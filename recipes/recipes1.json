@@ -1,0 +1,604 @@
+[
+  {
+    "recipe_name": "Iron Ingot",
+    "resources": ["Iron Ore"],
+    "resources_rates": [30],
+    "products": ["Iron Ingot"],
+    "product_rates": [30],
+    "power_consumption": 4,
+    "production_method": ["Smelter"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Copper Ingot",
+    "resources": ["Copper Ore"],
+    "resources_rates": [30],
+    "products": ["Copper Ingot"],
+    "product_rates": [30],
+    "power_consumption": 4,
+    "production_method": ["Smelter"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Concrete",
+    "resources": ["Limestone"],
+    "resources_rates": [45],
+    "products": ["Concrete"],
+    "product_rates": [15],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Iron Plate",
+    "resources": ["Iron Ingot"],
+    "resources_rates": [30],
+    "products": ["Iron Plate"],
+    "product_rates": [20],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Iron Rod",
+    "resources": ["Iron Ingot"],
+    "resources_rates": [15],
+    "products": ["Iron Rod"],
+    "product_rates": [15],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Copper Wire",
+    "resources": ["Copper Ingot"],
+    "resources_rates": [15],
+    "products": ["Wire"],
+    "product_rates": [45],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Cable",
+    "resources": ["Wire"],
+    "resources_rates": [60],
+    "products": ["Cable"],
+    "product_rates": [30],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Screw",
+    "resources": ["Iron Rod"],
+    "resources_rates": [10],
+    "products": ["Screw"],
+    "product_rates": [40],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
+    "recipe_name": "Reinforced Iron Plate",
+    "resources": ["Iron Plate", "Screw"],
+    "resources_rates": [30, 60],
+    "products": ["Reinforced Iron Plate"],
+    "product_rates": [5],
+    "power_consumption": 12,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 1"]
+  },
+  {
+    "recipe_name": "Modular Frame",
+    "resources": ["Reinforced Iron Plate", "Iron Rod"],
+    "resources_rates": [3, 12],
+    "products": ["Modular Frame"],
+    "product_rates": [2],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 2"]
+  },
+  {
+    "recipe_name": "Rotor",
+    "resources": ["Screw", "Iron Rod"],
+    "resources_rates": [100, 20],
+    "products": ["Rotor"],
+    "product_rates": [5],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 2"]
+  },
+  {
+    "recipe_name": "Stator",
+    "resources": ["Steel Pipe", "Wire"],
+    "resources_rates": [10, 40],
+    "products": ["Stator"],
+    "product_rates": [5],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 2"]
+  },
+  {
+    "recipe_name": "Steel Ingot",
+    "resources": ["Iron Ore", "Coal"],
+    "resources_rates": [45, 45],
+    "products": ["Steel Ingot"],
+    "product_rates": [45],
+    "power_consumption": 4,
+    "production_method": ["Foundry"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Steel Beam",
+    "resources": ["Steel Ingot"],
+    "resources_rates": [60],
+    "products": ["Steel Beam"],
+    "product_rates": [15],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Steel Pipe",
+    "resources": ["Steel Ingot"],
+    "resources_rates": [30],
+    "products": ["Steel Pipe"],
+    "product_rates": [20],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Motor",
+    "resources": ["Rotor", "Stator"],
+    "resources_rates": [10, 10],
+    "products": ["Motor"],
+    "product_rates": [5],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Circuit Board",
+    "resources": ["Copper Sheet", "Plastic"],
+    "resources_rates": [30, 30],
+    "products": ["Circuit Board"],
+    "product_rates": [5],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 4"]
+  },
+  {
+    "recipe_name": "Computer",
+    "resources": ["Circuit Board", "Cable", "Plastic", "Screw"],
+    "resources_rates": [25, 60, 45, 130],
+    "products": ["Computer"],
+    "product_rates": [2.5],
+    "power_consumption": 24,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 4"]
+  },
+  {
+    "recipe_name": "Heavy Modular Frame",
+    "resources": ["Modular Frame", "Steel Pipe", "Encased Industrial Beam", "Screw"],
+    "resources_rates": [5, 25, 15, 90],
+    "products": ["Heavy Modular Frame"],
+    "product_rates": [1],
+    "power_consumption": 30,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 4"]
+  },
+  {
+    "recipe_name": "Encased Industrial Beam",
+    "resources": ["Steel Beam", "Concrete"],
+    "resources_rates": [4, 20],
+    "products": ["Encased Industrial Beam"],
+    "product_rates": [4],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Plastic",
+    "resources": ["Crude Oil"],
+    "resources_rates": [30],
+    "products": ["Plastic"],
+    "product_rates": [22.5],
+    "power_consumption": 40,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Tier 4"]
+  },
+  {
+    "recipe_name": "Rubber",
+    "resources": ["Crude Oil"],
+    "resources_rates": [30],
+    "products": ["Rubber"],
+    "product_rates": [30],
+    "power_consumption": 40,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Tier 4"]
+  },
+  {
+    "recipe_name": "High-Speed Connector",
+    "resources": ["Quickwire", "Cable", "Circuit Board"],
+    "resources_rates": [100, 37.5, 3],
+    "products": ["High-Speed Connector"],
+    "product_rates": [3.75],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 4"]
+  },
+  {
+    "recipe_name": "Aluminum Ingot",
+    "resources": ["Alumina Solution", "Silica"],
+    "resources_rates": [240, 140],
+    "products": ["Aluminum Ingot"],
+    "product_rates": [80],
+    "power_consumption": 130,
+    "production_method": ["Foundry"],
+    "unlock_tags": ["Tier 5"]
+  },
+  {
+    "recipe_name": "Aluminum Sheet",
+    "resources": ["Aluminum Ingot"],
+    "resources_rates": [30],
+    "products": ["Aluminum Sheet"],
+    "product_rates": [30],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 5"]
+  },
+  {
+    "recipe_name": "Turbo Motor",
+    "resources": ["Motor", "Rubber", "Radio Control Unit", "Cooling System"],
+    "resources_rates": [4, 24, 2, 1],
+    "products": ["Turbo Motor"],
+    "product_rates": [1],
+    "power_consumption": 80,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 7"]
+  },
+  {
+    "recipe_name": "Battery",
+    "resources": ["Alumina Solution", "Sulfuric Acid", "Aluminum Casing"],
+    "resources_rates": [60, 40, 2],
+    "products": ["Battery"],
+    "product_rates": [4],
+    "power_consumption": 20,
+    "production_method": ["Blender"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Electromagnetic Control Rod",
+    "resources": ["Stator", "AI Limiter"],
+    "resources_rates": [6, 2],
+    "products": ["Electromagnetic Control Rod"],
+    "product_rates": [3],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Crystal Oscillator",
+    "resources": ["Quartz Crystal", "Cable", "Reinforced Iron Plate"],
+    "resources_rates": [36, 28, 2],
+    "products": ["Crystal Oscillator"],
+    "product_rates": [1],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 5"]
+  },
+  {
+    "recipe_name": "Heat Sink",
+    "resources": ["Aluminum Sheet", "Copper Sheet"],
+    "resources_rates": [16, 5],
+    "products": ["Heat Sink"],
+    "product_rates": [3.2],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Radio Control Unit",
+    "resources": ["Heat Sink", "Rubber", "Crystal Oscillator", "Computer"],
+    "resources_rates": [4, 16, 1, 1],
+    "products": ["Radio Control Unit"],
+    "product_rates": [1],
+    "power_consumption": 50,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Supercomputer",
+    "resources": ["Computer", "AI Limiter", "High-Speed Connector", "Plastic"],
+    "resources_rates": [2, 2, 3, 28],
+    "products": ["Supercomputer"],
+    "product_rates": [1],
+    "power_consumption": 50,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Nuclear Fuel Rod",
+    "resources": ["Encased Uranium Cell", "Electromagnetic Control Rod", "Lead"],
+    "resources_rates": [10, 3, 15],
+    "products": ["Nuclear Fuel Rod"],
+    "product_rates": [1],
+    "power_consumption": 75,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 7"]
+  },
+  {
+    "recipe_name": "Uranium Pellet",
+    "resources": ["Uranium"],
+    "resources_rates": [50],
+    "products": ["Uranium Pellet"],
+    "product_rates": [50],
+    "power_consumption": 10,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 7"]
+  },
+  {
+    "recipe_name": "Encased Uranium Cell",
+    "resources": ["Uranium Pellet", "Concrete"],
+    "resources_rates": [100, 9],
+    "products": ["Encased Uranium Cell"],
+    "product_rates": [10],
+    "power_consumption": 10,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 7"]
+  },
+  {
+    "recipe_name": "Nuclear Waste",
+    "resources": ["Nuclear Fuel Rod"],
+    "resources_rates": [0.2],
+    "products": ["Nuclear Waste"],
+    "product_rates": [1],
+    "power_consumption": 0,
+    "production_method": ["Nuclear Power Plant"],
+    "unlock_tags": ["Tier 7"]
+  },
+  {
+    "recipe_name": "Quickwire",
+    "resources": ["Caterium Ingot"],
+    "resources_rates": [12],
+    "products": ["Quickwire"],
+    "product_rates": [60],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "AI Limiter",
+    "resources": ["Copper Sheet", "Quickwire"],
+    "resources_rates": [5, 20],
+    "products": ["AI Limiter"],
+    "product_rates": [5],
+    "power_consumption": 10,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 5"]
+  },
+  {
+    "recipe_name": "Caterium Ingot",
+    "resources": ["Caterium Ore"],
+    "resources_rates": [45],
+    "products": ["Caterium Ingot"],
+    "product_rates": [15],
+    "power_consumption": 4,
+    "production_method": ["Smelter"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Copper Sheet",
+    "resources": ["Copper Ingot"],
+    "resources_rates": [20],
+    "products": ["Copper Sheet"],
+    "product_rates": [10],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 2"]
+  },
+  {
+    "recipe_name": "Versatile Framework",
+    "resources": ["Modular Frame", "Steel Beam"],
+    "resources_rates": [2.5, 30],
+    "products": ["Versatile Framework"],
+    "product_rates": [5],
+    "power_consumption": 15,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 4"]
+  },
+  {
+    "recipe_name": "Uranium Cell",
+    "resources": ["Uranium", "Concrete"],
+    "resources_rates": [45, 9],
+    "products": ["Uranium Cell"],
+    "product_rates": [10],
+    "power_consumption": 10,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 7"]
+  },
+  {
+    "recipe_name": "Silica",
+    "resources": ["Raw Quartz"],
+    "resources_rates": [22.5],
+    "products": ["Silica"],
+    "product_rates": [37.5],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Quartz Crystal",
+    "resources": ["Raw Quartz"],
+    "resources_rates": [37.5],
+    "products": ["Quartz Crystal"],
+    "product_rates": [22.5],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Beacon",
+    "resources": ["Iron Plate", "Iron Rod", "Wire", "Cable"],
+    "resources_rates": [22.5, 7.5, 112.5, 15],
+    "products": ["Beacon"],
+    "product_rates": [7.5],
+    "power_consumption": 10,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 2"]
+  },
+  {
+    "recipe_name": "Modular Engine",
+    "resources": ["Motor", "Rubber", "Smart Plating"],
+    "resources_rates": [2, 15, 2],
+    "products": ["Modular Engine"],
+    "product_rates": [1],
+    "power_consumption": 30,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 5"]
+  },
+  {
+    "recipe_name": "Adaptive Control Unit",
+    "resources": ["Automated Wiring", "Circuit Board", "Heavy Modular Frame", "Computer"],
+    "resources_rates": [7.5, 15, 1.25, 1.25],
+    "products": ["Adaptive Control Unit"],
+    "product_rates": [1.25],
+    "power_consumption": 75,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Cooling System",
+    "resources": ["Heat Sink", "Rubber", "Motor"],
+    "resources_rates": [10, 20, 3],
+    "products": ["Cooling System"],
+    "product_rates": [2],
+    "power_consumption": 30,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Uranium Cell",
+    "resources": ["Uranium", "Concrete"],
+    "resources_rates": [45, 9],
+    "products": ["Uranium Cell"],
+    "product_rates": [10],
+    "power_consumption": 10,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 7"]
+  },
+  {
+    "recipe_name": "Silica",
+    "resources": ["Raw Quartz"],
+    "resources_rates": [22.5],
+    "products": ["Silica"],
+    "product_rates": [37.5],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Quartz Crystal",
+    "resources": ["Raw Quartz"],
+    "resources_rates": [37.5],
+    "products": ["Quartz Crystal"],
+    "product_rates": [22.5],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 3"]
+  },
+  {
+    "recipe_name": "Beacon",
+    "resources": ["Iron Plate", "Iron Rod", "Wire", "Cable"],
+    "resources_rates": [22.5, 7.5, 112.5, 15],
+    "products": ["Beacon"],
+    "product_rates": [7.5],
+    "power_consumption": 10,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 2"]
+  },
+  {
+    "recipe_name": "Modular Engine",
+    "resources": ["Motor", "Rubber", "Smart Plating"],
+    "resources_rates": [2, 15, 2],
+    "products": ["Modular Engine"],
+    "product_rates": [1],
+    "power_consumption": 30,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 5"]
+  },
+  {
+    "recipe_name": "Adaptive Control Unit",
+    "resources": ["Automated Wiring", "Circuit Board", "Heavy Modular Frame", "Computer"],
+    "resources_rates": [7.5, 15, 1.25, 1.25],
+    "products": ["Adaptive Control Unit"],
+    "product_rates": [1.25],
+    "power_consumption": 75,
+    "production_method": ["Manufacturer"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Cooling System",
+    "resources": ["Heat Sink", "Rubber", "Motor"],
+    "resources_rates": [10, 20, 3],
+    "products": ["Cooling System"],
+    "product_rates": [2],
+    "power_consumption": 30,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 6"]
+  },
+  {
+    "recipe_name": "Fused Quickwire",
+    "resources": ["Caterium Ingot", "Copper Ingot"],
+    "resources_rates": [12, 12],
+    "products": ["Quickwire"],
+    "product_rates": [60],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Alternative Recipe"]
+  },
+  {
+    "recipe_name": "Compacted Coal",
+    "resources": ["Coal", "Sulfur"],
+    "resources_rates": [25, 25],
+    "products": ["Compacted Coal"],
+    "product_rates": [25],
+    "power_consumption": 10,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Alternative Recipe"]
+  },
+  {
+    "recipe_name": "Turbofuel",
+    "resources": ["Fuel", "Compacted Coal"],
+    "resources_rates": [37.5, 30],
+    "products": ["Turbofuel"],
+    "product_rates": [18.75],
+    "power_consumption": 22.5,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Alternative Recipe"]
+	},
+  {
+    "recipe_name": "Ingot Iron Alloy",
+    "resources": ["Iron Ore", "Copper Ore"],
+    "resources_rates": [20, 20],
+    "products": ["Iron Ingot"],
+    "product_rates": [50],
+    "power_consumption": 4,
+    "production_method": ["Foundry"],
+    "unlock_tags": ["Alternative Recipe"]
+  },
+  {
+    "recipe_name": "Copper Alloy Ingot",
+    "resources": ["Copper Ore", "Iron Ore"],
+    "resources_rates": [20, 20],
+    "products": ["Copper Ingot"],
+    "product_rates": [50],
+    "power_consumption": 4,
+    "production_method": ["Foundry"],
+    "unlock_tags": ["Alternative Recipe"]
+  }
+]
+
+
