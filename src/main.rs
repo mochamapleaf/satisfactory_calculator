@@ -32,12 +32,14 @@ struct Edge {
     recipe_name: String,
 }
 
+
+
 fn main() {
     let (mut recipes, mut resources) = init_graph();
     let mut start_map = HashSet::new();
-    start_map.insert("Iron Ore".to_string());
-    start_map.insert("Coal".to_string());
-    expand_coverage(&mut recipes, &mut resources, &mut start_map);
+    start_map.insert("Rotor".to_string());
+    let mut recipes_used = HashSet::new();
+    recurse_dependency(&recipes, &resources, &mut start_map, &mut recipes_used);
 }
 
 //read json recipes, and construct a graph network of resources
@@ -110,4 +112,36 @@ fn expand_coverage(recipes_table: &mut HashMap<String, Recipe>,
         }
         if !next_iter{ break; }
     }
+}
+
+fn recurse_dependency(recipes_table: &HashMap<String, Recipe>,
+resources_table: &HashMap<String, Rc<RefCell<ResourceNode>>>,
+target_resources: &mut HashSet<String>,
+recipes_used: &mut HashSet<String>){
+    println!("{:?}\n{:?}\n-----", target_resources, recipes_used);
+    let targets = target_resources.clone();
+    let mut print_out = true;
+    for product in targets.iter(){
+        target_resources.remove(product);
+        let avaliable_recipes: HashSet<String> = resources_table[product]
+            .borrow().ingress_edges.iter().map(|edge| edge.recipe_name.clone()).collect();
+        for available_recipe in avaliable_recipes.iter() {
+            print_out = false;
+            if !recipes_used.contains(available_recipe) {
+                recipes_used.insert(available_recipe.clone());
+                for new_dependency in recipes_table[available_recipe].resources.iter() {
+                    target_resources.insert(new_dependency.clone());
+                }
+                recurse_dependency(recipes_table, resources_table, target_resources, recipes_used);
+                recipes_used.remove(available_recipe);
+                for new_dependency in recipes_table[available_recipe].resources.iter() {
+                    target_resources.remove(new_dependency);
+                }
+            }else{
+                recurse_dependency(recipes_table, resources_table, target_resources, recipes_used);
+            }
+        }
+        target_resources.insert(product.clone());
+    }
+    if print_out{ println!("resources: {:?}\nrecipes: {:?}", target_resources, recipes_used); }
 }
