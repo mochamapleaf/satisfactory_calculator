@@ -80,6 +80,16 @@
     "unlock_tags": ["Tier 0"]
   },
   {
+    "recipe_name": "Screw (Iron Ingot)",
+    "resources": ["Iron Ingot"],
+    "resources_rates": [10],
+    "products": ["Screw"],
+    "product_rates": [40],
+    "power_consumption": 4,
+    "production_method": ["Constructor"],
+    "unlock_tags": ["Tier 0"]
+  },
+  {
     "recipe_name": "Reinforced Iron Plate",
     "resources": ["Iron Plate", "Screw"],
     "resources_rates": [30, 60],
