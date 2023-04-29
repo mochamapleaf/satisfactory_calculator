@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Recipe {
@@ -36,10 +37,9 @@ struct Edge {
 
 fn main() {
     let (mut recipes, mut resources) = init_graph();
-    let mut start_map = HashSet::new();
-    start_map.insert("Rotor".to_string());
-    let mut recipes_used = HashSet::new();
-    recurse_dependency(&recipes, &resources, &mut start_map, &mut recipes_used);
+    let mut start_map = Vec::new();
+    start_map.push("Adaptive Control Unit".to_string());
+    find_dependency(&recipes, &resources, &mut start_map);
 }
 
 //read json recipes, and construct a graph network of resources
@@ -114,34 +114,67 @@ fn expand_coverage(recipes_table: &mut HashMap<String, Recipe>,
     }
 }
 
-fn recurse_dependency(recipes_table: &HashMap<String, Recipe>,
-resources_table: &HashMap<String, Rc<RefCell<ResourceNode>>>,
-target_resources: &mut HashSet<String>,
-recipes_used: &mut HashSet<String>){
-    println!("{:?}\n{:?}\n-----", target_resources, recipes_used);
-    let targets = target_resources.clone();
-    let mut print_out = true;
-    for product in targets.iter(){
-        target_resources.remove(product);
-        let avaliable_recipes: HashSet<String> = resources_table[product]
-            .borrow().ingress_edges.iter().map(|edge| edge.recipe_name.clone()).collect();
-        for available_recipe in avaliable_recipes.iter() {
-            print_out = false;
-            if !recipes_used.contains(available_recipe) {
-                recipes_used.insert(available_recipe.clone());
-                for new_dependency in recipes_table[available_recipe].resources.iter() {
-                    target_resources.insert(new_dependency.clone());
-                }
-                recurse_dependency(recipes_table, resources_table, target_resources, recipes_used);
-                recipes_used.remove(available_recipe);
-                for new_dependency in recipes_table[available_recipe].resources.iter() {
-                    target_resources.remove(new_dependency);
-                }
-            }else{
-                recurse_dependency(recipes_table, resources_table, target_resources, recipes_used);
+fn find_dependency(recipes_table: &HashMap<String, Recipe>,
+                          resources_table: &HashMap<String, Rc<RefCell<ResourceNode>>>,
+                          target_resources: &mut Vec<String>) -> HashSet<(Vec<String>, Vec<String>, Vec<String>)> {
+    let mut ret : Vec<(Vec<String>, Vec<String>, Vec<String>)>= Vec::new();
+    ret.push( (target_resources.clone(), Vec::new(), Vec::new()) );
+
+    loop{
+        //expand
+        let mut new_solutions = Vec::new();
+        let mut exit_loop = true;
+        for solution in ret.iter_mut(){
+            if solution.0.is_empty() {
+                new_solutions.push(solution.clone());
+                continue;
             }
+            exit_loop = false;
+            let target = solution.0.pop().unwrap();
+            solution.1.push(target);
+            let mut fall_through = true;
+            let target = solution.1.last().unwrap();
+            let mut new_recipes :HashSet<String> = resources_table[target].borrow().ingress_edges.iter().map(|edge| edge.recipe_name.clone() ).collect();
+            for recipe in new_recipes.iter(){
+                let mut new_solution = solution.clone();
+                new_solution.2.push(recipe.clone());
+                for prod in recipes_table[recipe].products.iter(){
+                    if let Some(i) = new_solution.0.iter().position(|x| x == prod ){
+                        let solution_len = new_solution.0.len();
+                        new_solution.0.swap(i, solution_len-1);
+                        new_solution.1.push(new_solution.0.pop().unwrap());
+                    }
+                }
+                for resource in recipes_table[recipe].resources.iter(){
+                    if new_solution.0.contains(resource) || new_solution.1.contains(resource) { continue; }
+                    new_solution.0.push(resource.clone());
+                }
+                new_solutions.push(new_solution);
+                fall_through = false;
+            }
+            if fall_through{ new_solutions.push(solution.clone());}
         }
-        target_resources.insert(product.clone());
+        ret = new_solutions;
+        ret.iter().for_each(|line| println!("{:?}", line) );
+        println!("--------");
+        if exit_loop { break; }
     }
-    if print_out{ println!("resources: {:?}\nrecipes: {:?}", target_resources, recipes_used); }
+    //remove repetitive
+    let mut ret_set: HashSet<(Vec<String>, Vec<String>, Vec<String>)> = HashSet::new();
+    for sol in ret.into_iter(){
+        let mut temp =(
+                sol.0.into_iter().collect::<Vec<String>>(),
+                sol.1.into_iter().collect::<Vec<String>>(),
+                sol.2.into_iter().collect::<Vec<String>>()
+        );
+        temp.0.sort_unstable();
+        temp.1.sort_unstable();
+        temp.2.sort_unstable();
+        println!("{:?}", temp);
+        ret_set.insert(temp);
+    }
+    println!("--------");
+    ret_set.iter().for_each(|line| println!("{:?}", line) );
+    println!("--------");
+    return ret_set;
 }
