@@ -6,15 +6,17 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
+use ndarray::Array2;
+use ndarray_linalg::Inverse;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Recipe {
     recipe_name: String,
     resources: Vec<String>,
-    resources_rates: Vec<f32>,
+    resources_rates: Vec<f64>,
     products: Vec<String>,
-    product_rates: Vec<f32>,
-    power_consumption: f32,
+    product_rates: Vec<f64>,
+    power_consumption: f64,
     production_method: Vec<String>,
     unlock_tags: Vec<String>,
 }
@@ -37,9 +39,50 @@ struct Edge {
 
 fn main() {
     let (mut recipes, mut resources) = init_graph();
-    let mut start_map = Vec::new();
-    start_map.push("Adaptive Control Unit".to_string());
-    find_dependency(&recipes, &resources, &mut start_map);
+    let mut start_map : HashMap<String, f64>= HashMap::new();
+    start_map.insert("Heavy Modular Frame".to_string(), 60_f64);
+    let mut start_vec = start_map.iter().map(|(k,_)| k.clone()).collect();
+    let dep = find_dependency(&recipes, &resources, &mut start_vec);
+    for temp in dep{
+        let mut matrix = construct_matrix(&recipes, &resources, &temp.1, &temp.2);
+        //insert input and output nodes
+        let mut new_io = Vec::new();
+        for (i, resource) in temp.1.iter().enumerate(){
+            if resources[resource].borrow().ingress_edges.len() == 0{
+                //input
+                new_io.push(format!("[input]{}", resource));
+                let mut temp_vec = vec![0_f64; temp.1.len()];
+                temp_vec[i] = 1_f64;
+                matrix.push(temp_vec);
+            }
+        }
+        let mut titles = temp.2.clone();
+        titles.extend(new_io);
+        //construct matrix, find inverse
+        let mut graph_matrix = Array2::from_shape_vec((titles.len(), titles.len()), matrix.concat()).unwrap();
+
+        let mut graph_inv = graph_matrix.t().inv().unwrap();
+        let mut output_vec : Vec<f64>= temp.1.iter().map(|v|
+            if start_map.contains_key(v){
+                start_map[v]
+            }else{
+                0_f64
+            }).collect();
+        let mut output_array2 = Array2::from_shape_vec((titles.len(), 1), output_vec ).unwrap();
+        let result = graph_inv.dot(&output_array2);
+        println!("--------");
+        start_map.iter().for_each(|(k,v)|{
+            println!("{}[output] {}", k,v);
+        });
+        println!("--------");
+        for i in 0..result.len(){
+            println!("{} \t {}", titles[i], result[[i,0]]);
+        }
+
+
+
+
+    }
 }
 
 //read json recipes, and construct a graph network of resources
@@ -159,7 +202,7 @@ fn find_dependency(recipes_table: &HashMap<String, Recipe>,
         println!("--------");
         if exit_loop { break; }
     }
-    //remove repetitive
+    //remove repetitive (unnecessary)
     let mut ret_set: HashSet<(Vec<String>, Vec<String>, Vec<String>)> = HashSet::new();
     for sol in ret.into_iter(){
         let mut temp =(
@@ -177,4 +220,25 @@ fn find_dependency(recipes_table: &HashMap<String, Recipe>,
     ret_set.iter().for_each(|line| println!("{:?}", line) );
     println!("--------");
     return ret_set;
+}
+
+fn construct_matrix(recipes_table: &HashMap<String, Recipe>,
+                    resources_table: &HashMap<String, Rc<RefCell<ResourceNode>>>,
+                    path_resources: &Vec<String>,
+                    used_recipes: &Vec<String>) -> Vec<Vec<f64>> {
+    let mut matrix = Vec::new();
+    for recipe in used_recipes{
+        let mut row = vec![0_f64; path_resources.len()];
+        //add positive weights (products)
+        for (i, product) in recipes_table[recipe].products.iter().enumerate(){
+            let target_index = path_resources.iter().position(|v| v == product).unwrap();
+            row[target_index] = recipes_table[recipe].product_rates[i];
+        }
+        for (i, resource) in recipes_table[recipe].resources.iter().enumerate() {
+            let target_index = path_resources.iter().position(|v| v == resource).unwrap();
+            row[target_index] = -recipes_table[recipe].resources_rates[i];
+        }
+        matrix.push(row);
+    }
+    matrix
 }
