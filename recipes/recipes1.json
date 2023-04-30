@@ -192,9 +192,9 @@
   {
     "recipe_name": "Heavy Modular Frame",
     "resources": ["Modular Frame", "Steel Pipe", "Encased Industrial Beam", "Screw"],
-    "resources_rates": [5, 25, 15, 90],
+    "resources_rates": [10, 30, 10, 200],
     "products": ["Heavy Modular Frame"],
-    "product_rates": [1],
+    "product_rates": [2],
     "power_consumption": 30,
     "production_method": ["Manufacturer"],
     "unlock_tags": ["Tier 4"]
@@ -202,9 +202,9 @@
   {
     "recipe_name": "Encased Industrial Beam",
     "resources": ["Steel Beam", "Concrete"],
-    "resources_rates": [4, 20],
+    "resources_rates": [24, 30],
     "products": ["Encased Industrial Beam"],
-    "product_rates": [4],
+    "product_rates": [6],
     "power_consumption": 15,
     "production_method": ["Assembler"],
     "unlock_tags": ["Tier 3"]
