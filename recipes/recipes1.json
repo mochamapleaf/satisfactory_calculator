@@ -213,22 +213,32 @@
     "recipe_name": "Plastic",
     "resources": ["Crude Oil"],
     "resources_rates": [30],
-    "products": ["Plastic"],
-    "product_rates": [22.5],
-    "power_consumption": 40,
+    "products": ["Plastic", "Heavy Oil Residue"],
+    "product_rates": [20, 20],
+    "power_consumption": 24,
     "production_method": ["Refinery"],
-    "unlock_tags": ["Tier 4"]
+    "unlock_tags": []
   },
   {
-    "recipe_name": "Rubber",
-    "resources": ["Crude Oil"],
-    "resources_rates": [30],
-    "products": ["Rubber"],
-    "product_rates": [30],
-    "power_consumption": 40,
-    "production_method": ["Refinery"],
-    "unlock_tags": ["Tier 4"]
+  "recipe_name": "Recycled Plastic",
+  "resources": ["Rubber", "Fuel"],
+  "resources_rates": [30, 30],
+  "products": ["Plastic"],
+  "product_rates": [60],
+  "power_consumption": 22.5,
+  "production_method": ["Refinery"],
+  "unlock_tags": ["Alternative Recipe"]
   },
+  {
+  "recipe_name": "Rubber",
+  "resources": ["Crude Oil"],
+  "resources_rates": [30],
+  "products": ["Rubber", "Heavy Oil Residue"],
+  "product_rates": [20, 10],
+  "power_consumption": 30,
+  "production_method": ["Refinery"],
+  "unlock_tags": ["Default Recipe"]
+},
   {
     "recipe_name": "High-Speed Connector",
     "resources": ["Quickwire", "Cable", "Circuit Board"],
@@ -578,6 +588,26 @@
     "power_consumption": 10,
     "production_method": ["Assembler"],
     "unlock_tags": ["Alternative Recipe"]
+  },
+  {
+  "recipe_name": "Fuel (from Heavy Oil Residue)",
+  "resources": ["Heavy Oil Residue"],
+  "resources_rates": [40],
+  "products": ["Fuel"],
+  "product_rates": [60],
+  "power_consumption": 30,
+  "production_method": ["Refinery"],
+  "unlock_tags": []
+  },
+  {
+  "recipe_name": "Fuel",
+  "resources": ["Crude Oil"],
+  "resources_rates": [60],
+  "products": ["Fuel"],
+  "product_rates": [60],
+  "power_consumption": 30,
+  "production_method": ["Refinery"],
+  "unlock_tags": []
   },
   {
     "recipe_name": "Turbofuel",
