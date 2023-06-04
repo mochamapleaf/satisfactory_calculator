@@ -37,7 +37,8 @@ struct Edge {
 
 struct Graph{
     recipes: HashMap<String, Recipe>,
-    resources: HashMap<String,Rc<RefCell<ResourceNode>>>
+    resources: HashMap<String,Rc<RefCell<ResourceNode>>>,
+    topological_sort_result: HashMap<String, (u64, u64)>
 }
 
 impl Graph{
@@ -81,8 +82,46 @@ impl Graph{
                 }
             }
         }
-        return Self{recipes: recipes_table, resources: resource_table};
+
+        //dfs for topological sort
+        let mut pending: HashSet<String> = resource_table.keys().map(|s| s.clone()).collect();
+        let mut topology: HashMap<String, (u64, u64)> = HashMap::new();
+        //a single resource node must be either in 'pending' or 'topology', not both
+        let mut cur = 0_u64;
+        //stack implementation to replace recursive program
+        while !pending.is_empty(){
+            let next = pending.iter().next().unwrap();
+            let mut dfs_stack: Vec<String> = Vec::new();
+            dfs_stack.push(next.to_string());
+            while let Some(s) = dfs_stack.pop(){
+                if !topology.contains_key(s.as_str()){
+                    //first time being discovered
+                    topology.insert( s.clone(), (cur, u64::MAX));
+                    cur += 1;
+                    dfs_stack.push(s.clone()); //add it back for second discovery
+                    pending.remove(s.as_str());
+                    for egress in resource_table[&s].borrow().egress_edges.iter(){
+                        if !topology.contains_key(egress.to.as_str()){
+                            dfs_stack.push(egress.to.clone());
+                        }
+                    }
+
+                }else {
+                    //second time being discovered
+                    topology.get_mut(s.as_str()).unwrap().1 = cur;
+                    cur += 1;
+                }
+            }
+        }
+
+        return Self{
+            recipes: recipes_table,
+            resources: resource_table,
+            topological_sort_result: topology
+        };
     }
+
+
 
 
     //given recipes and resource table
@@ -110,9 +149,37 @@ impl Graph{
             if !next_iter{ break; }
         }
     }
+
+    //take anything that can be converted into string vector
+    //return 2 lists
+    //1. All related resources
+    //2. All related recipes
+    fn find_all_related<'a, T:'a + Iterator<Item= U>, U: 'a + ToString>(&self, target_resources: T){
+        let mut pending: Vec<String> = target_resources.map(|u| u.to_string()).collect();
+        let mut processed = Vec::<String>::new();
+        let mut related_recipes = Vec::<String>::new();
+        println!("{:?}", pending);
+    }
 }
 
-fn main() {
+fn main(){
+    let mut inst = Graph::new("./recipes/recipes1.json");
+    let mut start_map : HashMap<String, f64>= HashMap::new();
+    start_map.insert("Plastic".to_string(), 300_f64);
+    let dep = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
+}
+
+#[test]
+fn test_topological_sort(){
+    let mut inst = Graph::new("./recipes/recipes1.json");
+    let mut all_resources: Vec<&str> = inst.topological_sort_result.keys().map(|s| s.as_str()).collect();
+    all_resources.sort_unstable_by_key(|&s | inst.topological_sort_result[s].1);
+    all_resources.reverse();
+    println!("{:?}", all_resources);
+}
+
+
+fn main_back() {
     let mut inst = Graph::new("./recipes/recipes1.json");
     let mut start_map : HashMap<String, f64>= HashMap::new();
     //start_map.insert("Plastic".to_string(), 20_f64);
