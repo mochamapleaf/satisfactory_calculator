@@ -156,9 +156,19 @@ impl Graph{
     //2. All related recipes
     fn find_all_related<'a, T:'a + Iterator<Item= U>, U: 'a + ToString>(&self, target_resources: T){
         let mut pending: Vec<String> = target_resources.map(|u| u.to_string()).collect();
-        let mut processed = Vec::<String>::new();
-        let mut related_recipes = Vec::<String>::new();
-        println!("{:?}", pending);
+        let mut processed = HashSet::<String>::new();
+        let mut related_recipes = HashSet::<String>::new();
+        while !pending.is_empty() {
+            let cur_item = pending.pop().unwrap();
+            if processed.contains(&cur_item) { continue; }
+            for edge in self.resources[&cur_item].borrow().ingress_edges.iter(){
+                pending.push(edge.from.clone());
+                related_recipes.insert(edge.recipe_name.clone());
+            }
+            processed.insert(cur_item);
+        }
+
+        println!("{:?}\n{:?}", processed, related_recipes);
     }
 }
 
