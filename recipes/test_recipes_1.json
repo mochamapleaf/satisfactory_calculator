@@ -70,7 +70,7 @@
   },
   {
   "recipe_name": "Recycled Rubber",
-  "resources": ["Fuel", "Rubber"],
+  "resources": ["Fuel", "Plastic"],
   "resources_rates": [30, 30],
   "products": ["Rubber"],
   "product_rates": [60],

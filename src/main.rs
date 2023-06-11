@@ -180,7 +180,7 @@ impl Graph{
 }
 
 fn main(){
-    let mut inst = Graph::new("./recipes/recipes1.json");
+    let mut inst = Graph::new("./recipes/test_recipes_1.json");
     let mut start_map : HashMap<String, f64>= HashMap::new();
     start_map.insert("Plastic".to_string(), 300_f64);
     let dep = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
