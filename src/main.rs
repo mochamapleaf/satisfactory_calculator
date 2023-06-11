@@ -1,3 +1,5 @@
+mod common_tests;
+
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::prelude::*;
@@ -42,7 +44,7 @@ struct Graph{
 }
 
 impl Graph{
-    //read json recipes, and construct a graph network of resources
+    /// read json recipes, and construct a graph network of resources
     fn new(filename: &str) -> Self{
         let mut file = File::open(filename).expect("Unable to open JSON file");
         let mut json_data = String::new();
@@ -124,8 +126,9 @@ impl Graph{
 
 
 
-    //given recipes and resource table
-    //find all the resources that can be produced with the given avaliable resources, modify in place
+    /// find all the resources that can be produced with the given avaliable resources
+    ///
+    /// The parameter HashSet is modified in place, so it is changed after the function call
     fn expand_coverage(&self, avaliable_resources: &mut HashSet<String>){
         loop{
             let mut next_iter = false;
@@ -150,25 +153,29 @@ impl Graph{
         }
     }
 
-    //take anything that can be converted into string vector
-    //return 2 lists
-    //1. All related resources
-    //2. All related recipes
+    /// Given a set of products, return all the related recipes and resources.
+    ///
+    /// Recipes are included if it produces the given product, either directly or indirectly.
+    /// Resources are included if it belongs to any of the included recipes
+    ///
+    /// # Arguments
+    ///
+    /// * `target_resources` - Any struct that can be converted into a string vector
+    ///
+    /// # Returns
+    ///
+    /// 1. All related resources
+    /// 2. All related recipes
     fn find_all_related<'a, T:'a + Iterator<Item= U>, U: 'a + ToString>(&self, target_resources: T){
         let mut pending: Vec<String> = target_resources.map(|u| u.to_string()).collect();
         let mut processed = HashSet::<String>::new();
         let mut related_recipes = HashSet::<String>::new();
-        while !pending.is_empty() {
-            let cur_item = pending.pop().unwrap();
-            if processed.contains(&cur_item) { continue; }
-            for edge in self.resources[&cur_item].borrow().ingress_edges.iter(){
-                pending.push(edge.from.clone());
-                related_recipes.insert(edge.recipe_name.clone());
-            }
-            processed.insert(cur_item);
+        loop{
+            println!("{:?}", pending);
+            if pending.is_empty(){ break; }
+            let cur = pending.pop().unwrap();
+            if !processed.insert(cur.clone()){}
         }
-
-        println!("{:?}\n{:?}", processed, related_recipes);
     }
 }
 
@@ -177,15 +184,6 @@ fn main(){
     let mut start_map : HashMap<String, f64>= HashMap::new();
     start_map.insert("Plastic".to_string(), 300_f64);
     let dep = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
-}
-
-#[test]
-fn test_topological_sort(){
-    let mut inst = Graph::new("./recipes/recipes1.json");
-    let mut all_resources: Vec<&str> = inst.topological_sort_result.keys().map(|s| s.as_str()).collect();
-    all_resources.sort_unstable_by_key(|&s | inst.topological_sort_result[s].1);
-    all_resources.reverse();
-    println!("{:?}", all_resources);
 }
 
 

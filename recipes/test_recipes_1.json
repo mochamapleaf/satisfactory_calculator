@@ -1,0 +1,151 @@
+[
+  {
+    "recipe_name": "Plastic",
+    "resources": ["Crude Oil"],
+    "resources_rates": [30],
+    "products": ["Plastic", "Heavy Oil Residue"],
+    "product_rates": [20, 20],
+    "power_consumption": 24,
+    "production_method": ["Refinery"],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "Recycled Plastic",
+    "resources": ["Rubber", "Fuel"],
+    "resources_rates": [30, 30],
+    "products": ["Plastic"],
+    "product_rates": [60],
+    "power_consumption": 22.5,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Alternative Recipe"]
+  },{
+    "recipe_name": "Residual Plastic",
+    "resources": ["Polymer Resin", "Water"],
+    "resources_rates": [60, 20],
+    "products": ["Plastic"],
+    "product_rates": [20],
+    "power_consumption": 4,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Alternate"]
+  },
+  {
+    "recipe_name": "Fuel",
+    "resources": ["Crude Oil"],
+    "resources_rates": [60],
+    "products": ["Fuel", "Polymer Resin"],
+    "product_rates": [40, 30],
+    "power_consumption": 4,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Tier 5 - Oil Processing"]
+  },
+  {
+    "recipe_name": "Heavy Oil Residue",
+    "resources": ["Crude Oil"],
+    "resources_rates": [30],
+    "products": ["Plastic", "Heavy Oil Residue"],
+    "product_rates": [20, 10],
+    "power_consumption": 4,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Tier 5 - Oil Processing"]
+  },
+  {
+    "recipe_name": "Polymer Resin",
+    "resources": ["Crude Oil"],
+    "resources_rates": [60],
+    "products": ["Fuel", "Polymer Resin"],
+    "product_rates": [40, 30],
+    "power_consumption": 4,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Tier 5 - Oil Processing"]
+  },
+  {
+    "recipe_name": "Rubber",
+    "resources": ["Crude Oil"],
+    "resources_rates": [30],
+    "products": ["Rubber", "Heavy Oil Residue"],
+    "product_rates": [20, 10],
+    "power_consumption": 30,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Default Recipe"]
+  },
+  {
+  "recipe_name": "Recycled Rubber",
+  "resources": ["Fuel", "Rubber"],
+  "resources_rates": [30, 30],
+  "products": ["Rubber"],
+  "product_rates": [60],
+  "power_consumption": 6,
+  "production_method": ["Refinery"],
+  "unlock_tags": ["Alternate"]
+},
+  {
+    "recipe_name": "Residual Rubber",
+    "resources": ["Heavy Oil Residue", "Water"],
+    "resources_rates": [40, 40],
+    "products": ["Rubber"],
+    "product_rates": [20],
+    "power_consumption": 4,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Alternate"]
+  },
+  {
+    "recipe_name": "Unpackage Heavy Oil Residue",
+    "resources": ["Packaged Heavy Oil Residue"],
+    "resources_rates": [60],
+    "products": ["Heavy Oil Residue", "Empty Canister"],
+    "product_rates": [60, 60],
+    "power_consumption": 1,
+    "production_method": ["Packager"],
+    "unlock_tags": ["Packaging"]
+  },
+  {
+    "recipe_name": "Residual Fuel",
+    "resources": ["Heavy Oil Residue", "Water"],
+    "resources_rates": [60, 60],
+    "products": ["Fuel"],
+    "product_rates": [40],
+    "power_consumption": 4,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Alternate"]
+  },
+  {
+    "recipe_name": "Unpackage Fuel",
+    "resources": ["Packaged Fuel"],
+    "resources_rates": [60],
+    "products": ["Fuel", "Empty Canister"],
+    "product_rates": [60, 60],
+    "power_consumption": 1,
+    "production_method": ["Packager"],
+    "unlock_tags": ["Packaging"]
+  },
+  {
+    "recipe_name": "Diluted Fuel",
+    "resources": ["Heavy Oil Residue", "Water"],
+    "resources_rates": [50, 100],
+    "products": ["Fuel"],
+    "product_rates": [100],
+    "power_consumption": 6,
+    "production_method": ["Blender"],
+    "unlock_tags": ["Alternate"]
+  },
+  {
+    "recipe_name": "Packaged Fuel",
+    "resources": ["Fuel", "Empty Canister"],
+    "resources_rates": [60, 60],
+    "products": ["Packaged Fuel"],
+    "product_rates": [60],
+    "power_consumption": 2,
+    "production_method": ["Packager"],
+    "unlock_tags": ["Tier 5 - Alternative Fluid Transport"]
+  },
+  {
+    "recipe_name": "Diluted Packaged Fuel",
+    "resources": ["Heavy Oil Residue", "Packaged Water"],
+    "resources_rates": [60, 60],
+    "products": ["Packaged Fuel"],
+    "product_rates": [120],
+    "power_consumption": 4,
+    "production_method": ["Refinery"],
+    "unlock_tags": ["Alternate"]
+  }
+]
