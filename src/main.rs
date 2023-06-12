@@ -11,6 +11,9 @@ use std::hash::{Hash, Hasher};
 use ndarray::Array2;
 use ndarray_linalg::Inverse;
 
+extern crate glpk_sys;
+use glpk_sys::*;
+
 #[derive(Debug, Deserialize, Serialize)]
 struct Recipe {
     recipe_name: String,
@@ -43,9 +46,11 @@ struct Graph{
     topological_sort_result: HashMap<String, (u64, u64)>
 }
 
-impl Graph{
+static WORLD_ROOT: &str = "world_root";
+
+impl Graph {
     /// read json recipes, and construct a graph network of resources
-    fn new(filename: &str) -> Self{
+    fn new(filename: &str) -> Self {
         let mut file = File::open(filename).expect("Unable to open JSON file");
         let mut json_data = String::new();
         file.read_to_string(&mut json_data).expect("Unable to read JSON file");
@@ -64,7 +69,13 @@ impl Graph{
                             egress_edges: vec![],
                         })));
                 }
-                for resource in recipe.resources.iter() {
+                let mut process_recipes = recipe.resources.clone();
+                if process_recipes.is_empty(){
+                    // The resource comes from the world directly
+                    // replace the resource with WORLD_ROOT
+                    process_recipes.push(WORLD_ROOT.to_string());
+                }
+                for resource in process_recipes.iter() {
                     if !resource_table.contains_key(resource.as_str()) {
                         resource_table.insert(resource.clone(), Rc::new(RefCell::new(
                             ResourceNode {
@@ -91,24 +102,23 @@ impl Graph{
         //a single resource node must be either in 'pending' or 'topology', not both
         let mut cur = 0_u64;
         //stack implementation to replace recursive program
-        while !pending.is_empty(){
+        while !pending.is_empty() {
             let next = pending.iter().next().unwrap();
             let mut dfs_stack: Vec<String> = Vec::new();
             dfs_stack.push(next.to_string());
-            while let Some(s) = dfs_stack.pop(){
-                if !topology.contains_key(s.as_str()){
+            while let Some(s) = dfs_stack.pop() {
+                if !topology.contains_key(s.as_str()) {
                     //first time being discovered
-                    topology.insert( s.clone(), (cur, u64::MAX));
+                    topology.insert(s.clone(), (cur, u64::MAX));
                     cur += 1;
                     dfs_stack.push(s.clone()); //add it back for second discovery
                     pending.remove(s.as_str());
-                    for egress in resource_table[&s].borrow().egress_edges.iter(){
-                        if !topology.contains_key(egress.to.as_str()){
+                    for egress in resource_table[&s].borrow().egress_edges.iter() {
+                        if !topology.contains_key(egress.to.as_str()) {
                             dfs_stack.push(egress.to.clone());
                         }
                     }
-
-                }else {
+                } else {
                     //second time being discovered
                     topology.get_mut(s.as_str()).unwrap().1 = cur;
                     cur += 1;
@@ -116,7 +126,7 @@ impl Graph{
             }
         }
 
-        return Self{
+        return Self {
             recipes: recipes_table,
             resources: resource_table,
             topological_sort_result: topology
@@ -124,32 +134,30 @@ impl Graph{
     }
 
 
-
-
     /// find all the resources that can be produced with the given avaliable resources
     ///
     /// The parameter HashSet is modified in place, so it is changed after the function call
-    fn expand_coverage(&self, avaliable_resources: &mut HashSet<String>){
-        loop{
+    fn expand_coverage(&self, avaliable_resources: &mut HashSet<String>) {
+        loop {
             let mut next_iter = false;
             let cur_sources = avaliable_resources.clone();
-            for source in cur_sources.iter(){
-                for egress in self.resources[source].borrow().egress_edges.iter(){
+            for source in cur_sources.iter() {
+                for egress in self.resources[source].borrow().egress_edges.iter() {
                     if avaliable_resources.contains(egress.to.as_str()) { continue; };
                     let mut condition_fulfilled = true;
                     for requirement in self.recipes[egress.recipe_name.as_str()].resources.iter() {
-                        if !avaliable_resources.contains(requirement.as_str()){
+                        if !avaliable_resources.contains(requirement.as_str()) {
                             condition_fulfilled = false;
                             break;
                         }
                     }
-                    if condition_fulfilled{
+                    if condition_fulfilled {
                         next_iter = true;
                         avaliable_resources.insert(egress.to.clone());
                     }
                 }
             }
-            if !next_iter{ break; }
+            if !next_iter { break; }
         }
     }
 
@@ -164,18 +172,66 @@ impl Graph{
     ///
     /// # Returns
     ///
-    /// 1. All related resources
-    /// 2. All related recipes
-    fn find_all_related<'a, T:'a + Iterator<Item= U>, U: 'a + ToString>(&self, target_resources: T){
+    /// `(Vec<String>, Vec<String>)`
+    ///
+    /// 0. All related resources, sorted in topological order (note: due to the fact DFS uses HashSet, the order is not always the same for different runs. But within one single process, the order is determined)
+    /// 1. All related recipes, sorted in alphabetical order
+    fn find_all_related<'a, T: 'a + Iterator<Item=U>, U: 'a + ToString>(&self, target_resources: T)
+        -> (Vec<String>, Vec<String>) {
         let mut pending: Vec<String> = target_resources.map(|u| u.to_string()).collect();
         let mut processed = HashSet::<String>::new();
         let mut related_recipes = HashSet::<String>::new();
-        loop{
-            println!("{:?}", pending);
-            if pending.is_empty(){ break; }
-            let cur = pending.pop().unwrap();
-            if !processed.insert(cur.clone()){}
+        while !pending.is_empty() {
+            let cur_item = pending.pop().unwrap();
+            if processed.contains(&cur_item) { continue; }
+            for edge in self.resources[&cur_item].borrow().ingress_edges.iter() {
+                pending.push(edge.from.clone());
+                related_recipes.insert(edge.recipe_name.clone());
+            }
+            processed.insert(cur_item);
         }
+        let mut resource_vec: Vec<String> = processed.iter().map(|s| s.clone()).collect();
+        let mut recipes_vec: Vec<String> = related_recipes.iter().map(|s| s.clone()).collect();
+        resource_vec.sort_by_key( |v| u64::MAX - self.topological_sort_result[v].1);
+        recipes_vec.sort();
+        ( resource_vec, recipes_vec)
+    }
+
+    fn construct_matrix(&self, recipes: &Vec<String>, resources: &Vec<String>) -> (Array2<f64>, Vec<f64>){
+        let mut matrix: Vec<Vec<f64>> = Vec::new();
+        let mut row_names : Vec<String> = Vec::new();
+        let mut cost_vec: Vec<f64> = Vec::new();
+
+        // Add input for "source nodes" in the graph
+        // for (i, sources) in resources.iter().enumerate().filter(|(i, r)| self.resources[*r].borrow().ingress_edges.is_empty()){
+        //     let mut new_row = vec![0_f64; resources.len()];
+        //     new_row[i] = 1_f64;
+        //     matrix.push(new_row);
+        //     cost_vec.push(0_f64); // TODO: replace this with corresponding cost of the item
+        //     row_names.push(format!("[input] {}", sources));
+        // }
+
+        for recipe in recipes.iter(){
+            let mut new_row = vec![0_f64; resources.len()];
+            //add negative weights
+            for (i, product) in self.recipes[recipe].resources.iter().enumerate(){
+                let target_index = resources.iter().position(|v| v == product).unwrap();
+                new_row[target_index] -= self.recipes[recipe].resources_rates[i];
+            }
+            for (i, product) in self.recipes[recipe].products.iter().enumerate() {
+                let target_index = resources.iter().position(|v| v == product).unwrap();
+                new_row[target_index] += self.recipes[recipe].product_rates[i];
+            }
+
+            matrix.push(new_row);
+            cost_vec.push(self.recipes[recipe].power_consumption);
+            row_names.push(format!("{}: {}", self.recipes[recipe].production_method[0], recipe));
+        }
+        (Array2::from_shape_vec((matrix.len(), resources.len()), matrix.concat()).unwrap(), cost_vec)
+    }
+
+    fn sort_topologically(&self, resource_list: &mut Vec<impl AsRef<str>>){
+        resource_list.sort_by_key( |v| u64::MAX - self.topological_sort_result[v.as_ref()].1);
     }
 }
 
@@ -183,9 +239,65 @@ fn main(){
     let mut inst = Graph::new("./recipes/test_recipes_1.json");
     let mut start_map : HashMap<String, f64>= HashMap::new();
     start_map.insert("Plastic".to_string(), 300_f64);
-    let dep = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
+    let (resources, recipes) = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
+    println!("{:?}", resources);
+    let (mut matrix,mut cost_vec) = inst.construct_matrix(&recipes, &resources);
+    println!("{:?}", matrix);
+    println!("{:?}", cost_vec);
+
+    let mut matrix_A = matrix.t().to_owned();
+    let mut target_vals : Vec<f64>= resources.iter()
+        .map(|r| start_map.get(r).unwrap_or(&0_f64).clone()).collect();
+    solve_lp(&matrix_A, &cost_vec, &target_vals);
+    println!("{:?}", recipes);
 }
 
+fn solve_lp(matrix: &Array2<f64>, cost_vec: &Vec<f64>, target_vec: &Vec<f64>){
+    unsafe{
+        let mut lp = glp_create_prob();
+
+        glp_set_obj_dir(lp, 1); //1 for GLP_MIN
+        assert_eq!(matrix.nrows() , target_vec.len());
+        assert_eq!(matrix.ncols() , cost_vec.len());
+        glp_add_cols(lp,cost_vec.len() as i32);
+        glp_add_rows(lp, target_vec.len() as i32);
+
+        for i in 1..=cost_vec.len(){
+            glp_set_col_bnds(lp, i as i32, 2, 0.0, 0.0);
+            glp_set_obj_coef(lp, i as i32, cost_vec[i-1]);
+        }
+
+        for i in 1..=target_vec.len(){
+            glp_set_row_bnds(lp, i as i32, 5, target_vec[i-1], target_vec[i-1]);
+        }
+        let mut ia: Vec<i32> = (1..=matrix.nrows())
+            .flat_map(|x| std::iter::repeat(x).take(matrix.ncols()))
+            .map(|v| v as i32).collect();
+        ia.insert(0,0);
+        let mut ja: Vec<i32> = (1..=matrix.ncols()).cycle().take(matrix.len())
+            .map(|v| v as i32).collect();
+        ja.insert(0,0);
+
+        let mut ar: Vec<f64> = matrix.clone().into_raw_vec();
+        ar.insert(0, 0_f64);
+        glp_load_matrix(lp, matrix.len() as i32, ia.as_ptr() , ja.as_ptr(), ar.as_ptr());
+
+        glp_simplex(lp, std::ptr::null_mut());
+
+        let status = glp_get_status(lp) as i32;
+        let obj_val = glp_get_obj_val(lp) as f64;
+        println!("Status: {:?}, Objective value: {}", status, obj_val);
+
+        let mut solution = vec![0_f64; matrix.ncols()];
+        for i in 1..=matrix.ncols(){
+            solution[i-1] = glp_get_col_prim(lp, i as i32);
+        }
+
+        glp_delete_prob(lp);
+
+        println!("Solution: {:?}", solution);
+    }
+}
 
 fn main_back() {
     let mut inst = Graph::new("./recipes/recipes1.json");

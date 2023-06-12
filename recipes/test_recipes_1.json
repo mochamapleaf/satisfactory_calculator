@@ -147,5 +147,65 @@
     "power_consumption": 4,
     "production_method": ["Refinery"],
     "unlock_tags": ["Alternate"]
+  },
+  {
+    "recipe_name": "Packaged Heavy Oil Residue",
+    "resources": ["Heavy Oil Residue", "Empty Canister"],
+    "resources_rates": [30, 30],
+    "products": ["Packaged Heavy Oil Residue"],
+    "product_rates": [30],
+    "power_consumption": 2,
+    "production_method": ["Packager"],
+    "unlock_tags": ["Oil Processing - Alternate"]
+  },
+  {
+    "recipe_name": "Packaged Water",
+    "resources": ["Water", "Empty Canister"],
+    "resources_rates": [120, 30],
+    "products": ["Packaged Water"],
+    "product_rates": [30],
+    "power_consumption": 4,
+    "production_method": ["Packager"],
+    "unlock_tags": ["Bottled Water"]
+  },
+  {
+    "recipe_name": "Empty Canister",
+    "resources": ["Plastic"],
+    "resources_rates": [20],
+    "products": ["Empty Canister"],
+    "product_rates": [20],
+    "power_consumption": 1,
+    "production_method": ["Assembler"],
+    "unlock_tags": ["Tier 2 - Basic Steel Production"]
+  },
+  {
+    "recipe_name": "Packaged Heavy Oil Residue",
+    "resources": ["Heavy Oil Residue", "Empty Canister"],
+    "resources_rates": [30, 30],
+    "products": ["Packaged Heavy Oil Residue"],
+    "product_rates": [30],
+    "power_consumption": 2,
+    "production_method": ["Packager"],
+    "unlock_tags": ["Oil Processing - Alternate"]
+  },
+  {
+    "recipe_name": "Crude Oil",
+    "resources": [],
+    "resources_rates": [],
+    "products": ["Crude Oil"],
+    "product_rates": [60],
+    "power_consumption": 1,
+    "production_method": ["Extractor"],
+    "unlock_tags": ["Oil Processing"]
+  },
+  {
+    "recipe_name": "Water",
+    "resources": [],
+    "resources_rates": [],
+    "products": ["Water"],
+    "product_rates": [120],
+    "power_consumption": 1,
+    "production_method": ["Extractor"],
+    "unlock_tags": []
   }
 ]
