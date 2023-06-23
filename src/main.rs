@@ -199,7 +199,6 @@ impl Graph {
 
     fn construct_matrix(&self, recipes: &Vec<String>, resources: &Vec<String>) -> (Array2<f64>, Vec<f64>){
         let mut matrix: Vec<Vec<f64>> = Vec::new();
-        let mut row_names : Vec<String> = Vec::new();
         let mut cost_vec: Vec<f64> = Vec::new();
 
         // Add input for "source nodes" in the graph
@@ -218,6 +217,7 @@ impl Graph {
                 let target_index = resources.iter().position(|v| v == product).unwrap();
                 new_row[target_index] -= self.recipes[recipe].resources_rates[i];
             }
+            //add positive weights
             for (i, product) in self.recipes[recipe].products.iter().enumerate() {
                 let target_index = resources.iter().position(|v| v == product).unwrap();
                 new_row[target_index] += self.recipes[recipe].product_rates[i];
@@ -225,7 +225,6 @@ impl Graph {
 
             matrix.push(new_row);
             cost_vec.push(self.recipes[recipe].power_consumption);
-            row_names.push(format!("{}: {}", self.recipes[recipe].production_method[0], recipe));
         }
         (Array2::from_shape_vec((matrix.len(), resources.len()), matrix.concat()).unwrap(), cost_vec)
     }
@@ -239,17 +238,22 @@ fn main(){
     let mut inst = Graph::new("./recipes/test_recipes_1.json");
     let mut start_map : HashMap<String, f64>= HashMap::new();
     start_map.insert("Plastic".to_string(), 300_f64);
-    let (resources, recipes) = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
-    println!("{:?}", resources);
+    let (mut resources, recipes) = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
     let (mut matrix,mut cost_vec) = inst.construct_matrix(&recipes, &resources);
-    println!("{:?}", matrix);
-    println!("{:?}", cost_vec);
 
+    let col_num = matrix.ncols();
+    let col_selector: Vec<_> = (1..col_num).collect();
+    let matrix = matrix.select(ndarray::Axis(1), &col_selector);
     let mut matrix_A = matrix.t().to_owned();
+    resources.remove(0);
     let mut target_vals : Vec<f64>= resources.iter()
         .map(|r| start_map.get(r).unwrap_or(&0_f64).clone()).collect();
     solve_lp(&matrix_A, &cost_vec, &target_vals);
-    println!("{:?}", recipes);
+    println!("{:?}", resources);
+    for i in 0..matrix.nrows(){
+        println!("{:?} - {} : {}", matrix.row(i), cost_vec[i], recipes[i]);
+    }
+    println!("{:?}", target_vals);
 }
 
 fn solve_lp(matrix: &Array2<f64>, cost_vec: &Vec<f64>, target_vec: &Vec<f64>){

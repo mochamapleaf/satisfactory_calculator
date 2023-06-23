@@ -11,3 +11,4 @@ ndarray = "0.15.6"
 ndarray-linalg = { version = "0.16.0", features = ["openblas"] }
 serde = { version = "1.0.160", features = ["derive"] }
 serde_json = "1.0.95"
+yew = { version = "0.20.0", features = ["csr"] }
