@@ -195,7 +195,7 @@
     "products": ["Crude Oil"],
     "product_rates": [60],
     "power_consumption": 1,
-    "production_method": ["Extractor"],
+    "production_method": ["Oil Extractor"],
     "unlock_tags": ["Oil Processing"]
   },
   {
@@ -205,7 +205,7 @@
     "products": ["Water"],
     "product_rates": [120],
     "power_consumption": 1,
-    "production_method": ["Extractor"],
+    "production_method": ["Water Extractor"],
     "unlock_tags": []
   }
 ]

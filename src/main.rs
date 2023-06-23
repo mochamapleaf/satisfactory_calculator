@@ -20,8 +20,16 @@ use wasm_bindgen::{JsCast, UnwrapThrowExt};
 
 use gloo_net::http::Request;
 
-static IMAGE_PREFIX_ADDRESS: &str = "https://satisfactory.wiki.gg/images/d/da/";
-static DEFAULT_JSON: &str = include_str!("../recipes/test_recipes_1.json");
+const DEFAULT_JSON: &str = include_str!("../recipes/test_recipes_1.json");
+
+use md5::{Md5,Digest};
+fn generate_item_image_link(name: &str) -> String{
+    let pic_name = format!("{}.png", name).replace(" ", "_");
+    let mut hasher = Md5::new();
+    hasher.update(pic_name.as_bytes());
+    let hex_str = format!("{:x}", hasher.finalize()).into_bytes();
+    format!("https://satisfactory.wiki.gg/images/{0}/{0}{1}/{2}", hex_str[0] as char, hex_str[1] as char, pic_name)
+}
 
 struct App{
     target_resources: Vec<String>,
@@ -175,8 +183,8 @@ impl App{
             {for self.data.recipes.iter().map(|(k,v)| html!{
                 <tr>
                 <td>{k}</td>
-                <td>{k}</td>
-                <td>{v.production_method.clone()}</td>
+                <td>{v.product_rates[0]}<img src={generate_item_image_link(&v.products[0])} width="25" height="25"/></td>
+                <td>{v.production_method.clone()}<img src={generate_item_image_link(&v.production_method[0])} width="25" height="25"/></td>
                 <td>{1_f64}</td>
                 </tr>
             })}
