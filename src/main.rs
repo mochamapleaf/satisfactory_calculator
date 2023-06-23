@@ -9,16 +9,19 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use ndarray::Array2;
-use ndarray_linalg::Inverse;
 
-extern crate glpk_sys;
-use glpk_sys::*;
 
 //for yew framework
 
 use yew::prelude::*;
 
+use web_sys::{Event, HtmlInputElement, InputEvent};
+use wasm_bindgen::{JsCast, UnwrapThrowExt};
+
+use gloo_net::http::Request;
+
 static IMAGE_PREFIX_ADDRESS: &str = "https://satisfactory.wiki.gg/images/d/da/";
+static DEFAULT_JSON: &str = include_str!("../recipes/test_recipes_1.json");
 
 struct App{
     target_resources: Vec<String>,
@@ -40,12 +43,13 @@ impl Component for App{
     type Properties = ();
     type Message = Msg;
     fn create(_ctx: &yew::Context<Self>) -> Self{
+
         App{
             target_resources: vec![],
             target_quanties: vec![],
             output_recipes: vec![],
             output_quantites: vec![],
-            data: Graph::new("./recipes/test_recipes_1.json"),
+            data: Graph::from_str(DEFAULT_JSON),
         }
     }
     fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool{
@@ -55,8 +59,13 @@ impl Component for App{
                 self.target_quanties.push(1_f64);
             }
             Msg::RemoveRow(index) => {
-                self.target_resources.remove(index);
-                self.target_quanties.remove(index);
+                if index == usize::MAX{
+                    self.target_resources.pop();
+                    self.target_quanties.pop();
+                }else {
+                    self.target_resources.remove(index);
+                    self.target_quanties.remove(index);
+                }
             }
             Msg::UpdateInputResource(index, new_name) => {
                 self.target_resources[index] = new_name;
@@ -80,6 +89,12 @@ impl Component for App{
         html! {
             <div class="container">
                 <h1>{"Satisfactory Calculator"}</h1>
+                 <div class="button-group">
+                            <button onclick={_ctx.link().callback(|_| Msg::AddRow)}>{ "Add Row" }</button>
+                            <button onclick={_ctx.link().callback(|_| Msg::RemoveRow(usize::MAX))}>{ "Pop Row" }</button>
+                            <button onclick={_ctx.link().callback(|_| Msg::Clear)}>{ "Clear" }</button>
+                            <button onclick={_ctx.link().callback(|_| Msg::Calculate)}>{ "Calculate" }</button>
+                        </div>
                 <div class="row">
                     <div class="column column-left">
                         <table>
@@ -91,14 +106,10 @@ impl Component for App{
                                 </tr>
                             </thead>
                             <tbody>
-                                //{for (0..self.target_resources.len()).map(|i| self.view_input_row(i))}
+                                {for (0..self.target_resources.len()).map(|i| self.view_input_row(_ctx, i))}
                             </tbody>
                         </table>
-                        <div class="button-group">
-                            <button onclick={_ctx.link().callback(|_| Msg::AddRow)}>{ "Add Row" }</button>
-                            <button onclick={_ctx.link().callback(|_| Msg::Clear)}>{ "Clear" }</button>
-                            <button onclick={_ctx.link().callback(|_| Msg::Calculate)}>{ "Calculate" }</button>
-                        </div>
+
                     </div>
                     <div class="column column-right">
                         <table>
@@ -111,7 +122,7 @@ impl Component for App{
                                 </tr>
                             </thead>
                             <tbody>
-                                //{for self.output_recipes.iter().map(|row| self.view_output_row(row))}
+                                {self.generate_output_table(_ctx)}
                             </tbody>
                         </table>
                         <div>{"Total power usage"}</div>
@@ -123,11 +134,54 @@ impl Component for App{
 }
 
 impl App{
-    fn view_input_row(&self, index: usize){
-
+    fn view_input_row(&self, ctx: &yew::Context<Self>, index: usize) -> Html{
+        html! {
+            <tr>
+                <td>
+                    <input
+                        type="text"
+                        value={self.target_resources[index].clone()}
+                        oninput={ctx.link().callback(move |e: InputEvent| {
+                let event: Event = e.dyn_into().unwrap_throw();
+    let event_target = event.target().unwrap_throw();
+    let target: HtmlInputElement = event_target.dyn_into().unwrap_throw();
+    web_sys::console::log_1(&target.value().into());
+                Msg::UpdateInputResource(index, target.value().to_owned())
+            })}
+                    />
+                </td>
+                <td>
+                    <input
+                        type="number"
+                        value={self.target_quanties[index].to_string()}
+                        oninput={ctx.link().callback(move |e: InputEvent| {
+                let event: Event = e.dyn_into().unwrap_throw();
+    let event_target = event.target().unwrap_throw();
+    let target: HtmlInputElement = event_target.dyn_into().unwrap_throw();
+    web_sys::console::log_1(&target.value().into());
+                Msg::UpdateInputQuantity(index, target.value().parse().unwrap())
+            })}
+                    />
+                </td>
+                <td>
+                    <button onclick={ctx.link().callback(move |_| Msg::RemoveRow(index)) }>{"Remove"}</button>
+                </td>
+            </tr>
+        }
     }
-    fn view_output_row(&self, index: usize){
-
+    fn generate_output_table(&self, ctx: &yew::Context<App>) -> Html{
+        html!{
+            <>
+            {for self.data.recipes.iter().map(|(k,v)| html!{
+                <tr>
+                <td>{k}</td>
+                <td>{k}</td>
+                <td>{v.production_method.clone()}</td>
+                <td>{1_f64}</td>
+                </tr>
+            })}
+            </>
+        }
     }
 }
 
@@ -171,10 +225,11 @@ static WORLD_ROOT: &str = "world_root";
 
 impl Graph {
     /// read json recipes, and construct a graph network of resources
-    fn new(filename: &str) -> Self {
-        let mut file = File::open(filename).expect("Unable to open JSON file");
-        let mut json_data = String::new();
-        file.read_to_string(&mut json_data).expect("Unable to read JSON file");
+    fn from_str(file: &str) -> Self {
+
+        // let mut file = File::open(filename).expect("Unable to open JSON file");
+        let mut json_data = file.to_string();
+        // file.read_to_string(&mut json_data).expect("Unable to read JSON file");
         let recipes_list: Vec<Recipe> = serde_json::from_str(&json_data).expect("Error parsing JSON file");
         let mut recipes_table: std::collections::HashMap<String, Recipe>
             = recipes_list.into_iter().map(|r| (r.recipe_name.clone(), r)).collect();
@@ -355,7 +410,7 @@ impl Graph {
     }
 }
 fn main_old(){
-    let mut inst = Graph::new("./recipes/test_recipes_1.json");
+    let mut inst = Graph::from_str("./recipes/test_recipes_1.json");
     let mut start_map : HashMap<String, f64>= HashMap::new();
     start_map.insert("Plastic".to_string(), 300_f64);
     let (mut resources, recipes) = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
@@ -368,7 +423,7 @@ fn main_old(){
     resources.remove(0);
     let mut target_vals : Vec<f64>= resources.iter()
         .map(|r| start_map.get(r).unwrap_or(&0_f64).clone()).collect();
-    solve_lp(&matrix_A, &cost_vec, &target_vals);
+    //solve_lp(&matrix_A, &cost_vec, &target_vals);
     println!("{:?}", resources);
     for i in 0..matrix.nrows(){
         println!("{:?} - {} : {}", matrix.row(i), cost_vec[i], recipes[i]);
@@ -376,105 +431,105 @@ fn main_old(){
     println!("{:?}", target_vals);
 }
 
-fn solve_lp(matrix: &Array2<f64>, cost_vec: &Vec<f64>, target_vec: &Vec<f64>){
-    unsafe{
-        let mut lp = glp_create_prob();
+// fn solve_lp(matrix: &Array2<f64>, cost_vec: &Vec<f64>, target_vec: &Vec<f64>){
+//     unsafe{
+//         let mut lp = glp_create_prob();
+//
+//         glp_set_obj_dir(lp, 1); //1 for GLP_MIN
+//         assert_eq!(matrix.nrows() , target_vec.len());
+//         assert_eq!(matrix.ncols() , cost_vec.len());
+//         glp_add_cols(lp,cost_vec.len() as i32);
+//         glp_add_rows(lp, target_vec.len() as i32);
+//
+//         for i in 1..=cost_vec.len(){
+//             glp_set_col_bnds(lp, i as i32, 2, 0.0, 0.0);
+//             glp_set_obj_coef(lp, i as i32, cost_vec[i-1]);
+//         }
+//
+//         for i in 1..=target_vec.len(){
+//             glp_set_row_bnds(lp, i as i32, 5, target_vec[i-1], target_vec[i-1]);
+//         }
+//         let mut ia: Vec<i32> = (1..=matrix.nrows())
+//             .flat_map(|x| std::iter::repeat(x).take(matrix.ncols()))
+//             .map(|v| v as i32).collect();
+//         ia.insert(0,0);
+//         let mut ja: Vec<i32> = (1..=matrix.ncols()).cycle().take(matrix.len())
+//             .map(|v| v as i32).collect();
+//         ja.insert(0,0);
+//
+//         let mut ar: Vec<f64> = matrix.clone().into_raw_vec();
+//         ar.insert(0, 0_f64);
+//         glp_load_matrix(lp, matrix.len() as i32, ia.as_ptr() , ja.as_ptr(), ar.as_ptr());
+//
+//         glp_simplex(lp, std::ptr::null_mut());
+//
+//         let status = glp_get_status(lp) as i32;
+//         let obj_val = glp_get_obj_val(lp) as f64;
+//         println!("Status: {:?}, Objective value: {}", status, obj_val);
+//
+//         let mut solution = vec![0_f64; matrix.ncols()];
+//         for i in 1..=matrix.ncols(){
+//             solution[i-1] = glp_get_col_prim(lp, i as i32);
+//         }
+//
+//         glp_delete_prob(lp);
+//
+//         println!("Solution: {:?}", solution);
+//     }
+// }
 
-        glp_set_obj_dir(lp, 1); //1 for GLP_MIN
-        assert_eq!(matrix.nrows() , target_vec.len());
-        assert_eq!(matrix.ncols() , cost_vec.len());
-        glp_add_cols(lp,cost_vec.len() as i32);
-        glp_add_rows(lp, target_vec.len() as i32);
-
-        for i in 1..=cost_vec.len(){
-            glp_set_col_bnds(lp, i as i32, 2, 0.0, 0.0);
-            glp_set_obj_coef(lp, i as i32, cost_vec[i-1]);
-        }
-
-        for i in 1..=target_vec.len(){
-            glp_set_row_bnds(lp, i as i32, 5, target_vec[i-1], target_vec[i-1]);
-        }
-        let mut ia: Vec<i32> = (1..=matrix.nrows())
-            .flat_map(|x| std::iter::repeat(x).take(matrix.ncols()))
-            .map(|v| v as i32).collect();
-        ia.insert(0,0);
-        let mut ja: Vec<i32> = (1..=matrix.ncols()).cycle().take(matrix.len())
-            .map(|v| v as i32).collect();
-        ja.insert(0,0);
-
-        let mut ar: Vec<f64> = matrix.clone().into_raw_vec();
-        ar.insert(0, 0_f64);
-        glp_load_matrix(lp, matrix.len() as i32, ia.as_ptr() , ja.as_ptr(), ar.as_ptr());
-
-        glp_simplex(lp, std::ptr::null_mut());
-
-        let status = glp_get_status(lp) as i32;
-        let obj_val = glp_get_obj_val(lp) as f64;
-        println!("Status: {:?}, Objective value: {}", status, obj_val);
-
-        let mut solution = vec![0_f64; matrix.ncols()];
-        for i in 1..=matrix.ncols(){
-            solution[i-1] = glp_get_col_prim(lp, i as i32);
-        }
-
-        glp_delete_prob(lp);
-
-        println!("Solution: {:?}", solution);
-    }
-}
-
-fn main_back() {
-    let mut inst = Graph::new("./recipes/recipes1.json");
-    let mut start_map : HashMap<String, f64>= HashMap::new();
-    //start_map.insert("Plastic".to_string(), 20_f64);
-    //start_map.insert("Fuel".to_string(), 300_f64);
-    start_map.insert("Plastic".to_string(), 300_f64);
-    start_map.insert("Heavy Oil Residue".to_string(), 20_f64);
-    let mut start_vec = start_map.iter().map(|(k,_)| k.clone()).collect();
-    let dep = find_dependency(&inst.recipes, &inst.resources, &mut start_vec);
-    for temp in dep{
-        let mut matrix = construct_matrix(&inst.recipes, &inst.resources, &temp.1, &temp.2);
-        //insert input and output nodes
-        let mut new_io = Vec::new();
-        for (i, resource) in temp.1.iter().enumerate(){
-            if inst.resources[resource].borrow().ingress_edges.len() == 0{
-                //input
-                new_io.push(format!("[input]{}", resource));
-                let mut temp_vec = vec![0_f64; temp.1.len()];
-                temp_vec[i] = 1_f64;
-                matrix.push(temp_vec);
-            }
-        }
-        let mut titles = temp.2.clone();
-        titles.extend(new_io);
-        //construct matrix, find inverse
-        matrix.iter().for_each(|v| println!("{:?}", v));
-        let mut graph_matrix = Array2::from_shape_vec((titles.len(), titles.len()), matrix.concat()).unwrap();
-
-        let mut graph_inv = graph_matrix.t().inv().unwrap();
-        println!("{:?}", graph_matrix);
-        let mut output_vec : Vec<f64>= temp.1.iter().map(|v|
-            if start_map.contains_key(v){
-                start_map[v]
-            }else{
-                0_f64
-            }).collect();
-        let mut output_array2 = Array2::from_shape_vec((titles.len(), 1), output_vec ).unwrap();
-        let result = graph_inv.dot(&output_array2);
-        println!("--------");
-        start_map.iter().for_each(|(k,v)|{
-            println!("{}[output] {}", k,v);
-        });
-        println!("--------");
-        for i in 0..result.len(){
-            println!("{} \t {}", titles[i], result[[i,0]]);
-        }
-
-
-
-
-    }
-}
+// fn main_back() {
+//     let mut inst = Graph::new("./recipes/recipes1.json");
+//     let mut start_map : HashMap<String, f64>= HashMap::new();
+//     //start_map.insert("Plastic".to_string(), 20_f64);
+//     //start_map.insert("Fuel".to_string(), 300_f64);
+//     start_map.insert("Plastic".to_string(), 300_f64);
+//     start_map.insert("Heavy Oil Residue".to_string(), 20_f64);
+//     let mut start_vec = start_map.iter().map(|(k,_)| k.clone()).collect();
+//     let dep = find_dependency(&inst.recipes, &inst.resources, &mut start_vec);
+//     for temp in dep{
+//         let mut matrix = construct_matrix(&inst.recipes, &inst.resources, &temp.1, &temp.2);
+//         //insert input and output nodes
+//         let mut new_io = Vec::new();
+//         for (i, resource) in temp.1.iter().enumerate(){
+//             if inst.resources[resource].borrow().ingress_edges.len() == 0{
+//                 //input
+//                 new_io.push(format!("[input]{}", resource));
+//                 let mut temp_vec = vec![0_f64; temp.1.len()];
+//                 temp_vec[i] = 1_f64;
+//                 matrix.push(temp_vec);
+//             }
+//         }
+//         let mut titles = temp.2.clone();
+//         titles.extend(new_io);
+//         //construct matrix, find inverse
+//         matrix.iter().for_each(|v| println!("{:?}", v));
+//         let mut graph_matrix = Array2::from_shape_vec((titles.len(), titles.len()), matrix.concat()).unwrap();
+//
+//         let mut graph_inv = graph_matrix.t().inv().unwrap();
+//         println!("{:?}", graph_matrix);
+//         let mut output_vec : Vec<f64>= temp.1.iter().map(|v|
+//             if start_map.contains_key(v){
+//                 start_map[v]
+//             }else{
+//                 0_f64
+//             }).collect();
+//         let mut output_array2 = Array2::from_shape_vec((titles.len(), 1), output_vec ).unwrap();
+//         let result = graph_inv.dot(&output_array2);
+//         println!("--------");
+//         start_map.iter().for_each(|(k,v)|{
+//             println!("{}[output] {}", k,v);
+//         });
+//         println!("--------");
+//         for i in 0..result.len(){
+//             println!("{} \t {}", titles[i], result[[i,0]]);
+//         }
+//
+//
+//
+//
+//     }
+// }
 
 
 fn find_dependency(recipes_table: &HashMap<String, Recipe>,

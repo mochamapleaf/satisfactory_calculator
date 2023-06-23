@@ -6,9 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glpk-sys = "0.2.0"
+gloo-net = "0.3.0"
 ndarray = "0.15.6"
-ndarray-linalg = { version = "0.16.0", features = ["openblas"] }
 serde = { version = "1.0.160", features = ["derive"] }
 serde_json = "1.0.95"
+wasm-bindgen = "0.2.87"
+wasm-bindgen-futures = "0.4.37"
+web-sys = "0.3.64"
 yew = { version = "0.20.0", features = ["csr"] }
