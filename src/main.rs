@@ -14,6 +14,127 @@ use ndarray_linalg::Inverse;
 extern crate glpk_sys;
 use glpk_sys::*;
 
+//for yew framework
+
+use yew::prelude::*;
+
+static IMAGE_PREFIX_ADDRESS: &str = "https://satisfactory.wiki.gg/images/d/da/";
+
+struct App{
+    target_resources: Vec<String>,
+    target_quanties: Vec<f64>,
+    output_recipes: Vec<String>,
+    output_quantites: Vec<f64>,
+    data: Graph,
+}
+
+enum Msg{
+    AddRow,
+    RemoveRow(usize),
+    UpdateInputResource(usize, String),
+    UpdateInputQuantity(usize, f64),
+    Clear,
+    Calculate,
+}
+impl Component for App{
+    type Properties = ();
+    type Message = Msg;
+    fn create(_ctx: &yew::Context<Self>) -> Self{
+        App{
+            target_resources: vec![],
+            target_quanties: vec![],
+            output_recipes: vec![],
+            output_quantites: vec![],
+            data: Graph::new("./recipes/test_recipes_1.json"),
+        }
+    }
+    fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool{
+        match msg{
+            Msg::AddRow => {
+                self.target_resources.push(String::new());
+                self.target_quanties.push(1_f64);
+            }
+            Msg::RemoveRow(index) => {
+                self.target_resources.remove(index);
+                self.target_quanties.remove(index);
+            }
+            Msg::UpdateInputResource(index, new_name) => {
+                self.target_resources[index] = new_name;
+            }
+            Msg::UpdateInputQuantity(index, new_val) => {
+                self.target_quanties[index] = new_val;
+            }
+            Msg::Clear => {
+                self.target_quanties.clear();
+                self.target_resources.clear();
+                self.output_quantites.clear();
+                self.output_recipes.clear();
+            }
+            Msg::Calculate => {
+                //TODO
+            }
+        }
+        true
+    }
+    fn view(&self, _ctx: &yew::Context<Self>) -> Html{
+        html! {
+            <div class="container">
+                <h1>{"Satisfactory Calculator"}</h1>
+                <div class="row">
+                    <div class="column column-left">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>{"Target resources"}</th>
+                                    <th>{"Target quantity"}</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                //{for (0..self.target_resources.len()).map(|i| self.view_input_row(i))}
+                            </tbody>
+                        </table>
+                        <div class="button-group">
+                            <button onclick={_ctx.link().callback(|_| Msg::AddRow)}>{ "Add Row" }</button>
+                            <button onclick={_ctx.link().callback(|_| Msg::Clear)}>{ "Clear" }</button>
+                            <button onclick={_ctx.link().callback(|_| Msg::Calculate)}>{ "Calculate" }</button>
+                        </div>
+                    </div>
+                    <div class="column column-right">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>{"Recipe name"}</th>
+                                    <th>{"Recipe detail"}</th>
+                                    <th>{"Production machine"}</th>
+                                    <th>{"Machine quantity"}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                //{for self.output_recipes.iter().map(|row| self.view_output_row(row))}
+                            </tbody>
+                        </table>
+                        <div>{"Total power usage"}</div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+}
+
+impl App{
+    fn view_input_row(&self, index: usize){
+
+    }
+    fn view_output_row(&self, index: usize){
+
+    }
+}
+
+fn main(){
+    yew::Renderer::<App>::new().render();
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 struct Recipe {
     recipe_name: String,
@@ -233,8 +354,7 @@ impl Graph {
         resource_list.sort_by_key( |v| u64::MAX - self.topological_sort_result[v.as_ref()].1);
     }
 }
-
-fn main(){
+fn main_old(){
     let mut inst = Graph::new("./recipes/test_recipes_1.json");
     let mut start_map : HashMap<String, f64>= HashMap::new();
     start_map.insert("Plastic".to_string(), 300_f64);
