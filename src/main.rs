@@ -20,6 +20,8 @@ use wasm_bindgen::{JsCast, UnwrapThrowExt};
 
 use gloo_net::http::Request;
 
+use minilp::{Problem, OptimizationDirection, ComparisonOp};
+
 const DEFAULT_JSON: &str = include_str!("../recipes/test_recipes_1.json");
 
 use md5::{Md5,Digest};
@@ -36,6 +38,8 @@ struct App{
     target_quanties: Vec<f64>,
     output_recipes: Vec<String>,
     output_quantites: Vec<f64>,
+    output_objective: f64,
+    lp_mode: ComparisonOp,
     data: Graph,
 }
 
@@ -57,6 +61,8 @@ impl Component for App{
             target_quanties: vec![],
             output_recipes: vec![],
             output_quantites: vec![],
+            output_objective: 0_f64,
+            lp_mode: ComparisonOp::Ge,
             data: Graph::from_str(DEFAULT_JSON),
         }
     }
@@ -86,9 +92,26 @@ impl Component for App{
                 self.target_resources.clear();
                 self.output_quantites.clear();
                 self.output_recipes.clear();
+                self.lp_mode = ComparisonOp::Ge;
+                self.output_objective = 0_f64;
             }
             Msg::Calculate => {
-                //TODO
+                let (mut resources, recipes) = self.data.find_all_related(self.target_resources.iter().map(|s| s.as_str()));
+                let (mut matrix,mut cost_vec) = self.data.construct_matrix(&recipes, &resources);
+
+                let col_num = matrix.ncols();
+                let col_selector: Vec<_> = (1..col_num).collect();
+                let matrix = matrix.select(ndarray::Axis(1), &col_selector); //remove empty column "world root"
+                let mut matrix_A = matrix.t().to_owned();
+                resources.remove(0);
+                let target_map: HashMap<_, _> = self.target_resources.iter().zip(self.target_quanties.iter()).collect();
+                let mut target_vals : Vec<f64>= resources.iter()
+                    .map(|r| **target_map.get(r).unwrap_or(&&0_f64)).collect();
+                let (solution, objective) = solve_lp(&matrix_A, &cost_vec,&target_vals, self.lp_mode);
+                self.output_objective = objective;
+                let temp: Vec<_> = solution.iter().zip(recipes.iter()).filter(|(&s,_)| s > 0_f64 ).collect();
+                self.output_recipes = temp.iter().map(|(_, s)| (*s).clone()).collect();
+                self.output_quantites = temp.iter().map(|(&v, _)| v).collect();
             }
         }
         true
@@ -133,7 +156,7 @@ impl Component for App{
                                 {self.generate_output_table(_ctx)}
                             </tbody>
                         </table>
-                        <div>{"Total power usage"}</div>
+                        <div>{"Total power usage: "} {self.output_objective}</div>
                     </div>
                 </div>
             </div>
@@ -180,12 +203,12 @@ impl App{
     fn generate_output_table(&self, ctx: &yew::Context<App>) -> Html{
         html!{
             <>
-            {for self.data.recipes.iter().map(|(k,v)| html!{
+            {for self.output_recipes.iter().zip(self.output_quantites.iter()).map(|(k,v)| html!{
                 <tr>
                 <td>{k}</td>
-                <td>{v.product_rates[0]}<img src={generate_item_image_link(&v.products[0])} width="25" height="25"/></td>
-                <td>{v.production_method.clone()}<img src={generate_item_image_link(&v.production_method[0])} width="25" height="25"/></td>
-                <td>{1_f64}</td>
+                <td>{self.data.recipes[k].product_rates[0]}<img src={generate_item_image_link(&self.data.recipes[k].products[0])} width="25" height="25"/></td>
+                <td>{self.data.recipes[k].production_method.clone()}<img src={generate_item_image_link(&self.data.recipes[k].production_method[0])} width="25" height="25"/></td>
+                <td>{v}</td>
                 </tr>
             })}
             </>
@@ -417,8 +440,10 @@ impl Graph {
         resource_list.sort_by_key( |v| u64::MAX - self.topological_sort_result[v.as_ref()].1);
     }
 }
+
+#[test]
 fn main_old(){
-    let mut inst = Graph::from_str("./recipes/test_recipes_1.json");
+    let mut inst = Graph::from_str(DEFAULT_JSON);
     let mut start_map : HashMap<String, f64>= HashMap::new();
     start_map.insert("Plastic".to_string(), 300_f64);
     let (mut resources, recipes) = inst.find_all_related(start_map.keys().map(|s| s.as_str()));
@@ -431,7 +456,7 @@ fn main_old(){
     resources.remove(0);
     let mut target_vals : Vec<f64>= resources.iter()
         .map(|r| start_map.get(r).unwrap_or(&0_f64).clone()).collect();
-    //solve_lp(&matrix_A, &cost_vec, &target_vals);
+    solve_lp(&matrix_A, &cost_vec, &target_vals, minilp::ComparisonOp::Ge);
     println!("{:?}", resources);
     for i in 0..matrix.nrows(){
         println!("{:?} - {} : {}", matrix.row(i), cost_vec[i], recipes[i]);
@@ -439,52 +464,62 @@ fn main_old(){
     println!("{:?}", target_vals);
 }
 
-// fn solve_lp(matrix: &Array2<f64>, cost_vec: &Vec<f64>, target_vec: &Vec<f64>){
-//     unsafe{
-//         let mut lp = glp_create_prob();
-//
-//         glp_set_obj_dir(lp, 1); //1 for GLP_MIN
-//         assert_eq!(matrix.nrows() , target_vec.len());
-//         assert_eq!(matrix.ncols() , cost_vec.len());
-//         glp_add_cols(lp,cost_vec.len() as i32);
-//         glp_add_rows(lp, target_vec.len() as i32);
-//
-//         for i in 1..=cost_vec.len(){
-//             glp_set_col_bnds(lp, i as i32, 2, 0.0, 0.0);
-//             glp_set_obj_coef(lp, i as i32, cost_vec[i-1]);
-//         }
-//
-//         for i in 1..=target_vec.len(){
-//             glp_set_row_bnds(lp, i as i32, 5, target_vec[i-1], target_vec[i-1]);
-//         }
-//         let mut ia: Vec<i32> = (1..=matrix.nrows())
-//             .flat_map(|x| std::iter::repeat(x).take(matrix.ncols()))
-//             .map(|v| v as i32).collect();
-//         ia.insert(0,0);
-//         let mut ja: Vec<i32> = (1..=matrix.ncols()).cycle().take(matrix.len())
-//             .map(|v| v as i32).collect();
-//         ja.insert(0,0);
-//
-//         let mut ar: Vec<f64> = matrix.clone().into_raw_vec();
-//         ar.insert(0, 0_f64);
-//         glp_load_matrix(lp, matrix.len() as i32, ia.as_ptr() , ja.as_ptr(), ar.as_ptr());
-//
-//         glp_simplex(lp, std::ptr::null_mut());
-//
-//         let status = glp_get_status(lp) as i32;
-//         let obj_val = glp_get_obj_val(lp) as f64;
-//         println!("Status: {:?}, Objective value: {}", status, obj_val);
-//
-//         let mut solution = vec![0_f64; matrix.ncols()];
-//         for i in 1..=matrix.ncols(){
-//             solution[i-1] = glp_get_col_prim(lp, i as i32);
-//         }
-//
-//         glp_delete_prob(lp);
-//
-//         println!("Solution: {:?}", solution);
-//     }
-// }
+
+fn solve_lp(matrix: &Array2<f64>, cost_vec: &Vec<f64>, target_vec: &Vec<f64>, lp_option: minilp::ComparisonOp) -> (Vec<f64>, f64){
+    let mut problem = Problem::new(OptimizationDirection::Minimize);
+    let vars: Vec<_> = cost_vec.iter().map(|&v| problem.add_var(v, (0.0, f64::INFINITY))).collect(); //each var >= 0
+    for row in 0..matrix.nrows(){
+        let mut row_expr = minilp::LinearExpr::empty();
+        matrix.row(row).iter().enumerate().for_each(|(i, &v)| row_expr.add(vars[i], v));
+        problem.add_constraint(row_expr, lp_option, target_vec[row]);
+    }
+    let solution = problem.solve().unwrap();
+    ( (0..matrix.ncols()).map(|i| *solution.var_value(vars[i])).collect(), solution.objective() )
+    // unsafe{
+    //     let mut lp = glp_create_prob();
+    //
+    //     glp_set_obj_dir(lp, 1); //1 for GLP_MIN
+    //     assert_eq!(matrix.nrows() , target_vec.len());
+    //     assert_eq!(matrix.ncols() , cost_vec.len());
+    //     glp_add_cols(lp,cost_vec.len() as i32);
+    //     glp_add_rows(lp, target_vec.len() as i32);
+    //
+    //     for i in 1..=cost_vec.len(){
+    //         glp_set_col_bnds(lp, i as i32, 2, 0.0, 0.0);
+    //         glp_set_obj_coef(lp, i as i32, cost_vec[i-1]);
+    //     }
+    //
+    //     for i in 1..=target_vec.len(){
+    //         glp_set_row_bnds(lp, i as i32, 5, target_vec[i-1], target_vec[i-1]);
+    //     }
+    //     let mut ia: Vec<i32> = (1..=matrix.nrows())
+    //         .flat_map(|x| std::iter::repeat(x).take(matrix.ncols()))
+    //         .map(|v| v as i32).collect();
+    //     ia.insert(0,0);
+    //     let mut ja: Vec<i32> = (1..=matrix.ncols()).cycle().take(matrix.len())
+    //         .map(|v| v as i32).collect();
+    //     ja.insert(0,0);
+    //
+    //     let mut ar: Vec<f64> = matrix.clone().into_raw_vec();
+    //     ar.insert(0, 0_f64);
+    //     glp_load_matrix(lp, matrix.len() as i32, ia.as_ptr() , ja.as_ptr(), ar.as_ptr());
+    //
+    //     glp_simplex(lp, std::ptr::null_mut());
+    //
+    //     let status = glp_get_status(lp) as i32;
+    //     let obj_val = glp_get_obj_val(lp) as f64;
+    //     println!("Status: {:?}, Objective value: {}", status, obj_val);
+    //
+    //     let mut solution = vec![0_f64; matrix.ncols()];
+    //     for i in 1..=matrix.ncols(){
+    //         solution[i-1] = glp_get_col_prim(lp, i as i32);
+    //     }
+    //
+    //     glp_delete_prob(lp);
+    //
+    //     println!("Solution: {:?}", solution);
+    // }
+}
 
 // fn main_back() {
 //     let mut inst = Graph::new("./recipes/recipes1.json");

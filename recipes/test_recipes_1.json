@@ -175,7 +175,7 @@
     "products": ["Empty Canister"],
     "product_rates": [20],
     "power_consumption": 1,
-    "production_method": ["Assembler"],
+    "production_method": ["Constructor"],
     "unlock_tags": ["Tier 2 - Basic Steel Production"]
   },
   {
