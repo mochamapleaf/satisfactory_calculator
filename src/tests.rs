@@ -9,10 +9,4 @@ mod test{
         all_resources.reverse();
         println!("{:?}", all_resources);
     }
-
-    //Self circular recipes should self-cancel when put into incident matrix
-    #[test]
-    fn test_self_circular_matrix_representation(){
-
-    }
 }
