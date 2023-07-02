@@ -1,5 +1,6 @@
 use yew::prelude::*;
 
+use gloo_net::http::{Request, QueryParams};
 use web_sys::{Event, HtmlInputElement, InputEvent};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use minilp::{Problem, OptimizationDirection, ComparisonOp};
@@ -9,7 +10,7 @@ use std::collections::HashMap;
 use crate::graph::*;
 use crate::utilities::*;
 
-const DEFAULT_JSON: &str = include_str!("../recipes/test_recipes_1.json");
+const DEFAULT_JSON: &str = include_str!("../recipes/auto_output.json");
 
 pub struct App{
     target_resources: Vec<String>,
@@ -33,7 +34,6 @@ impl Component for App{
     type Properties = ();
     type Message = Msg;
     fn create(_ctx: &yew::Context<Self>) -> Self{
-
         App{
             target_resources: vec![],
             target_quanties: vec![],

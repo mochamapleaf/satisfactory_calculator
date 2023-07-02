@@ -1,0 +1,5253 @@
+[
+  {
+    "recipe_name": "AI Limiter",
+    "resources": [
+      "Desc_CopperSheet_C",
+      "Desc_HighSpeedWire_C"
+    ],
+    "resources_rates": [
+      25.0,
+      100.0
+    ],
+    "products": [
+      "Desc_CircuitBoardHighSpeed_C"
+    ],
+    "product_rates": [
+      25.0,
+      100.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - AI Limiter OR<br>[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Alien DNA Capsule",
+    "resources": [
+      "Desc_AlienProtein_C"
+    ],
+    "resources_rates": [
+      10.0
+    ],
+    "products": [
+      "Desc_AlienDNACapsule_C"
+    ],
+    "product_rates": [
+      10.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Alien Organisms Research|MAM Alien Organisms Research]] - Bio-Organic Properties"
+    ]
+  },
+  {
+    "recipe_name": "Adhered Iron Plate",
+    "resources": [
+      "Desc_IronPlate_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      11.25,
+      3.75
+    ],
+    "products": [
+      "Desc_IronPlateReinforced_C"
+    ],
+    "product_rates": [
+      11.25,
+      3.75
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Alclad Casing",
+    "resources": [
+      "Desc_AluminumIngot_C",
+      "Desc_CopperIngot_C"
+    ],
+    "resources_rates": [
+      150.0,
+      75.0
+    ],
+    "products": [
+      "Desc_AluminumCasing_C"
+    ],
+    "product_rates": [
+      150.0,
+      75.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Automated Miner",
+    "resources": [
+      "Desc_Motor_C",
+      "Desc_SteelPipe_C",
+      "Desc_IronRod_C",
+      "Desc_IronPlate_C"
+    ],
+    "resources_rates": [
+      1.0,
+      4.0,
+      4.0,
+      2.0
+    ],
+    "products": [
+      "BP_ItemDescriptorPortableMiner_C"
+    ],
+    "product_rates": [
+      1.0,
+      4.0,
+      4.0,
+      2.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing"
+    ]
+  },
+  {
+    "recipe_name": "Crystal Beacon",
+    "resources": [
+      "Desc_SteelPlate_C",
+      "Desc_SteelPipe_C",
+      "Desc_CrystalOscillator_C"
+    ],
+    "resources_rates": [
+      2.0,
+      8.0,
+      0.5
+    ],
+    "products": [
+      "BP_EquipmentDescriptorBeacon_C"
+    ],
+    "product_rates": [
+      2.0,
+      8.0,
+      0.5
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
+    ]
+  },
+  {
+    "recipe_name": "Bolted Frame",
+    "resources": [
+      "Desc_IronPlateReinforced_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      7.5,
+      140.0
+    ],
+    "products": [
+      "Desc_ModularFrame_C"
+    ],
+    "product_rates": [
+      7.5,
+      140.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 2]] - Part Assembly"
+    ]
+  },
+  {
+    "recipe_name": "Insulated Cable",
+    "resources": [
+      "Desc_Wire_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      45.0,
+      30.0
+    ],
+    "products": [
+      "Desc_Cable_C"
+    ],
+    "product_rates": [
+      45.0,
+      30.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Quickwire Cable",
+    "resources": [
+      "Desc_HighSpeedWire_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      7.5,
+      5.0
+    ],
+    "products": [
+      "Desc_Cable_C"
+    ],
+    "product_rates": [
+      7.5,
+      5.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
+    ]
+  },
+  {
+    "recipe_name": "Silicon Circuit Board",
+    "resources": [
+      "Desc_CopperSheet_C",
+      "Desc_Silica_C"
+    ],
+    "resources_rates": [
+      27.5,
+      27.5
+    ],
+    "products": [
+      "Desc_CircuitBoard_C"
+    ],
+    "product_rates": [
+      27.5,
+      27.5
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz"
+    ]
+  },
+  {
+    "recipe_name": "Caterium Circuit Board",
+    "resources": [
+      "Desc_Plastic_C",
+      "Desc_HighSpeedWire_C"
+    ],
+    "resources_rates": [
+      12.5,
+      37.5
+    ],
+    "products": [
+      "Desc_CircuitBoard_C"
+    ],
+    "product_rates": [
+      12.5,
+      37.5
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
+    ]
+  },
+  {
+    "recipe_name": "Classic Battery",
+    "resources": [
+      "Desc_Sulfur_C",
+      "Desc_AluminumPlate_C",
+      "Desc_Plastic_C",
+      "Desc_Wire_C"
+    ],
+    "resources_rates": [
+      45.0,
+      52.5,
+      60.0,
+      90.0
+    ],
+    "products": [
+      "Desc_Battery_C"
+    ],
+    "product_rates": [
+      45.0,
+      52.5,
+      60.0,
+      90.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Charcoal",
+    "resources": [
+      "Desc_Wood_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_Coal_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Coal Power OR<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
+    ]
+  },
+  {
+    "recipe_name": "Biocoal",
+    "resources": [
+      "Desc_GenericBiomass_C"
+    ],
+    "resources_rates": [
+      37.5
+    ],
+    "products": [
+      "Desc_Coal_C"
+    ],
+    "product_rates": [
+      37.5
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Coal Power OR<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
+    ]
+  },
+  {
+    "recipe_name": "Coated Cable",
+    "resources": [
+      "Desc_Wire_C",
+      "Desc_HeavyOilResidue_C"
+    ],
+    "resources_rates": [
+      37.5,
+      15.0
+    ],
+    "products": [
+      "Desc_Cable_C"
+    ],
+    "product_rates": [
+      37.5,
+      15.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Coated Iron Canister",
+    "resources": [
+      "Desc_IronPlate_C",
+      "Desc_CopperSheet_C"
+    ],
+    "resources_rates": [
+      30.0,
+      15.0
+    ],
+    "products": [
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      30.0,
+      15.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Coated Iron Plate",
+    "resources": [
+      "Desc_IronIngot_C",
+      "Desc_Plastic_C"
+    ],
+    "resources_rates": [
+      50.0,
+      10.0
+    ],
+    "products": [
+      "Desc_IronPlate_C"
+    ],
+    "product_rates": [
+      50.0,
+      10.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Coke Steel Ingot",
+    "resources": [
+      "Desc_OreIron_C",
+      "Desc_PetroleumCoke_C"
+    ],
+    "resources_rates": [
+      75.0,
+      75.0
+    ],
+    "products": [
+      "Desc_SteelIngot_C"
+    ],
+    "product_rates": [
+      75.0,
+      75.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Caterium Computer",
+    "resources": [
+      "Desc_CircuitBoard_C",
+      "Desc_HighSpeedWire_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      26.25,
+      105.0,
+      45.0
+    ],
+    "products": [
+      "Desc_Computer_C"
+    ],
+    "product_rates": [
+      26.25,
+      105.0,
+      45.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
+    ]
+  },
+  {
+    "recipe_name": "Crystal Computer",
+    "resources": [
+      "Desc_CircuitBoard_C",
+      "Desc_CrystalOscillator_C"
+    ],
+    "resources_rates": [
+      7.5,
+      2.8125
+    ],
+    "products": [
+      "Desc_Computer_C"
+    ],
+    "product_rates": [
+      7.5,
+      2.8125
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
+    ]
+  },
+  {
+    "recipe_name": "Fine Concrete",
+    "resources": [
+      "Desc_Silica_C",
+      "Desc_Stone_C"
+    ],
+    "resources_rates": [
+      7.5,
+      30.0
+    ],
+    "products": [
+      "Desc_Cement_C"
+    ],
+    "product_rates": [
+      7.5,
+      30.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Quartz Research|MAM Quartz Research]] - Quartz"
+    ]
+  },
+  {
+    "recipe_name": "Cooling Device",
+    "resources": [
+      "Desc_AluminumPlateReinforced_C",
+      "Desc_Motor_C",
+      "Desc_NitrogenGas_C"
+    ],
+    "resources_rates": [
+      9.375,
+      1.875,
+      45.0
+    ],
+    "products": [
+      "Desc_CoolingSystem_C"
+    ],
+    "product_rates": [
+      9.375,
+      1.875,
+      45.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Copper Alloy Ingot",
+    "resources": [
+      "Desc_OreCopper_C",
+      "Desc_OreIron_C"
+    ],
+    "resources_rates": [
+      50.0,
+      25.0
+    ],
+    "products": [
+      "Desc_CopperIngot_C"
+    ],
+    "product_rates": [
+      50.0,
+      25.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      ""
+    ]
+  },
+  {
+    "recipe_name": "Copper Rotor",
+    "resources": [
+      "Desc_CopperSheet_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      22.5,
+      195.0
+    ],
+    "products": [
+      "Desc_Rotor_C"
+    ],
+    "product_rates": [
+      22.5,
+      195.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 2]] - Part Assembly"
+    ]
+  },
+  {
+    "recipe_name": "Insulated Crystal Oscillator",
+    "resources": [
+      "Desc_QuartzCrystal_C",
+      "Desc_Rubber_C",
+      "Desc_CircuitBoardHighSpeed_C"
+    ],
+    "resources_rates": [
+      18.75,
+      13.125,
+      1.875
+    ],
+    "products": [
+      "Desc_CrystalOscillator_C"
+    ],
+    "product_rates": [
+      18.75,
+      13.125,
+      1.875
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Quartz Research|MAM Quartz Research]] - Crystal Oscillator OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Electronics OR<br>[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Diluted Fuel",
+    "resources": [
+      "Desc_HeavyOilResidue_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      50.0,
+      100.0
+    ],
+    "products": [
+      "Desc_LiquidFuel_C"
+    ],
+    "product_rates": [
+      50.0,
+      100.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Diluted Packaged Fuel",
+    "resources": [
+      "Desc_HeavyOilResidue_C",
+      "Desc_PackagedWater_C"
+    ],
+    "resources_rates": [
+      30.0,
+      60.0
+    ],
+    "products": [
+      "Desc_Fuel_C"
+    ],
+    "product_rates": [
+      30.0,
+      60.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Electric Motor",
+    "resources": [
+      "Desc_ElectromagneticControlRod_C",
+      "Desc_Rotor_C"
+    ],
+    "resources_rates": [
+      3.75,
+      7.5
+    ],
+    "products": [
+      "Desc_Motor_C"
+    ],
+    "product_rates": [
+      3.75,
+      7.5
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Electrode - Aluminum Scrap",
+    "resources": [
+      "Desc_AluminaSolution_C",
+      "Desc_PetroleumCoke_C"
+    ],
+    "resources_rates": [
+      180.0,
+      60.0
+    ],
+    "products": [
+      "Desc_AluminumScrap_C",
+      "Desc_Water_C"
+    ],
+    "product_rates": [
+      180.0,
+      60.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Electrode Circuit Board",
+    "resources": [
+      "Desc_Rubber_C",
+      "Desc_PetroleumCoke_C"
+    ],
+    "resources_rates": [
+      30.0,
+      45.0
+    ],
+    "products": [
+      "Desc_CircuitBoard_C"
+    ],
+    "product_rates": [
+      30.0,
+      45.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Electromagnetic Connection Rod",
+    "resources": [
+      "Desc_Stator_C",
+      "Desc_HighSpeedConnector_C"
+    ],
+    "resources_rates": [
+      8.0,
+      4.0
+    ],
+    "products": [
+      "Desc_ElectromagneticControlRod_C"
+    ],
+    "product_rates": [
+      8.0,
+      4.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power OR<br>[[Caterium Research|MAM Caterium Research]] - AI Limiter"
+    ]
+  },
+  {
+    "recipe_name": "Encased Industrial Pipe",
+    "resources": [
+      "Desc_SteelPipe_C",
+      "Desc_Cement_C"
+    ],
+    "resources_rates": [
+      28.0,
+      20.0
+    ],
+    "products": [
+      "Desc_SteelPlateReinforced_C"
+    ],
+    "product_rates": [
+      28.0,
+      20.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Compacted Coal",
+    "resources": [
+      "Desc_Coal_C",
+      "Desc_Sulfur_C"
+    ],
+    "resources_rates": [
+      25.0,
+      25.0
+    ],
+    "products": [
+      "Desc_CompactedCoal_C"
+    ],
+    "product_rates": [
+      25.0,
+      25.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
+    ]
+  },
+  {
+    "recipe_name": "Fertile Uranium",
+    "resources": [
+      "Desc_OreUranium_C",
+      "Desc_NuclearWaste_C",
+      "Desc_NitricAcid_C",
+      "Desc_SulfuricAcid_C"
+    ],
+    "resources_rates": [
+      25.0,
+      25.0,
+      15.0,
+      25.0
+    ],
+    "products": [
+      "Desc_NonFissibleUranium_C",
+      "Desc_Water_C"
+    ],
+    "product_rates": [
+      25.0,
+      25.0,
+      15.0,
+      25.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Flexible Framework",
+    "resources": [
+      "Desc_ModularFrame_C",
+      "Desc_SteelPlate_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      3.75,
+      22.5,
+      30.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_2_C"
+    ],
+    "product_rates": [
+      3.75,
+      22.5,
+      30.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Fused Wire",
+    "resources": [
+      "Desc_CopperIngot_C",
+      "Desc_GoldIngot_C"
+    ],
+    "resources_rates": [
+      12.0,
+      3.0
+    ],
+    "products": [
+      "Desc_Wire_C"
+    ],
+    "product_rates": [
+      12.0,
+      3.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - Caterium"
+    ]
+  },
+  {
+    "recipe_name": "Fine Black Powder",
+    "resources": [
+      "Desc_Sulfur_C",
+      "Desc_CompactedCoal_C"
+    ],
+    "resources_rates": [
+      7.5,
+      3.75
+    ],
+    "products": [
+      "Desc_Gunpowder_C"
+    ],
+    "product_rates": [
+      7.5,
+      3.75
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
+    ]
+  },
+  {
+    "recipe_name": "Heat-Fused Frame",
+    "resources": [
+      "Desc_ModularFrameHeavy_C",
+      "Desc_AluminumIngot_C",
+      "Desc_NitricAcid_C",
+      "Desc_LiquidFuel_C"
+    ],
+    "resources_rates": [
+      3.0,
+      150.0,
+      24.0,
+      30.0
+    ],
+    "products": [
+      "Desc_ModularFrameFused_C"
+    ],
+    "product_rates": [
+      3.0,
+      150.0,
+      24.0,
+      30.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Heat Exchanger",
+    "resources": [
+      "Desc_AluminumCasing_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      30.0,
+      30.0
+    ],
+    "products": [
+      "Desc_AluminumPlateReinforced_C"
+    ],
+    "product_rates": [
+      30.0,
+      30.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Heavy Flexible Frame",
+    "resources": [
+      "Desc_ModularFrame_C",
+      "Desc_SteelPlateReinforced_C",
+      "Desc_Rubber_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      18.75,
+      11.25,
+      75.0,
+      390.0
+    ],
+    "products": [
+      "Desc_ModularFrameHeavy_C"
+    ],
+    "product_rates": [
+      18.75,
+      11.25,
+      75.0,
+      390.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing"
+    ]
+  },
+  {
+    "recipe_name": "Heavy Oil Residue",
+    "resources": [
+      "Desc_LiquidOil_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_HeavyOilResidue_C",
+      "Desc_PolymerResin_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Silicon High-Speed Connector",
+    "resources": [
+      "Desc_HighSpeedWire_C",
+      "Desc_Silica_C",
+      "Desc_CircuitBoard_C"
+    ],
+    "resources_rates": [
+      90.0,
+      37.5,
+      3.0
+    ],
+    "products": [
+      "Desc_HighSpeedConnector_C"
+    ],
+    "product_rates": [
+      90.0,
+      37.5,
+      3.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - High-Speed Connector OR<br>[[Tier 5]] - Oil Processing OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz"
+    ]
+  },
+  {
+    "recipe_name": "Automated Speed Wiring",
+    "resources": [
+      "Desc_Stator_C",
+      "Desc_Wire_C",
+      "Desc_HighSpeedConnector_C"
+    ],
+    "resources_rates": [
+      3.75,
+      75.0,
+      1.875
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_3_C"
+    ],
+    "product_rates": [
+      3.75,
+      75.0,
+      1.875
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production OR<br>[[Caterium Research|MAM Caterium Research]] - AI Limiter"
+    ]
+  },
+  {
+    "recipe_name": "Iron Alloy Ingot",
+    "resources": [
+      "Desc_OreIron_C",
+      "Desc_OreCopper_C"
+    ],
+    "resources_rates": [
+      20.0,
+      20.0
+    ],
+    "products": [
+      "Desc_IronIngot_C"
+    ],
+    "product_rates": [
+      20.0,
+      20.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      ""
+    ]
+  },
+  {
+    "recipe_name": "Solid Steel Ingot",
+    "resources": [
+      "Desc_IronIngot_C",
+      "Desc_Coal_C"
+    ],
+    "resources_rates": [
+      40.0,
+      40.0
+    ],
+    "products": [
+      "Desc_SteelIngot_C"
+    ],
+    "product_rates": [
+      40.0,
+      40.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Compacted Steel Ingot",
+    "resources": [
+      "Desc_OreIron_C",
+      "Desc_CompactedCoal_C"
+    ],
+    "resources_rates": [
+      22.5,
+      11.25
+    ],
+    "products": [
+      "Desc_SteelIngot_C"
+    ],
+    "product_rates": [
+      22.5,
+      11.25
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal OR<br>[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Instant Plutonium Cell",
+    "resources": [
+      "Desc_NonFissibleUranium_C",
+      "Desc_AluminumCasing_C"
+    ],
+    "resources_rates": [
+      75.0,
+      10.0
+    ],
+    "products": [
+      "Desc_PlutoniumCell_C"
+    ],
+    "product_rates": [
+      75.0,
+      10.0
+    ],
+    "power_consumption": 1000.0,
+    "production_method": [
+      "Desc_HadronCollider_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Instant Scrap",
+    "resources": [
+      "Desc_OreBauxite_C",
+      "Desc_Coal_C",
+      "Desc_SulfuricAcid_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      150.0,
+      100.0,
+      50.0,
+      60.0
+    ],
+    "products": [
+      "Desc_AluminumScrap_C",
+      "Desc_Water_C"
+    ],
+    "product_rates": [
+      150.0,
+      100.0,
+      50.0,
+      60.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement OR<br>[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Heavy Encased Frame",
+    "resources": [
+      "Desc_ModularFrame_C",
+      "Desc_SteelPlateReinforced_C",
+      "Desc_SteelPipe_C",
+      "Desc_Cement_C"
+    ],
+    "resources_rates": [
+      7.5,
+      9.375,
+      33.75,
+      20.625
+    ],
+    "products": [
+      "Desc_ModularFrameHeavy_C"
+    ],
+    "product_rates": [
+      7.5,
+      9.375,
+      33.75,
+      20.625
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing"
+    ]
+  },
+  {
+    "recipe_name": "Steeled Frame",
+    "resources": [
+      "Desc_IronPlateReinforced_C",
+      "Desc_SteelPipe_C"
+    ],
+    "resources_rates": [
+      2.0,
+      10.0
+    ],
+    "products": [
+      "Desc_ModularFrame_C"
+    ],
+    "product_rates": [
+      2.0,
+      10.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Rigour Motor",
+    "resources": [
+      "Desc_Rotor_C",
+      "Desc_Stator_C",
+      "Desc_CrystalOscillator_C"
+    ],
+    "resources_rates": [
+      3.75,
+      3.75,
+      1.25
+    ],
+    "products": [
+      "Desc_Motor_C"
+    ],
+    "product_rates": [
+      3.75,
+      3.75,
+      1.25
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
+    ]
+  },
+  {
+    "recipe_name": "Uranium Fuel Unit",
+    "resources": [
+      "Desc_UraniumCell_C",
+      "Desc_ElectromagneticControlRod_C",
+      "Desc_CrystalOscillator_C",
+      "BP_EquipmentDescriptorBeacon_C"
+    ],
+    "resources_rates": [
+      20.0,
+      2.0,
+      0.6000000000000001,
+      1.2000000000000002
+    ],
+    "products": [
+      "Desc_NuclearFuelRod_C"
+    ],
+    "product_rates": [
+      20.0,
+      2.0,
+      0.6000000000000001,
+      1.2000000000000002
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
+    ]
+  },
+  {
+    "recipe_name": "OC Supercomputer",
+    "resources": [
+      "Desc_ModularFrameLightweight_C",
+      "Desc_CoolingSystem_C"
+    ],
+    "resources_rates": [
+      9.0,
+      9.0
+    ],
+    "products": [
+      "Desc_ComputerSuper_C"
+    ],
+    "product_rates": [
+      9.0,
+      9.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering OR<br>[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Plastic Smart Plating",
+    "resources": [
+      "Desc_IronPlateReinforced_C",
+      "Desc_Rotor_C",
+      "Desc_Plastic_C"
+    ],
+    "resources_rates": [
+      2.5,
+      2.5,
+      7.5
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_1_C"
+    ],
+    "product_rates": [
+      2.5,
+      2.5,
+      7.5
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Recycled Plastic",
+    "resources": [
+      "Desc_Rubber_C",
+      "Desc_LiquidFuel_C"
+    ],
+    "resources_rates": [
+      30.0,
+      30.0
+    ],
+    "products": [
+      "Desc_Plastic_C"
+    ],
+    "product_rates": [
+      30.0,
+      30.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Plutonium Fuel Unit",
+    "resources": [
+      "Desc_PlutoniumCell_C",
+      "Desc_PressureConversionCube_C"
+    ],
+    "resources_rates": [
+      10.0,
+      0.5
+    ],
+    "products": [
+      "Desc_PlutoniumFuelRod_C"
+    ],
+    "product_rates": [
+      10.0,
+      0.5
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Polyester Fabric",
+    "resources": [
+      "Desc_PolymerResin_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      30.0,
+      30.0
+    ],
+    "products": [
+      "Desc_Fabric_C"
+    ],
+    "product_rates": [
+      30.0,
+      30.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Mycelia Research|MAM Mycelia Research]] - Synthethic Polyester Fabric"
+    ]
+  },
+  {
+    "recipe_name": "Polymer Resin",
+    "resources": [
+      "Desc_LiquidOil_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_PolymerResin_C",
+      "Desc_HeavyOilResidue_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Pure Caterium Ingot",
+    "resources": [
+      "Desc_OreGold_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      24.0,
+      24.0
+    ],
+    "products": [
+      "Desc_GoldIngot_C"
+    ],
+    "product_rates": [
+      24.0,
+      24.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - Caterium OR<br>[[Tier 3]] - Coal Power"
+    ]
+  },
+  {
+    "recipe_name": "Pure Copper Ingot",
+    "resources": [
+      "Desc_OreCopper_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      15.0,
+      10.0
+    ],
+    "products": [
+      "Desc_CopperIngot_C"
+    ],
+    "product_rates": [
+      15.0,
+      10.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Coal Power"
+    ]
+  },
+  {
+    "recipe_name": "Pure Iron Ingot",
+    "resources": [
+      "Desc_OreIron_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      35.0,
+      20.0
+    ],
+    "products": [
+      "Desc_IronIngot_C"
+    ],
+    "product_rates": [
+      35.0,
+      20.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Coal Power"
+    ]
+  },
+  {
+    "recipe_name": "Pure Quartz Crystal",
+    "resources": [
+      "Desc_RawQuartz_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      67.5,
+      37.5
+    ],
+    "products": [
+      "Desc_QuartzCrystal_C"
+    ],
+    "product_rates": [
+      67.5,
+      37.5
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Quartz Research|MAM Quartz Research]] - Quartz Crystals OR<br>[[Tier 3]] - Coal Power"
+    ]
+  },
+  {
+    "recipe_name": "Fused Quickwire",
+    "resources": [
+      "Desc_GoldIngot_C",
+      "Desc_CopperIngot_C"
+    ],
+    "resources_rates": [
+      7.5,
+      37.5
+    ],
+    "products": [
+      "Desc_HighSpeedWire_C"
+    ],
+    "product_rates": [
+      7.5,
+      37.5
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
+    ]
+  },
+  {
+    "recipe_name": "Radio Control System",
+    "resources": [
+      "Desc_CrystalOscillator_C",
+      "Desc_CircuitBoard_C",
+      "Desc_AluminumCasing_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      1.5,
+      15.0,
+      90.0,
+      45.0
+    ],
+    "products": [
+      "Desc_ModularFrameLightweight_C"
+    ],
+    "product_rates": [
+      1.5,
+      15.0,
+      90.0,
+      45.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Radio Connection Unit",
+    "resources": [
+      "Desc_AluminumPlateReinforced_C",
+      "Desc_HighSpeedConnector_C",
+      "Desc_QuartzCrystal_C"
+    ],
+    "resources_rates": [
+      15.0,
+      7.5,
+      45.0
+    ],
+    "products": [
+      "Desc_ModularFrameLightweight_C"
+    ],
+    "product_rates": [
+      15.0,
+      7.5,
+      45.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production OR<br>[[Caterium Research|MAM Caterium Research]] - AI Limiter"
+    ]
+  },
+  {
+    "recipe_name": "Recycled Rubber",
+    "resources": [
+      "Desc_Plastic_C",
+      "Desc_LiquidFuel_C"
+    ],
+    "resources_rates": [
+      30.0,
+      30.0
+    ],
+    "products": [
+      "Desc_Rubber_C"
+    ],
+    "product_rates": [
+      30.0,
+      30.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Bolted Iron Plate",
+    "resources": [
+      "Desc_IronPlate_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      90.0,
+      250.0
+    ],
+    "products": [
+      "Desc_IronPlateReinforced_C"
+    ],
+    "product_rates": [
+      90.0,
+      250.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      ""
+    ]
+  },
+  {
+    "recipe_name": "Stitched Iron Plate",
+    "resources": [
+      "Desc_IronPlate_C",
+      "Desc_Wire_C"
+    ],
+    "resources_rates": [
+      18.75,
+      37.5
+    ],
+    "products": [
+      "Desc_IronPlateReinforced_C"
+    ],
+    "product_rates": [
+      18.75,
+      37.5
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      ""
+    ]
+  },
+  {
+    "recipe_name": "Steel Rotor",
+    "resources": [
+      "Desc_SteelPipe_C",
+      "Desc_Wire_C"
+    ],
+    "resources_rates": [
+      10.0,
+      30.0
+    ],
+    "products": [
+      "Desc_Rotor_C"
+    ],
+    "product_rates": [
+      10.0,
+      30.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Rubber Concrete",
+    "resources": [
+      "Desc_Stone_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      50.0,
+      10.0
+    ],
+    "products": [
+      "Desc_Cement_C"
+    ],
+    "product_rates": [
+      50.0,
+      10.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Steel Screw",
+    "resources": [
+      "Desc_SteelPlate_C"
+    ],
+    "resources_rates": [
+      5.0
+    ],
+    "products": [
+      "Desc_IronScrew_C"
+    ],
+    "product_rates": [
+      5.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Cast Screw",
+    "resources": [
+      "Desc_IronIngot_C"
+    ],
+    "resources_rates": [
+      12.5
+    ],
+    "products": [
+      "Desc_IronScrew_C"
+    ],
+    "product_rates": [
+      12.5
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      ""
+    ]
+  },
+  {
+    "recipe_name": "Cheap Silica",
+    "resources": [
+      "Desc_RawQuartz_C",
+      "Desc_Stone_C"
+    ],
+    "resources_rates": [
+      11.25,
+      18.75
+    ],
+    "products": [
+      "Desc_Silica_C"
+    ],
+    "product_rates": [
+      11.25,
+      18.75
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Quartz Research|MAM Quartz Research]] - Silica"
+    ]
+  },
+  {
+    "recipe_name": "Sloppy Alumina",
+    "resources": [
+      "Desc_OreBauxite_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      200.0,
+      200.0
+    ],
+    "products": [
+      "Desc_AluminaSolution_C"
+    ],
+    "product_rates": [
+      200.0,
+      200.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Quickwire Stator",
+    "resources": [
+      "Desc_SteelPipe_C",
+      "Desc_HighSpeedWire_C"
+    ],
+    "resources_rates": [
+      16.0,
+      60.0
+    ],
+    "products": [
+      "Desc_Stator_C"
+    ],
+    "product_rates": [
+      16.0,
+      60.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
+    ]
+  },
+  {
+    "recipe_name": "Steamed Copper Sheet",
+    "resources": [
+      "Desc_CopperIngot_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      22.5,
+      22.5
+    ],
+    "products": [
+      "Desc_CopperSheet_C"
+    ],
+    "product_rates": [
+      22.5,
+      22.5
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Coal Power"
+    ]
+  },
+  {
+    "recipe_name": "Steel Canister",
+    "resources": [
+      "Desc_SteelIngot_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Steel Coated Plate",
+    "resources": [
+      "Desc_SteelIngot_C",
+      "Desc_Plastic_C"
+    ],
+    "resources_rates": [
+      7.5,
+      5.0
+    ],
+    "products": [
+      "Desc_IronPlate_C"
+    ],
+    "product_rates": [
+      7.5,
+      5.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Steel Rod",
+    "resources": [
+      "Desc_SteelIngot_C"
+    ],
+    "resources_rates": [
+      12.0
+    ],
+    "products": [
+      "Desc_IronRod_C"
+    ],
+    "product_rates": [
+      12.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Super-State Computer",
+    "resources": [
+      "Desc_Computer_C",
+      "Desc_ElectromagneticControlRod_C",
+      "Desc_Battery_C",
+      "Desc_Wire_C"
+    ],
+    "resources_rates": [
+      3.5999999999999996,
+      2.4,
+      24.0,
+      54.0
+    ],
+    "products": [
+      "Desc_ComputerSuper_C"
+    ],
+    "product_rates": [
+      3.5999999999999996,
+      2.4,
+      24.0,
+      54.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power OR<br>[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Turbo Blend Fuel",
+    "resources": [
+      "Desc_LiquidFuel_C",
+      "Desc_HeavyOilResidue_C",
+      "Desc_Sulfur_C",
+      "Desc_PetroleumCoke_C"
+    ],
+    "resources_rates": [
+      15.0,
+      30.0,
+      22.5,
+      22.5
+    ],
+    "products": [
+      "Desc_LiquidTurboFuel_C"
+    ],
+    "product_rates": [
+      15.0,
+      30.0,
+      22.5,
+      22.5
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement OR<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur"
+    ]
+  },
+  {
+    "recipe_name": "Turbo Heavy Fuel",
+    "resources": [
+      "Desc_HeavyOilResidue_C",
+      "Desc_CompactedCoal_C"
+    ],
+    "resources_rates": [
+      37.5,
+      30.0
+    ],
+    "products": [
+      "Desc_LiquidTurboFuel_C"
+    ],
+    "product_rates": [
+      37.5,
+      30.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing OR<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
+    ]
+  },
+  {
+    "recipe_name": "Turbo Electric Motor",
+    "resources": [
+      "Desc_Motor_C",
+      "Desc_ModularFrameLightweight_C",
+      "Desc_ElectromagneticControlRod_C",
+      "Desc_Rotor_C"
+    ],
+    "resources_rates": [
+      6.5625,
+      8.4375,
+      4.6875,
+      6.5625
+    ],
+    "products": [
+      "Desc_MotorLightweight_C"
+    ],
+    "product_rates": [
+      6.5625,
+      8.4375,
+      4.6875,
+      6.5625
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Leading-edge Production OR<br>[[Tier 8]] - Nuclear Power"
+    ]
+  },
+  {
+    "recipe_name": "Turbo Pressure Motor",
+    "resources": [
+      "Desc_Motor_C",
+      "Desc_PressureConversionCube_C",
+      "Desc_PackagedNitrogenGas_C",
+      "Desc_Stator_C"
+    ],
+    "resources_rates": [
+      7.5,
+      1.875,
+      45.0,
+      15.0
+    ],
+    "products": [
+      "Desc_MotorLightweight_C"
+    ],
+    "product_rates": [
+      7.5,
+      1.875,
+      45.0,
+      15.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Turbofuel",
+    "resources": [
+      "Desc_LiquidFuel_C",
+      "Desc_CompactedCoal_C"
+    ],
+    "resources_rates": [
+      22.5,
+      15.0
+    ],
+    "products": [
+      "Desc_LiquidTurboFuel_C"
+    ],
+    "product_rates": [
+      22.5,
+      15.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Sulfur Research|MAM Sulfur Research]] - Turbo Fuel"
+    ]
+  },
+  {
+    "recipe_name": "Infused Uranium Cell",
+    "resources": [
+      "Desc_OreUranium_C",
+      "Desc_Silica_C",
+      "Desc_Sulfur_C",
+      "Desc_HighSpeedWire_C"
+    ],
+    "resources_rates": [
+      25.0,
+      15.0,
+      25.0,
+      75.0
+    ],
+    "products": [
+      "Desc_UraniumCell_C"
+    ],
+    "product_rates": [
+      25.0,
+      15.0,
+      25.0,
+      75.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz OR<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur"
+    ]
+  },
+  {
+    "recipe_name": "Wet Concrete",
+    "resources": [
+      "Desc_Stone_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      120.0,
+      100.0
+    ],
+    "products": [
+      "Desc_Cement_C"
+    ],
+    "product_rates": [
+      120.0,
+      100.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Coal Power"
+    ]
+  },
+  {
+    "recipe_name": "Iron Wire",
+    "resources": [
+      "Desc_IronIngot_C"
+    ],
+    "resources_rates": [
+      12.5
+    ],
+    "products": [
+      "Desc_Wire_C"
+    ],
+    "product_rates": [
+      12.5
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      ""
+    ]
+  },
+  {
+    "recipe_name": "Caterium Wire",
+    "resources": [
+      "Desc_GoldIngot_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_Wire_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - Caterium"
+    ]
+  },
+  {
+    "recipe_name": "Alumina Solution",
+    "resources": [
+      "Desc_OreBauxite_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      120.0,
+      180.0
+    ],
+    "products": [
+      "Desc_AluminaSolution_C",
+      "Desc_Silica_C"
+    ],
+    "product_rates": [
+      120.0,
+      180.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Aluminum Casing",
+    "resources": [
+      "Desc_AluminumIngot_C"
+    ],
+    "resources_rates": [
+      90.0
+    ],
+    "products": [
+      "Desc_AluminumCasing_C"
+    ],
+    "product_rates": [
+      90.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Aluminum Scrap",
+    "resources": [
+      "Desc_AluminaSolution_C",
+      "Desc_Coal_C"
+    ],
+    "resources_rates": [
+      240.0,
+      120.0
+    ],
+    "products": [
+      "Desc_AluminumScrap_C",
+      "Desc_Water_C"
+    ],
+    "product_rates": [
+      240.0,
+      120.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Alclad Aluminum Sheet",
+    "resources": [
+      "Desc_AluminumIngot_C",
+      "Desc_CopperIngot_C"
+    ],
+    "resources_rates": [
+      30.0,
+      10.0
+    ],
+    "products": [
+      "Desc_AluminumPlate_C"
+    ],
+    "product_rates": [
+      30.0,
+      10.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Battery",
+    "resources": [
+      "Desc_SulfuricAcid_C",
+      "Desc_AluminaSolution_C",
+      "Desc_AluminumCasing_C"
+    ],
+    "resources_rates": [
+      50.0,
+      40.0,
+      20.0
+    ],
+    "products": [
+      "Desc_Battery_C",
+      "Desc_Water_C"
+    ],
+    "product_rates": [
+      50.0,
+      40.0,
+      20.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Solid Biofuel",
+    "resources": [
+      "Desc_GenericBiomass_C"
+    ],
+    "resources_rates": [
+      120.0
+    ],
+    "products": [
+      "Desc_Biofuel_C"
+    ],
+    "product_rates": [
+      120.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 2]] - Obstacle Clearing"
+    ]
+  },
+  {
+    "recipe_name": "Biomass (Alien Protein)",
+    "resources": [
+      "Desc_AlienProtein_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_GenericBiomass_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Alien Organisms Research|MAM Alien Organisms Research]] - Bio-Organic Properties"
+    ]
+  },
+  {
+    "recipe_name": "Biomass (Leaves)",
+    "resources": [
+      "Desc_Leaves_C"
+    ],
+    "resources_rates": [
+      120.0
+    ],
+    "products": [
+      "Desc_GenericBiomass_C"
+    ],
+    "product_rates": [
+      120.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 6"
+    ]
+  },
+  {
+    "recipe_name": "Biomass (Mycelia)",
+    "resources": [
+      "Desc_Mycelia_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_GenericBiomass_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Mycelia Research|MAM Mycelia Research]] - Mycelia"
+    ]
+  },
+  {
+    "recipe_name": "Biomass (Wood)",
+    "resources": [
+      "Desc_Wood_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_GenericBiomass_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 6"
+    ]
+  },
+  {
+    "recipe_name": "Cable",
+    "resources": [
+      "Desc_Wire_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_Cable_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 2"
+    ]
+  },
+  {
+    "recipe_name": "Candy Cane",
+    "resources": [
+      "Desc_Gift_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_CandyCane_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Candy Cane Basher"
+    ]
+  },
+  {
+    "recipe_name": "Turbo Rifle Ammo",
+    "resources": [
+      "Desc_CartridgeStandard_C",
+      "Desc_AluminumCasing_C",
+      "Desc_LiquidTurboFuel_C"
+    ],
+    "resources_rates": [
+      125.0,
+      15.0,
+      15.0
+    ],
+    "products": [
+      "Desc_CartridgeChaos_C"
+    ],
+    "product_rates": [
+      125.0,
+      15.0,
+      15.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Sulfur Research|MAM Sulfur Research]] - Turbo Rifle Ammo"
+    ]
+  },
+  {
+    "recipe_name": "Circuit Board",
+    "resources": [
+      "Desc_CopperSheet_C",
+      "Desc_Plastic_C"
+    ],
+    "resources_rates": [
+      15.0,
+      30.0
+    ],
+    "products": [
+      "Desc_CircuitBoard_C"
+    ],
+    "product_rates": [
+      15.0,
+      30.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Color Cartridge",
+    "resources": [
+      "Desc_FlowerPetals_C"
+    ],
+    "resources_rates": [
+      50.0
+    ],
+    "products": [
+      "Desc_ColorCartridge_C"
+    ],
+    "product_rates": [
+      50.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Flower Petals Research|MAM Flower Petals Research]] - Color Cartridges OR<br>[[Tier 2]] - Resource Sink Bonus Program"
+    ]
+  },
+  {
+    "recipe_name": "Supercomputer",
+    "resources": [
+      "Desc_Computer_C",
+      "Desc_CircuitBoardHighSpeed_C",
+      "Desc_HighSpeedConnector_C",
+      "Desc_Plastic_C"
+    ],
+    "resources_rates": [
+      3.75,
+      3.75,
+      5.625,
+      52.5
+    ],
+    "products": [
+      "Desc_ComputerSuper_C"
+    ],
+    "product_rates": [
+      3.75,
+      3.75,
+      5.625,
+      52.5
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - Supercomputer OR<br>[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Computer",
+    "resources": [
+      "Desc_CircuitBoard_C",
+      "Desc_Cable_C",
+      "Desc_Plastic_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      25.0,
+      22.5,
+      45.0,
+      130.0
+    ],
+    "products": [
+      "Desc_Computer_C"
+    ],
+    "product_rates": [
+      25.0,
+      22.5,
+      45.0,
+      130.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing"
+    ]
+  },
+  {
+    "recipe_name": "Concrete",
+    "resources": [
+      "Desc_Stone_C"
+    ],
+    "resources_rates": [
+      45.0
+    ],
+    "products": [
+      "Desc_Cement_C"
+    ],
+    "product_rates": [
+      45.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 3"
+    ]
+  },
+  {
+    "recipe_name": "Cooling System",
+    "resources": [
+      "Desc_AluminumPlateReinforced_C",
+      "Desc_Rubber_C",
+      "Desc_Water_C",
+      "Desc_NitrogenGas_C"
+    ],
+    "resources_rates": [
+      12.0,
+      12.0,
+      30.0,
+      150.0
+    ],
+    "products": [
+      "Desc_CoolingSystem_C"
+    ],
+    "product_rates": [
+      12.0,
+      12.0,
+      30.0,
+      150.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Copper Powder",
+    "resources": [
+      "Desc_CopperIngot_C"
+    ],
+    "resources_rates": [
+      300.0
+    ],
+    "products": [
+      "Desc_CopperDust_C"
+    ],
+    "product_rates": [
+      300.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Copper Sheet",
+    "resources": [
+      "Desc_CopperIngot_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_CopperSheet_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 2]] - Part Assembly"
+    ]
+  },
+  {
+    "recipe_name": "Crystal Oscillator",
+    "resources": [
+      "Desc_QuartzCrystal_C",
+      "Desc_Cable_C",
+      "Desc_IronPlateReinforced_C"
+    ],
+    "resources_rates": [
+      18.0,
+      14.0,
+      2.5
+    ],
+    "products": [
+      "Desc_CrystalOscillator_C"
+    ],
+    "product_rates": [
+      18.0,
+      14.0,
+      2.5
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Quartz Research|MAM Quartz Research]] - Crystal Oscillator OR<br>[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Electromagnetic Control Rod",
+    "resources": [
+      "Desc_Stator_C",
+      "Desc_CircuitBoardHighSpeed_C"
+    ],
+    "resources_rates": [
+      6.0,
+      4.0
+    ],
+    "products": [
+      "Desc_ElectromagneticControlRod_C"
+    ],
+    "product_rates": [
+      6.0,
+      4.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power"
+    ]
+  },
+  {
+    "recipe_name": "Encased Industrial Beam",
+    "resources": [
+      "Desc_SteelPlate_C",
+      "Desc_Cement_C"
+    ],
+    "resources_rates": [
+      24.0,
+      30.0
+    ],
+    "products": [
+      "Desc_SteelPlateReinforced_C"
+    ],
+    "product_rates": [
+      24.0,
+      30.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Fabric",
+    "resources": [
+      "Desc_Mycelia_C",
+      "Desc_GenericBiomass_C"
+    ],
+    "resources_rates": [
+      15.0,
+      75.0
+    ],
+    "products": [
+      "Desc_Fabric_C"
+    ],
+    "product_rates": [
+      15.0,
+      75.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Mycelia Research|MAM Mycelia Research]] - Fabric"
+    ]
+  },
+  {
+    "recipe_name": "Empty Canister",
+    "resources": [
+      "Desc_Plastic_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Fuel",
+    "resources": [
+      "Desc_LiquidFuel_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      40.0,
+      40.0
+    ],
+    "products": [
+      "Desc_Fuel_C"
+    ],
+    "product_rates": [
+      40.0,
+      40.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Fused Modular Frame",
+    "resources": [
+      "Desc_ModularFrameHeavy_C",
+      "Desc_AluminumCasing_C",
+      "Desc_NitrogenGas_C"
+    ],
+    "resources_rates": [
+      1.5,
+      75.0,
+      37.5
+    ],
+    "products": [
+      "Desc_ModularFrameFused_C"
+    ],
+    "product_rates": [
+      1.5,
+      75.0,
+      37.5
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Empty Fluid Tank",
+    "resources": [
+      "Desc_AluminumIngot_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_GasTank_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Smokeless Powder",
+    "resources": [
+      "Desc_Gunpowder_C",
+      "Desc_HeavyOilResidue_C"
+    ],
+    "resources_rates": [
+      20.0,
+      10.0
+    ],
+    "products": [
+      "Desc_GunpowderMK2_C"
+    ],
+    "product_rates": [
+      20.0,
+      10.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Sulfur Research|MAM Sulfur Research]] - Smokeless Powder"
+    ]
+  },
+  {
+    "recipe_name": "Heat Sink",
+    "resources": [
+      "Desc_AluminumPlate_C",
+      "Desc_CopperSheet_C"
+    ],
+    "resources_rates": [
+      37.5,
+      22.5
+    ],
+    "products": [
+      "Desc_AluminumPlateReinforced_C"
+    ],
+    "product_rates": [
+      37.5,
+      22.5
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "High-Speed Connector",
+    "resources": [
+      "Desc_HighSpeedWire_C",
+      "Desc_Cable_C",
+      "Desc_CircuitBoard_C"
+    ],
+    "resources_rates": [
+      210.0,
+      37.5,
+      3.75
+    ],
+    "products": [
+      "Desc_HighSpeedConnector_C"
+    ],
+    "product_rates": [
+      210.0,
+      37.5,
+      3.75
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - High-Speed Connector OR<br>[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Aluminum Ingot",
+    "resources": [
+      "Desc_AluminumScrap_C",
+      "Desc_Silica_C"
+    ],
+    "resources_rates": [
+      90.0,
+      75.0
+    ],
+    "products": [
+      "Desc_AluminumIngot_C"
+    ],
+    "product_rates": [
+      90.0,
+      75.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Caterium Ingot",
+    "resources": [
+      "Desc_OreGold_C"
+    ],
+    "resources_rates": [
+      45.0
+    ],
+    "products": [
+      "Desc_GoldIngot_C"
+    ],
+    "product_rates": [
+      45.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_SmelterMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
+    ]
+  },
+  {
+    "recipe_name": "Copper Ingot",
+    "resources": [
+      "Desc_OreCopper_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_CopperIngot_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_SmelterMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 2"
+    ]
+  },
+  {
+    "recipe_name": "Iron Ingot",
+    "resources": [
+      "Desc_OreIron_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_IronIngot_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_SmelterMk1_C"
+    ],
+    "unlock_tags": [
+      "Onboarding"
+    ]
+  },
+  {
+    "recipe_name": "Steel Ingot",
+    "resources": [
+      "Desc_OreIron_C",
+      "Desc_Coal_C"
+    ],
+    "resources_rates": [
+      45.0,
+      45.0
+    ],
+    "products": [
+      "Desc_SteelIngot_C"
+    ],
+    "product_rates": [
+      45.0,
+      45.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Reinforced Iron Plate",
+    "resources": [
+      "Desc_IronPlate_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      30.0,
+      60.0
+    ],
+    "products": [
+      "Desc_IronPlateReinforced_C"
+    ],
+    "product_rates": [
+      30.0,
+      60.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 3"
+    ]
+  },
+  {
+    "recipe_name": "Iron Plate",
+    "resources": [
+      "Desc_IronIngot_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_IronPlate_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "Onboarding"
+    ]
+  },
+  {
+    "recipe_name": "Iron Rod",
+    "resources": [
+      "Desc_IronIngot_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_IronRod_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "Onboarding"
+    ]
+  },
+  {
+    "recipe_name": "Liquid Biofuel",
+    "resources": [
+      "Desc_Biofuel_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      90.0,
+      45.0
+    ],
+    "products": [
+      "Desc_LiquidBiofuel_C"
+    ],
+    "product_rates": [
+      90.0,
+      45.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Fuel",
+    "resources": [
+      "Desc_LiquidOil_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_LiquidFuel_C",
+      "Desc_PolymerResin_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Heavy Modular Frame",
+    "resources": [
+      "Desc_ModularFrame_C",
+      "Desc_SteelPipe_C",
+      "Desc_SteelPlateReinforced_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      10.0,
+      30.0,
+      10.0,
+      200.0
+    ],
+    "products": [
+      "Desc_ModularFrameHeavy_C"
+    ],
+    "product_rates": [
+      10.0,
+      30.0,
+      10.0,
+      200.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Modular Frame",
+    "resources": [
+      "Desc_IronPlateReinforced_C",
+      "Desc_IronRod_C"
+    ],
+    "resources_rates": [
+      3.0,
+      12.0
+    ],
+    "products": [
+      "Desc_ModularFrame_C"
+    ],
+    "product_rates": [
+      3.0,
+      12.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 2]] - Part Assembly"
+    ]
+  },
+  {
+    "recipe_name": "Turbo Motor",
+    "resources": [
+      "Desc_CoolingSystem_C",
+      "Desc_ModularFrameLightweight_C",
+      "Desc_Motor_C",
+      "Desc_Rubber_C"
+    ],
+    "resources_rates": [
+      7.5,
+      3.75,
+      7.5,
+      45.0
+    ],
+    "products": [
+      "Desc_MotorLightweight_C"
+    ],
+    "product_rates": [
+      7.5,
+      3.75,
+      7.5,
+      45.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Leading-edge Production"
+    ]
+  },
+  {
+    "recipe_name": "Motor",
+    "resources": [
+      "Desc_Rotor_C",
+      "Desc_Stator_C"
+    ],
+    "resources_rates": [
+      10.0,
+      10.0
+    ],
+    "products": [
+      "Desc_Motor_C"
+    ],
+    "product_rates": [
+      10.0,
+      10.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Nitric Acid",
+    "resources": [
+      "Desc_NitrogenGas_C",
+      "Desc_Water_C",
+      "Desc_IronPlate_C"
+    ],
+    "resources_rates": [
+      120.0,
+      30.0,
+      10.0
+    ],
+    "products": [
+      "Desc_NitricAcid_C"
+    ],
+    "product_rates": [
+      120.0,
+      30.0,
+      10.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Non-fissile Uranium",
+    "resources": [
+      "Desc_NuclearWaste_C",
+      "Desc_Silica_C",
+      "Desc_NitricAcid_C",
+      "Desc_SulfuricAcid_C"
+    ],
+    "resources_rates": [
+      37.5,
+      25.0,
+      15.0,
+      15.0
+    ],
+    "products": [
+      "Desc_NonFissibleUranium_C",
+      "Desc_Water_C"
+    ],
+    "product_rates": [
+      37.5,
+      25.0,
+      15.0,
+      15.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Uranium Fuel Rod",
+    "resources": [
+      "Desc_UraniumCell_C",
+      "Desc_SteelPlateReinforced_C",
+      "Desc_ElectromagneticControlRod_C"
+    ],
+    "resources_rates": [
+      20.0,
+      1.2000000000000002,
+      2.0
+    ],
+    "products": [
+      "Desc_NuclearFuelRod_C"
+    ],
+    "product_rates": [
+      20.0,
+      1.2000000000000002,
+      2.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Alumina Solution",
+    "resources": [
+      "Desc_AluminaSolution_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      120.0,
+      120.0
+    ],
+    "products": [
+      "Desc_PackagedAlumina_C"
+    ],
+    "product_rates": [
+      120.0,
+      120.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Liquid Biofuel",
+    "resources": [
+      "Desc_LiquidBiofuel_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      40.0,
+      40.0
+    ],
+    "products": [
+      "Desc_PackagedBiofuel_C"
+    ],
+    "product_rates": [
+      40.0,
+      40.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Oil",
+    "resources": [
+      "Desc_LiquidOil_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      30.0,
+      30.0
+    ],
+    "products": [
+      "Desc_PackagedOil_C"
+    ],
+    "product_rates": [
+      30.0,
+      30.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Nitric Acid",
+    "resources": [
+      "Desc_NitricAcid_C",
+      "Desc_GasTank_C"
+    ],
+    "resources_rates": [
+      30.0,
+      30.0
+    ],
+    "products": [
+      "Desc_PackagedNitricAcid_C"
+    ],
+    "product_rates": [
+      30.0,
+      30.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Nitrogen Gas",
+    "resources": [
+      "Desc_NitrogenGas_C",
+      "Desc_GasTank_C"
+    ],
+    "resources_rates": [
+      240.0,
+      60.0
+    ],
+    "products": [
+      "Desc_PackagedNitrogenGas_C"
+    ],
+    "product_rates": [
+      240.0,
+      60.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Heavy Oil Residue",
+    "resources": [
+      "Desc_HeavyOilResidue_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      30.0,
+      30.0
+    ],
+    "products": [
+      "Desc_PackagedOilResidue_C"
+    ],
+    "product_rates": [
+      30.0,
+      30.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Sulfuric Acid",
+    "resources": [
+      "Desc_SulfuricAcid_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      40.0,
+      40.0
+    ],
+    "products": [
+      "Desc_PackagedSulfuricAcid_C"
+    ],
+    "product_rates": [
+      40.0,
+      40.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Turbofuel",
+    "resources": [
+      "Desc_LiquidTurboFuel_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      20.0,
+      20.0
+    ],
+    "products": [
+      "Desc_TurboFuel_C"
+    ],
+    "product_rates": [
+      20.0,
+      20.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Sulfur Research|MAM Sulfur Research]] - Turbo Fuel OR<br>[[Tier 7]] - Bauxite Refinement AND<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur OR<br>[[Tier 5]] - Oil Processing AND<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
+    ]
+  },
+  {
+    "recipe_name": "Packaged Water",
+    "resources": [
+      "Desc_Water_C",
+      "Desc_FluidCanister_C"
+    ],
+    "resources_rates": [
+      60.0,
+      60.0
+    ],
+    "products": [
+      "Desc_PackagedWater_C"
+    ],
+    "product_rates": [
+      60.0,
+      60.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Petroleum Coke",
+    "resources": [
+      "Desc_HeavyOilResidue_C"
+    ],
+    "resources_rates": [
+      40.0
+    ],
+    "products": [
+      "Desc_PetroleumCoke_C"
+    ],
+    "product_rates": [
+      40.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Plastic",
+    "resources": [
+      "Desc_LiquidOil_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_Plastic_C",
+      "Desc_HeavyOilResidue_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Encased Plutonium Cell",
+    "resources": [
+      "Desc_PlutoniumPellet_C",
+      "Desc_Cement_C"
+    ],
+    "resources_rates": [
+      10.0,
+      20.0
+    ],
+    "products": [
+      "Desc_PlutoniumCell_C"
+    ],
+    "product_rates": [
+      10.0,
+      20.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Plutonium Fuel Rod",
+    "resources": [
+      "Desc_PlutoniumCell_C",
+      "Desc_SteelPlate_C",
+      "Desc_ElectromagneticControlRod_C",
+      "Desc_AluminumPlateReinforced_C"
+    ],
+    "resources_rates": [
+      7.5,
+      4.5,
+      1.5,
+      2.5
+    ],
+    "products": [
+      "Desc_PlutoniumFuelRod_C"
+    ],
+    "product_rates": [
+      7.5,
+      4.5,
+      1.5,
+      2.5
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Plutonium Pellet",
+    "resources": [
+      "Desc_NonFissibleUranium_C",
+      "Desc_NuclearWaste_C"
+    ],
+    "resources_rates": [
+      100.0,
+      25.0
+    ],
+    "products": [
+      "Desc_PlutoniumPellet_C"
+    ],
+    "product_rates": [
+      100.0,
+      25.0
+    ],
+    "power_consumption": 1000.0,
+    "production_method": [
+      "Desc_HadronCollider_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Power Shard (1)",
+    "resources": [
+      "Desc_Crystal_C"
+    ],
+    "resources_rates": [
+      7.5
+    ],
+    "products": [
+      "Desc_CrystalShard_C"
+    ],
+    "product_rates": [
+      7.5
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Power Slugs Research|MAM Power Slugs Research]] - Blue Power Slugs"
+    ]
+  },
+  {
+    "recipe_name": "Power Shard (2)",
+    "resources": [
+      "Desc_Crystal_mk2_C"
+    ],
+    "resources_rates": [
+      5.0
+    ],
+    "products": [
+      "Desc_CrystalShard_C"
+    ],
+    "product_rates": [
+      5.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Power Slugs Research|MAM Power Slugs Research]] - Yellow Power Shards"
+    ]
+  },
+  {
+    "recipe_name": "Power Shard (5)",
+    "resources": [
+      "Desc_Crystal_mk3_C"
+    ],
+    "resources_rates": [
+      2.5
+    ],
+    "products": [
+      "Desc_CrystalShard_C"
+    ],
+    "product_rates": [
+      2.5
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Power Slugs Research|MAM Power Slugs Research]] - Purple Power Shards"
+    ]
+  },
+  {
+    "recipe_name": "Pressure Conversion Cube",
+    "resources": [
+      "Desc_ModularFrameFused_C",
+      "Desc_ModularFrameLightweight_C"
+    ],
+    "resources_rates": [
+      1.0,
+      2.0
+    ],
+    "products": [
+      "Desc_PressureConversionCube_C"
+    ],
+    "product_rates": [
+      1.0,
+      2.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Hatcher Protein",
+    "resources": [
+      "Desc_HatcherParts_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_AlienProtein_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Alien Organisms Research|MAM Alien Organisms Research]] - Hatcher Research"
+    ]
+  },
+  {
+    "recipe_name": "Hog Protein",
+    "resources": [
+      "Desc_HogParts_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_AlienProtein_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Alien Organisms Research|MAM Alien Organisms Research]] - Hog Research"
+    ]
+  },
+  {
+    "recipe_name": "Spitter Protein",
+    "resources": [
+      "Desc_SpitterParts_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_AlienProtein_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Alien Organisms Research|MAM Alien Organisms Research]] - Spitter Research"
+    ]
+  },
+  {
+    "recipe_name": "Stinger Protein",
+    "resources": [
+      "Desc_StingerParts_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_AlienProtein_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Alien Organisms Research|MAM Alien Organisms Research]] - Stinger Research"
+    ]
+  },
+  {
+    "recipe_name": "Pure Aluminum Ingot",
+    "resources": [
+      "Desc_AluminumScrap_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_AluminumIngot_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_SmelterMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Quartz Crystal",
+    "resources": [
+      "Desc_RawQuartz_C"
+    ],
+    "resources_rates": [
+      37.5
+    ],
+    "products": [
+      "Desc_QuartzCrystal_C"
+    ],
+    "product_rates": [
+      37.5
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Quartz Research|MAM Quartz Research]] - Quartz Crystals OR<br>[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Quickwire",
+    "resources": [
+      "Desc_GoldIngot_C"
+    ],
+    "resources_rates": [
+      12.0
+    ],
+    "products": [
+      "Desc_HighSpeedWire_C"
+    ],
+    "product_rates": [
+      12.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Caterium Research|MAM Caterium Research]] - Quickwire"
+    ]
+  },
+  {
+    "recipe_name": "Radio Control Unit",
+    "resources": [
+      "Desc_AluminumCasing_C",
+      "Desc_CrystalOscillator_C",
+      "Desc_Computer_C"
+    ],
+    "resources_rates": [
+      40.0,
+      1.25,
+      1.25
+    ],
+    "products": [
+      "Desc_ModularFrameLightweight_C"
+    ],
+    "product_rates": [
+      40.0,
+      1.25,
+      1.25
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Residual Fuel",
+    "resources": [
+      "Desc_HeavyOilResidue_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_LiquidFuel_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Residual Plastic",
+    "resources": [
+      "Desc_PolymerResin_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      60.0,
+      20.0
+    ],
+    "products": [
+      "Desc_Plastic_C"
+    ],
+    "product_rates": [
+      60.0,
+      20.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Residual Rubber",
+    "resources": [
+      "Desc_PolymerResin_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      40.0,
+      40.0
+    ],
+    "products": [
+      "Desc_Rubber_C"
+    ],
+    "product_rates": [
+      40.0,
+      40.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Rotor",
+    "resources": [
+      "Desc_IronRod_C",
+      "Desc_IronScrew_C"
+    ],
+    "resources_rates": [
+      20.0,
+      100.0
+    ],
+    "products": [
+      "Desc_Rotor_C"
+    ],
+    "product_rates": [
+      20.0,
+      100.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 2]] - Part Assembly"
+    ]
+  },
+  {
+    "recipe_name": "Rubber",
+    "resources": [
+      "Desc_LiquidOil_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_Rubber_C",
+      "Desc_HeavyOilResidue_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Oil Processing"
+    ]
+  },
+  {
+    "recipe_name": "Screw",
+    "resources": [
+      "Desc_IronRod_C"
+    ],
+    "resources_rates": [
+      10.0
+    ],
+    "products": [
+      "Desc_IronScrew_C"
+    ],
+    "product_rates": [
+      10.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 3"
+    ]
+  },
+  {
+    "recipe_name": "Silica",
+    "resources": [
+      "Desc_RawQuartz_C"
+    ],
+    "resources_rates": [
+      22.5
+    ],
+    "products": [
+      "Desc_Silica_C"
+    ],
+    "product_rates": [
+      22.5
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Quartz Research|MAM Quartz Research]] - Silica OR<br>[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Actual Snow",
+    "resources": [
+      "Desc_Gift_C"
+    ],
+    "resources_rates": [
+      25.0
+    ],
+    "products": [
+      "Desc_Snow_C"
+    ],
+    "product_rates": [
+      25.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - A friend"
+    ]
+  },
+  {
+    "recipe_name": "Snowball",
+    "resources": [
+      "Desc_Snow_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_SnowballProjectile_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Snowfight!"
+    ]
+  },
+  {
+    "recipe_name": "Smart Plating",
+    "resources": [
+      "Desc_IronPlateReinforced_C",
+      "Desc_Rotor_C"
+    ],
+    "resources_rates": [
+      2.0,
+      2.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_1_C"
+    ],
+    "product_rates": [
+      2.0,
+      2.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 2]] - Part Assembly"
+    ]
+  },
+  {
+    "recipe_name": "Versatile Framework",
+    "resources": [
+      "Desc_ModularFrame_C",
+      "Desc_SteelPlate_C"
+    ],
+    "resources_rates": [
+      2.5,
+      30.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_2_C"
+    ],
+    "product_rates": [
+      2.5,
+      30.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Automated Wiring",
+    "resources": [
+      "Desc_Stator_C",
+      "Desc_Cable_C"
+    ],
+    "resources_rates": [
+      2.5,
+      50.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_3_C"
+    ],
+    "product_rates": [
+      2.5,
+      50.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Modular Engine",
+    "resources": [
+      "Desc_Motor_C",
+      "Desc_Rubber_C",
+      "Desc_SpaceElevatorPart_1_C"
+    ],
+    "resources_rates": [
+      2.0,
+      15.0,
+      2.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_4_C"
+    ],
+    "product_rates": [
+      2.0,
+      15.0,
+      2.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing"
+    ]
+  },
+  {
+    "recipe_name": "Adaptive Control Unit",
+    "resources": [
+      "Desc_SpaceElevatorPart_3_C",
+      "Desc_CircuitBoard_C",
+      "Desc_ModularFrameHeavy_C",
+      "Desc_Computer_C"
+    ],
+    "resources_rates": [
+      7.5,
+      5.0,
+      1.0,
+      1.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_5_C"
+    ],
+    "product_rates": [
+      7.5,
+      5.0,
+      1.0,
+      1.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Industrial Manufacturing"
+    ]
+  },
+  {
+    "recipe_name": "Magnetic Field Generator",
+    "resources": [
+      "Desc_SpaceElevatorPart_2_C",
+      "Desc_ElectromagneticControlRod_C",
+      "Desc_Battery_C"
+    ],
+    "resources_rates": [
+      2.5,
+      1.0,
+      5.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_6_C"
+    ],
+    "product_rates": [
+      2.5,
+      1.0,
+      5.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power"
+    ]
+  },
+  {
+    "recipe_name": "Assembly Director System",
+    "resources": [
+      "Desc_SpaceElevatorPart_5_C",
+      "Desc_ComputerSuper_C"
+    ],
+    "resources_rates": [
+      1.5,
+      0.75
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_7_C"
+    ],
+    "product_rates": [
+      1.5,
+      0.75
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Thermal Propulsion Rocket",
+    "resources": [
+      "Desc_SpaceElevatorPart_4_C",
+      "Desc_MotorLightweight_C",
+      "Desc_CoolingSystem_C",
+      "Desc_ModularFrameFused_C"
+    ],
+    "resources_rates": [
+      2.5,
+      1.0,
+      3.0,
+      1.0
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_8_C"
+    ],
+    "product_rates": [
+      2.5,
+      1.0,
+      3.0,
+      1.0
+    ],
+    "power_consumption": 55.0,
+    "production_method": [
+      "Desc_ManufacturerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Leading-edge Production"
+    ]
+  },
+  {
+    "recipe_name": "Nuclear Pasta",
+    "resources": [
+      "Desc_CopperDust_C",
+      "Desc_PressureConversionCube_C"
+    ],
+    "resources_rates": [
+      100.0,
+      0.5
+    ],
+    "products": [
+      "Desc_SpaceElevatorPart_9_C"
+    ],
+    "product_rates": [
+      100.0,
+      0.5
+    ],
+    "power_consumption": 1000.0,
+    "production_method": [
+      "Desc_HadronCollider_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Stator",
+    "resources": [
+      "Desc_SteelPipe_C",
+      "Desc_Wire_C"
+    ],
+    "resources_rates": [
+      15.0,
+      40.0
+    ],
+    "products": [
+      "Desc_Stator_C"
+    ],
+    "product_rates": [
+      15.0,
+      40.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 4]] - Advanced Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Steel Beam",
+    "resources": [
+      "Desc_SteelIngot_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_SteelPlate_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Steel Pipe",
+    "resources": [
+      "Desc_SteelIngot_C"
+    ],
+    "resources_rates": [
+      30.0
+    ],
+    "products": [
+      "Desc_SteelPipe_C"
+    ],
+    "product_rates": [
+      30.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 3]] - Basic Steel Production"
+    ]
+  },
+  {
+    "recipe_name": "Sulfuric Acid",
+    "resources": [
+      "Desc_Sulfur_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      50.0,
+      50.0
+    ],
+    "products": [
+      "Desc_SulfuricAcid_C"
+    ],
+    "product_rates": [
+      50.0,
+      50.0
+    ],
+    "power_consumption": 0.0,
+    "production_method": [
+      "Desc_OilRefinery_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Alumina Solution",
+    "resources": [
+      "Desc_PackagedAlumina_C"
+    ],
+    "resources_rates": [
+      120.0
+    ],
+    "products": [
+      "Desc_AluminaSolution_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      120.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Liquid Biofuel",
+    "resources": [
+      "Desc_PackagedBiofuel_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_LiquidBiofuel_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Fuel",
+    "resources": [
+      "Desc_Fuel_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_LiquidFuel_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Nitric Acid",
+    "resources": [
+      "Desc_PackagedNitricAcid_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_NitricAcid_C",
+      "Desc_GasTank_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Nitrogen Gas",
+    "resources": [
+      "Desc_PackagedNitrogenGas_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_NitrogenGas_C",
+      "Desc_GasTank_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Advanced Aluminum Production"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Heavy Oil Residue",
+    "resources": [
+      "Desc_PackagedOilResidue_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_HeavyOilResidue_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Oil",
+    "resources": [
+      "Desc_PackagedOil_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_LiquidOil_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Sulfuric Acid",
+    "resources": [
+      "Desc_PackagedSulfuricAcid_C"
+    ],
+    "resources_rates": [
+      60.0
+    ],
+    "products": [
+      "Desc_SulfuricAcid_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Aeronautical Engineering"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Turbofuel",
+    "resources": [
+      "Desc_TurboFuel_C"
+    ],
+    "resources_rates": [
+      20.0
+    ],
+    "products": [
+      "Desc_LiquidTurboFuel_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      20.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 7]] - Bauxite Refinement AND<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur OR<br>[[Sulfur Research|MAM Sulfur Research]] - Turbo Fuel OR<br>[[Tier 5]] - Oil Processing AND<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
+    ]
+  },
+  {
+    "recipe_name": "Unpackage Water",
+    "resources": [
+      "Desc_PackagedWater_C"
+    ],
+    "resources_rates": [
+      120.0
+    ],
+    "products": [
+      "Desc_Water_C",
+      "Desc_FluidCanister_C"
+    ],
+    "product_rates": [
+      120.0
+    ],
+    "power_consumption": 10.0,
+    "production_method": [
+      "Desc_Packager_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 5]] - Alternative Fluid Transport"
+    ]
+  },
+  {
+    "recipe_name": "Encased Uranium Cell",
+    "resources": [
+      "Desc_OreUranium_C",
+      "Desc_Cement_C",
+      "Desc_SulfuricAcid_C"
+    ],
+    "resources_rates": [
+      50.0,
+      15.0,
+      40.0
+    ],
+    "products": [
+      "Desc_UraniumCell_C",
+      "Desc_SulfuricAcid_C"
+    ],
+    "product_rates": [
+      50.0,
+      15.0,
+      40.0
+    ],
+    "power_consumption": 75.0,
+    "production_method": [
+      "Desc_Blender_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power"
+    ]
+  },
+  {
+    "recipe_name": "Wire",
+    "resources": [
+      "Desc_CopperIngot_C"
+    ],
+    "resources_rates": [
+      15.0
+    ],
+    "products": [
+      "Desc_Wire_C"
+    ],
+    "product_rates": [
+      15.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 0]] - HUB Upgrade 2"
+    ]
+  },
+  {
+    "recipe_name": "Red FICSMAS Ornament",
+    "resources": [
+      "Desc_Gift_C"
+    ],
+    "resources_rates": [
+      5.0
+    ],
+    "products": [
+      "Desc_XmasBall1_C"
+    ],
+    "product_rates": [
+      5.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_SmelterMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Giant FICSMAS Tree: Upgrade 1"
+    ]
+  },
+  {
+    "recipe_name": "Blue FICSMAS Ornament",
+    "resources": [
+      "Desc_Gift_C"
+    ],
+    "resources_rates": [
+      5.0
+    ],
+    "products": [
+      "Desc_XmasBall2_C"
+    ],
+    "product_rates": [
+      5.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_SmelterMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Giant FICSMAS Tree: Upgrade 1"
+    ]
+  },
+  {
+    "recipe_name": "Copper FICSMAS Ornament",
+    "resources": [
+      "Desc_XmasBall1_C",
+      "Desc_CopperIngot_C"
+    ],
+    "resources_rates": [
+      10.0,
+      10.0
+    ],
+    "products": [
+      "Desc_XmasBall3_C"
+    ],
+    "product_rates": [
+      10.0,
+      10.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Gift Tree"
+    ]
+  },
+  {
+    "recipe_name": "Iron FICSMAS Ornament",
+    "resources": [
+      "Desc_XmasBall2_C",
+      "Desc_IronIngot_C"
+    ],
+    "resources_rates": [
+      15.0,
+      15.0
+    ],
+    "products": [
+      "Desc_XmasBall4_C"
+    ],
+    "product_rates": [
+      15.0,
+      15.0
+    ],
+    "power_consumption": 16.0,
+    "production_method": [
+      "Desc_FoundryMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Gift Tree"
+    ]
+  },
+  {
+    "recipe_name": "FICSMAS Ornament Bundle",
+    "resources": [
+      "Desc_XmasBall3_C",
+      "Desc_XmasBall4_C"
+    ],
+    "resources_rates": [
+      5.0,
+      5.0
+    ],
+    "products": [
+      "Desc_XmasBallCluster_C"
+    ],
+    "product_rates": [
+      5.0,
+      5.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Lights"
+    ]
+  },
+  {
+    "recipe_name": "FICSMAS Bow",
+    "resources": [
+      "Desc_Gift_C"
+    ],
+    "resources_rates": [
+      10.0
+    ],
+    "products": [
+      "Desc_XmasBow_C"
+    ],
+    "product_rates": [
+      10.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Candy Cane Decor"
+    ]
+  },
+  {
+    "recipe_name": "FICSMAS Tree Branch",
+    "resources": [
+      "Desc_Gift_C"
+    ],
+    "resources_rates": [
+      10.0
+    ],
+    "products": [
+      "Desc_XmasBranch_C"
+    ],
+    "product_rates": [
+      10.0
+    ],
+    "power_consumption": 4.0,
+    "production_method": [
+      "Desc_ConstructorMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Tree Base"
+    ]
+  },
+  {
+    "recipe_name": "FICSMAS Wonder Star",
+    "resources": [
+      "Desc_XmasWreath_C",
+      "Desc_CandyCane_C"
+    ],
+    "resources_rates": [
+      5.0,
+      20.0
+    ],
+    "products": [
+      "Desc_XmasStar_C"
+    ],
+    "product_rates": [
+      5.0,
+      20.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Wreath"
+    ]
+  },
+  {
+    "recipe_name": "FICSMAS Decoration",
+    "resources": [
+      "Desc_XmasBranch_C",
+      "Desc_XmasBallCluster_C"
+    ],
+    "resources_rates": [
+      15.0,
+      6.0
+    ],
+    "products": [
+      "Desc_XmasWreath_C"
+    ],
+    "product_rates": [
+      15.0,
+      6.0
+    ],
+    "power_consumption": 15.0,
+    "production_method": [
+      "Desc_AssemblerMk1_C"
+    ],
+    "unlock_tags": [
+      "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - It's snowing!"
+    ]
+  },
+  {
+    "recipe_name": "Uranium Fuel Rod (burning)",
+    "resources": [
+      "Desc_NuclearFuelRod_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      0.2,
+      240.0
+    ],
+    "products": [
+      "Desc_NuclearWaste_C"
+    ],
+    "product_rates": [
+      0.2,
+      240.0
+    ],
+    "power_consumption": 2500.0,
+    "production_method": [
+      "Desc_GeneratorNuclear_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Nuclear Power"
+    ]
+  },
+  {
+    "recipe_name": "Plutonium Fuel Rod (burning)",
+    "resources": [
+      "Desc_PlutoniumFuelRod_C",
+      "Desc_Water_C"
+    ],
+    "resources_rates": [
+      0.1,
+      240.0
+    ],
+    "products": [
+      "Desc_PlutoniumWaste_C"
+    ],
+    "product_rates": [
+      0.1,
+      240.0
+    ],
+    "power_consumption": 2500.0,
+    "production_method": [
+      "Desc_GeneratorNuclear_C"
+    ],
+    "unlock_tags": [
+      "[[Tier 8]] - Particle Enrichment"
+    ]
+  }
+]

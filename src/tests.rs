@@ -10,3 +10,5 @@ mod test{
         println!("{:?}", all_resources);
     }
 }
+
+//TODO: Test on arm64 target before going to wasm32, for simpler debugging
