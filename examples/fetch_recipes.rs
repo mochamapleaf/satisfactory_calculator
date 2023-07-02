@@ -79,7 +79,7 @@ impl From<SatisfactoryRecipe> for Recipe{
             resources: source.ingredients.iter().map(|m| m.item.clone()).collect(),
             resources_rates: source.ingredients.iter().map(|m| m.amount * mutiplier).collect(),
             products: source.products.iter().map(|m| m.item.clone()).collect(),
-            product_rates: source.ingredients.iter().map(|m| m.amount * mutiplier).collect(),
+            product_rates: source.products.iter().map(|m| m.amount * mutiplier).collect(),
             power_consumption: power,
             production_method: source.produced_in.clone(),
             unlock_tags: vec![source.unlocked_by],

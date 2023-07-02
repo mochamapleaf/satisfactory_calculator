@@ -9,7 +9,6 @@ use std::hash::{Hash, Hasher};
 use ndarray::Array2;
 use minilp::{Problem, OptimizationDirection, ComparisonOp};
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Recipe {
     pub recipe_name: String,
@@ -82,13 +81,19 @@ impl Graph {
                             })));
                     }
                     let mut from_node = resource_table[resource].borrow_mut();
-                    from_node.egress_edges.push(Rc::new(Edge {
+                    let new_edge =
+                    Rc::new(Edge {
                         from: resource.clone(),
                         to: product.clone(),
                         recipe_name: recipe_name.clone(),
-                    }));
-                    let mut to_node = resource_table[product].borrow_mut();
-                    to_node.ingress_edges.push(from_node.egress_edges.last().unwrap().clone());
+                    });
+                    from_node.egress_edges.push(new_edge.clone());
+                    let mut to_node = if resource == product{
+                        from_node
+                    }else{
+                        resource_table[product].borrow_mut()
+                    };
+                    to_node.ingress_edges.push(new_edge);
                 }
             }
         }
@@ -181,9 +186,16 @@ impl Graph {
         while !pending.is_empty() {
             let cur_item = pending.pop().unwrap();
             if processed.contains(&cur_item) { continue; }
+            //push ingredients
             for edge in self.resources[&cur_item].borrow().ingress_edges.iter() {
                 pending.push(edge.from.clone());
-                related_recipes.insert(edge.recipe_name.clone());
+                let is_new = related_recipes.insert(edge.recipe_name.clone());
+                //if the pushed recipe contains byproduct, push it as well
+                if is_new{
+                    for byproduct in self.recipes[&edge.recipe_name].products.iter().filter(|s| **s != cur_item){
+                        pending.push(byproduct.clone());
+                    }
+                }
             }
             processed.insert(cur_item);
         }
@@ -206,7 +218,7 @@ impl Graph {
         //     cost_vec.push(0_f64); // TODO: replace this with corresponding cost of the item
         //     row_names.push(format!("[input] {}", sources));
         // }
-
+        println!("{:?}", resources);
         for recipe in recipes.iter(){
             let mut new_row = vec![0_f64; resources.len()];
             //add negative weights
