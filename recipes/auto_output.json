@@ -17,7 +17,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - AI Limiter OR<br>[[Tier 7]] - Aeronautical Engineering"
@@ -39,7 +39,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Alien Organisms Research|MAM Alien Organisms Research]] - Bio-Organic Properties"
@@ -63,7 +63,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -87,7 +87,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -115,7 +115,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing"
@@ -141,7 +141,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
@@ -165,7 +165,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 2]] - Part Assembly"
@@ -189,7 +189,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -213,7 +213,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
@@ -237,7 +237,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz"
@@ -261,7 +261,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
@@ -289,7 +289,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering"
@@ -311,7 +311,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Coal Power OR<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
@@ -333,7 +333,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Coal Power OR<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
@@ -357,7 +357,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -381,7 +381,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -405,7 +405,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -429,7 +429,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -455,7 +455,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
@@ -479,7 +479,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
@@ -503,7 +503,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Quartz Research|MAM Quartz Research]] - Quartz"
@@ -529,7 +529,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -553,7 +553,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       ""
@@ -577,7 +577,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 2]] - Part Assembly"
@@ -603,7 +603,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Quartz Research|MAM Quartz Research]] - Crystal Oscillator OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Electronics OR<br>[[Tier 5]] - Oil Processing"
@@ -627,7 +627,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -651,7 +651,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -675,7 +675,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering"
@@ -701,7 +701,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -725,7 +725,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -749,7 +749,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power OR<br>[[Caterium Research|MAM Caterium Research]] - AI Limiter"
@@ -773,7 +773,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production"
@@ -797,7 +797,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
@@ -827,7 +827,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -853,7 +853,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -877,7 +877,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - Caterium"
@@ -901,7 +901,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
@@ -929,7 +929,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -953,7 +953,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -981,7 +981,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing"
@@ -1005,7 +1005,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -1031,7 +1031,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - High-Speed Connector OR<br>[[Tier 5]] - Oil Processing OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz"
@@ -1057,7 +1057,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production OR<br>[[Caterium Research|MAM Caterium Research]] - AI Limiter"
@@ -1081,7 +1081,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       ""
@@ -1105,7 +1105,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -1129,7 +1129,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       "[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal OR<br>[[Tier 3]] - Basic Steel Production"
@@ -1153,7 +1153,7 @@
     ],
     "power_consumption": 1000.0,
     "production_method": [
-      "Desc_HadronCollider_C"
+      "Particle Accelerator"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -1183,7 +1183,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement OR<br>[[Tier 7]] - Aeronautical Engineering"
@@ -1211,7 +1211,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing"
@@ -1235,7 +1235,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -1261,7 +1261,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
@@ -1289,7 +1289,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz Crystals"
@@ -1313,7 +1313,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering OR<br>[[Tier 8]] - Advanced Aluminum Production"
@@ -1339,7 +1339,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -1363,7 +1363,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -1387,7 +1387,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -1411,7 +1411,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Mycelia Research|MAM Mycelia Research]] - Synthethic Polyester Fabric"
@@ -1435,7 +1435,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -1459,7 +1459,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - Caterium OR<br>[[Tier 3]] - Coal Power"
@@ -1483,7 +1483,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Coal Power"
@@ -1507,7 +1507,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Coal Power"
@@ -1531,7 +1531,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Quartz Research|MAM Quartz Research]] - Quartz Crystals OR<br>[[Tier 3]] - Coal Power"
@@ -1555,7 +1555,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
@@ -1583,7 +1583,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -1609,7 +1609,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production OR<br>[[Caterium Research|MAM Caterium Research]] - AI Limiter"
@@ -1633,7 +1633,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -1657,7 +1657,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       ""
@@ -1681,7 +1681,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       ""
@@ -1705,7 +1705,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -1729,7 +1729,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -1751,7 +1751,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -1773,7 +1773,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       ""
@@ -1797,7 +1797,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Quartz Research|MAM Quartz Research]] - Silica"
@@ -1821,7 +1821,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -1845,7 +1845,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
@@ -1869,7 +1869,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Coal Power"
@@ -1891,7 +1891,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -1915,7 +1915,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -1937,7 +1937,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -1965,7 +1965,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power OR<br>[[Tier 7]] - Aeronautical Engineering"
@@ -1993,7 +1993,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement OR<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur"
@@ -2017,7 +2017,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing OR<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
@@ -2045,7 +2045,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Leading-edge Production OR<br>[[Tier 8]] - Nuclear Power"
@@ -2073,7 +2073,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -2097,7 +2097,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Sulfur Research|MAM Sulfur Research]] - Turbo Fuel"
@@ -2125,7 +2125,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power OR<br>[[Caterium Research|MAM Caterium Research]] - Caterium Ingots OR<br>[[Quartz Research|MAM Quartz Research]] - Quartz OR<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur"
@@ -2149,7 +2149,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Coal Power"
@@ -2171,7 +2171,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       ""
@@ -2193,7 +2193,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - Caterium"
@@ -2219,7 +2219,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -2241,7 +2241,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -2267,7 +2267,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -2291,7 +2291,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -2319,7 +2319,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering"
@@ -2341,7 +2341,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 2]] - Obstacle Clearing"
@@ -2363,7 +2363,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Alien Organisms Research|MAM Alien Organisms Research]] - Bio-Organic Properties"
@@ -2385,7 +2385,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 6"
@@ -2407,7 +2407,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Mycelia Research|MAM Mycelia Research]] - Mycelia"
@@ -2429,7 +2429,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 6"
@@ -2451,7 +2451,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 2"
@@ -2473,7 +2473,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Candy Cane Basher"
@@ -2499,7 +2499,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Sulfur Research|MAM Sulfur Research]] - Turbo Rifle Ammo"
@@ -2523,7 +2523,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -2545,7 +2545,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Flower Petals Research|MAM Flower Petals Research]] - Color Cartridges OR<br>[[Tier 2]] - Resource Sink Bonus Program"
@@ -2573,7 +2573,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - Supercomputer OR<br>[[Tier 7]] - Aeronautical Engineering"
@@ -2601,7 +2601,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing"
@@ -2623,7 +2623,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 3"
@@ -2651,7 +2651,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -2673,7 +2673,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -2695,7 +2695,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 2]] - Part Assembly"
@@ -2721,7 +2721,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Quartz Research|MAM Quartz Research]] - Crystal Oscillator OR<br>[[Tier 7]] - Bauxite Refinement"
@@ -2745,7 +2745,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power"
@@ -2769,7 +2769,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production"
@@ -2793,7 +2793,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Mycelia Research|MAM Mycelia Research]] - Fabric"
@@ -2815,7 +2815,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -2839,7 +2839,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -2865,7 +2865,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -2887,7 +2887,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -2911,7 +2911,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Sulfur Research|MAM Sulfur Research]] - Smokeless Powder"
@@ -2935,7 +2935,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -2961,7 +2961,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - High-Speed Connector OR<br>[[Tier 7]] - Aeronautical Engineering"
@@ -2985,7 +2985,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -3007,7 +3007,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_SmelterMk1_C"
+      "Smelter"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - Caterium Ingots"
@@ -3029,7 +3029,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_SmelterMk1_C"
+      "Smelter"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 2"
@@ -3051,7 +3051,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_SmelterMk1_C"
+      "Smelter"
     ],
     "unlock_tags": [
       "Onboarding"
@@ -3075,7 +3075,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -3099,7 +3099,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 3"
@@ -3121,7 +3121,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "Onboarding"
@@ -3143,7 +3143,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "Onboarding"
@@ -3167,7 +3167,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -3191,7 +3191,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -3219,7 +3219,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production"
@@ -3243,7 +3243,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 2]] - Part Assembly"
@@ -3271,7 +3271,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Leading-edge Production"
@@ -3295,7 +3295,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production"
@@ -3321,7 +3321,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -3351,7 +3351,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -3377,7 +3377,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power"
@@ -3401,7 +3401,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -3425,7 +3425,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -3449,7 +3449,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -3473,7 +3473,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -3497,7 +3497,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -3521,7 +3521,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -3545,7 +3545,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering"
@@ -3569,7 +3569,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Sulfur Research|MAM Sulfur Research]] - Turbo Fuel OR<br>[[Tier 7]] - Bauxite Refinement AND<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur OR<br>[[Tier 5]] - Oil Processing AND<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
@@ -3593,7 +3593,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -3615,7 +3615,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -3639,7 +3639,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -3663,7 +3663,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -3691,7 +3691,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -3715,7 +3715,7 @@
     ],
     "power_consumption": 1000.0,
     "production_method": [
-      "Desc_HadronCollider_C"
+      "Particle Accelerator"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -3737,7 +3737,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Power Slugs Research|MAM Power Slugs Research]] - Blue Power Slugs"
@@ -3759,7 +3759,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Power Slugs Research|MAM Power Slugs Research]] - Yellow Power Shards"
@@ -3781,7 +3781,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Power Slugs Research|MAM Power Slugs Research]] - Purple Power Shards"
@@ -3805,7 +3805,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -3827,7 +3827,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Alien Organisms Research|MAM Alien Organisms Research]] - Hatcher Research"
@@ -3849,7 +3849,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Alien Organisms Research|MAM Alien Organisms Research]] - Hog Research"
@@ -3871,7 +3871,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Alien Organisms Research|MAM Alien Organisms Research]] - Spitter Research"
@@ -3893,7 +3893,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Alien Organisms Research|MAM Alien Organisms Research]] - Stinger Research"
@@ -3915,7 +3915,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_SmelterMk1_C"
+      "Smelter"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -3937,7 +3937,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Quartz Research|MAM Quartz Research]] - Quartz Crystals OR<br>[[Tier 7]] - Bauxite Refinement"
@@ -3959,7 +3959,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Caterium Research|MAM Caterium Research]] - Quickwire"
@@ -3985,7 +3985,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -4007,7 +4007,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -4031,7 +4031,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -4055,7 +4055,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -4079,7 +4079,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 2]] - Part Assembly"
@@ -4103,7 +4103,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Oil Processing"
@@ -4125,7 +4125,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 3"
@@ -4147,7 +4147,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Quartz Research|MAM Quartz Research]] - Silica OR<br>[[Tier 7]] - Bauxite Refinement"
@@ -4169,7 +4169,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - A friend"
@@ -4191,7 +4191,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Snowfight!"
@@ -4215,7 +4215,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 2]] - Part Assembly"
@@ -4239,7 +4239,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -4263,7 +4263,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production"
@@ -4289,7 +4289,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing"
@@ -4317,7 +4317,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Industrial Manufacturing"
@@ -4343,7 +4343,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power"
@@ -4367,7 +4367,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering"
@@ -4395,7 +4395,7 @@
     ],
     "power_consumption": 55.0,
     "production_method": [
-      "Desc_ManufacturerMk1_C"
+      "Manufacturer"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Leading-edge Production"
@@ -4419,7 +4419,7 @@
     ],
     "power_consumption": 1000.0,
     "production_method": [
-      "Desc_HadronCollider_C"
+      "Particle Accelerator"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -4443,7 +4443,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[Tier 4]] - Advanced Steel Production"
@@ -4465,7 +4465,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -4487,7 +4487,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 3]] - Basic Steel Production"
@@ -4511,7 +4511,7 @@
     ],
     "power_consumption": 0.0,
     "production_method": [
-      "Desc_OilRefinery_C"
+      "Refinery"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering"
@@ -4535,7 +4535,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement"
@@ -4559,7 +4559,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -4583,7 +4583,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -4607,7 +4607,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -4631,7 +4631,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Advanced Aluminum Production"
@@ -4655,7 +4655,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -4679,7 +4679,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -4703,7 +4703,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Aeronautical Engineering"
@@ -4727,7 +4727,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 7]] - Bauxite Refinement AND<br>[[Sulfur Research|MAM Sulfur Research]] - Sulfur OR<br>[[Sulfur Research|MAM Sulfur Research]] - Turbo Fuel OR<br>[[Tier 5]] - Oil Processing AND<br>[[Sulfur Research|MAM Sulfur Research]] - Compacted Coal"
@@ -4751,7 +4751,7 @@
     ],
     "power_consumption": 10.0,
     "production_method": [
-      "Desc_Packager_C"
+      "Packager"
     ],
     "unlock_tags": [
       "[[Tier 5]] - Alternative Fluid Transport"
@@ -4779,7 +4779,7 @@
     ],
     "power_consumption": 75.0,
     "production_method": [
-      "Desc_Blender_C"
+      "Blender"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power"
@@ -4801,7 +4801,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[Tier 0]] - HUB Upgrade 2"
@@ -4823,7 +4823,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_SmelterMk1_C"
+      "Smelter"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Giant FICSMAS Tree: Upgrade 1"
@@ -4845,7 +4845,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_SmelterMk1_C"
+      "Smelter"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Giant FICSMAS Tree: Upgrade 1"
@@ -4869,7 +4869,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Gift Tree"
@@ -4893,7 +4893,7 @@
     ],
     "power_consumption": 16.0,
     "production_method": [
-      "Desc_FoundryMk1_C"
+      "Foundry"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Gift Tree"
@@ -4917,7 +4917,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Lights"
@@ -4939,7 +4939,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - Candy Cane Decor"
@@ -4961,7 +4961,7 @@
     ],
     "power_consumption": 4.0,
     "production_method": [
-      "Desc_ConstructorMk1_C"
+      "Constructor"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Tree Base"
@@ -4985,7 +4985,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - FICSMAS Wreath"
@@ -5009,7 +5009,7 @@
     ],
     "power_consumption": 15.0,
     "production_method": [
-      "Desc_AssemblerMk1_C"
+      "Assembler"
     ],
     "unlock_tags": [
       "[[FICSMAS Holiday Event Research|MAM FICSMAS Holiday Event Research]] - It's snowing!"
@@ -5031,9 +5031,9 @@
     "product_rates": [
       10.0
     ],
-    "power_consumption": 2500.0,
+    "power_consumption": 0.0,
     "production_method": [
-      "Desc_GeneratorNuclear_C"
+      "Nuclear Power Plant"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Nuclear Power"
@@ -5055,9 +5055,9 @@
     "product_rates": [
       1.0
     ],
-    "power_consumption": 2500.0,
+    "power_consumption": 0.0,
     "production_method": [
-      "Desc_GeneratorNuclear_C"
+      "Nuclear Power Plant"
     ],
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
@@ -5267,7 +5267,7 @@
     ],
     "power_consumption": 150.0,
     "production_method": [
-      "Resource Well Extractors"
+      "Resource Well Pressurizer"
     ],
     "unlock_tags": []
   }

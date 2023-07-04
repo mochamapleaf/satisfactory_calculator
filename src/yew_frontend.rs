@@ -1,7 +1,7 @@
 use yew::prelude::*;
 
 use gloo_net::http::{Request, QueryParams};
-use web_sys::{Event, HtmlInputElement, InputEvent};
+use web_sys::{Event, HtmlInputElement, InputEvent, Url};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use minilp::{Problem, OptimizationDirection, ComparisonOp};
 
@@ -34,7 +34,7 @@ impl Component for App{
     type Properties = ();
     type Message = Msg;
     fn create(_ctx: &yew::Context<Self>) -> Self{
-        App{
+        let mut default = App{
             target_resources: vec![],
             target_quanties: vec![],
             output_recipes: vec![],
@@ -42,7 +42,16 @@ impl Component for App{
             output_objective: 0_f64,
             lp_mode: ComparisonOp::Ge,
             data: Graph::from_str(DEFAULT_JSON),
-        }
+        };
+        //fetch information from url
+        let href = web_sys::window().unwrap().location().href().unwrap();
+        let url = Url::new(&href).unwrap();
+        let params = url.search_params();
+        let info = params.get("item").unwrap_or("Plastic".to_string());
+        default.target_resources.push(info);
+        default.target_quanties.push(1.0);
+        _ctx.link().send_message(Msg::Calculate);
+        default
     }
     fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool{
         match msg{
@@ -78,16 +87,18 @@ impl Component for App{
                 let (mut matrix,mut cost_vec) = self.data.construct_matrix(&recipes, &resources);
 
                 let col_num = matrix.ncols();
-                let col_selector: Vec<_> = (1..col_num).collect();
+                let root_pos = resources.iter().position(|v| v == WORLD_ROOT).unwrap();
+                let mut col_selector: Vec<_> = (0..col_num).collect();
+                col_selector.remove(root_pos);
+                resources.remove(root_pos);
                 let matrix = matrix.select(ndarray::Axis(1), &col_selector); //remove empty column "world root"
                 let mut matrix_A = matrix.t().to_owned();
-                resources.remove(0);
                 let target_map: HashMap<_, _> = self.target_resources.iter().zip(self.target_quanties.iter()).collect();
                 let mut target_vals : Vec<f64>= resources.iter()
                     .map(|r| **target_map.get(r).unwrap_or(&&0_f64)).collect();
                 let (solution, objective) = solve_lp(&matrix_A, &cost_vec,&target_vals, self.lp_mode);
                 self.output_objective = objective;
-                let temp: Vec<_> = solution.iter().zip(recipes.iter()).filter(|(&s,_)| s > 0_f64 ).collect();
+                let temp: Vec<_> = solution.iter().zip(recipes.iter()).filter(|(&s,_)| s > 10000.0*f64::EPSILON ).collect();
                 self.output_recipes = temp.iter().map(|(_, s)| (*s).clone()).collect();
                 self.output_quantites = temp.iter().map(|(&v, _)| v).collect();
             }

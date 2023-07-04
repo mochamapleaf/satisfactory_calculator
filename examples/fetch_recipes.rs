@@ -97,6 +97,11 @@ impl Recipe {
                 *item = mapped_name.to_string();
             }
         });
+        self.production_method.iter_mut().for_each(|item| {
+            if let Some(mapped_name) = rename_map.get(item) {
+                *item = mapped_name.to_string();
+            }
+        });
     }
 }
 
@@ -112,7 +117,7 @@ impl From<SatisfactoryRecipe> for Recipe {
             "Desc_Packager_C" => 10.0,
             "Desc_ManufacturerMk1_C" => 55.0,
             "Desc_Blender_C" => 75.0,
-            "Desc_GeneratorNuclear_C" => 2500.0, //TODO: prevent this from making all recipes related to
+            "Desc_GeneratorNuclear_C" => 0.0, //TODO: prevent this from making all recipes related to
             //nuclear power have a negative loop
             "Desc_HadronCollider_C" => 1000.0, //TODO: Special logic, get average value
             _ => 0.0,
@@ -153,9 +158,10 @@ fn satisfactory_wiki_get_content(page_title: &str) -> String {
     let response_text = response.text().unwrap();
     let response_json: Value = serde_json::from_str(response_text.as_str()).unwrap();
     response_json["query"]["pages"][0]["revisions"][0]["slots"]["main"]["content"]
-        .as_str().unwrap().
-        replace("\\n", "\n")
-        .replace("\\\"", "\"")
+        .as_str().unwrap().to_string()
+    //as_str() converts json_value to proper string
+    //wheras to_string() directly on a json_value will yield stuff like "\"actual string\""
+    //the latter case require a manual replacement for "\\\"" to "\"" and "\\n" to "\n"
 }
 
 fn main() {
@@ -167,14 +173,19 @@ fn main() {
     let items_json_str = response_str.split_once("\n").unwrap().1.rsplit_once("\n").unwrap().0; //remove first and last line
     let items_json: Value = serde_json::from_str(items_json_str).unwrap();
     let items: Vec<SatisfactoryItem> = items_json.as_object().unwrap().iter().map(|(_, value)| { serde_json::from_value(value[0].clone()).expect("Error when parsing JSON item object") }).collect();
-    let classname_map: std::collections::HashMap<String, String> = items.iter().map(|i| (i.class_name.clone(), i.name.clone())).collect();
+    let mut classname_map: std::collections::HashMap<String, String> = items.iter().map(|i| (i.class_name.clone(), i.name.clone())).collect();
+    let response_str = satisfactory_wiki_get_content("Template:DocsBuildings.json");
+    let buildings_json_str = response_str.split_once("\n").unwrap().1.rsplit_once("\n").unwrap().0; //remove first and last line
+    let buildings_json: Value = serde_json::from_str(buildings_json_str).unwrap();
+
+    classname_map.extend(  buildings_json.as_object().unwrap().iter().map(|(_, value) | { (value[0]["className"].as_str().unwrap().to_string(), value[0]["name"].as_str().unwrap().to_string())}) );
+    let items: Vec<SatisfactoryItem> = items_json.as_object().unwrap().iter().map(|(_, value)| { serde_json::from_value(value[0].clone()).expect("Error when parsing JSON item object") }).collect();
     let mut output = Vec::new();
     for recipe in recipes {
         if recipe.in_workshop | recipe.in_customizer | recipe.in_build_gun { continue; }
         output.push(Recipe::from(recipe));
     }
 
-    output.iter_mut().for_each(|mut r| r.rename_items(&classname_map));
 
     //append Ore extractions
     //fetch minable ores
@@ -189,7 +200,10 @@ fn main() {
     let response_text = response.text().unwrap();
     let response_json: Value = serde_json::from_str(response_text.as_str()).unwrap();
     let mut minable_ores = Vec::new();
-    response_json["query"]["categorymembers"].as_array().iter().for_each(|obj| obj.iter().for_each(|v| minable_ores.push(v["title"].as_str().unwrap().replace("\\n", "\n").replace("\\\"", "\"")) ));
+    response_json["query"]["categorymembers"].as_array().iter().next().unwrap()
+        .iter().for_each(|v| minable_ores.push(v["title"].as_str().unwrap().to_string()));
+
+    output.iter_mut().for_each(|mut r| r.rename_items(&classname_map));
     //add coal
     minable_ores.push("Coal".to_string());
 
@@ -233,7 +247,7 @@ fn main() {
         products: vec!["Nitrogen Gas".to_string()],
         product_rates: vec![360.0],
         power_consumption: 150.0,
-        production_method: vec!["Resource Well Extractors".to_string()],
+        production_method: vec!["Resource Well Pressurizer".to_string()],
         unlock_tags: vec![],
     });
 

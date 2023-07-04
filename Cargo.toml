@@ -9,7 +9,7 @@ edition = "2021"
 gloo-net = { version = "0.3.0", features = ["json", "http"] }
 wasm-bindgen = "0.2.87"
 wasm-bindgen-futures = "0.4.37"
-web-sys = "0.3.64"
+web-sys = { version = "0.3.64", features = ["Url", "UrlSearchParams"] }
 yew = { version = "0.20.0", features = ["csr"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
