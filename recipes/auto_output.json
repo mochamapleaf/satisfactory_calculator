@@ -2,19 +2,18 @@
   {
     "recipe_name": "AI Limiter",
     "resources": [
-      "Desc_CopperSheet_C",
-      "Desc_HighSpeedWire_C"
+      "Copper Sheet",
+      "Quickwire"
     ],
     "resources_rates": [
       25.0,
       100.0
     ],
     "products": [
-      "Desc_CircuitBoardHighSpeed_C"
+      "AI Limiter"
     ],
     "product_rates": [
-      25.0,
-      100.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -27,13 +26,13 @@
   {
     "recipe_name": "Alien DNA Capsule",
     "resources": [
-      "Desc_AlienProtein_C"
+      "Alien Protein"
     ],
     "resources_rates": [
       10.0
     ],
     "products": [
-      "Desc_AlienDNACapsule_C"
+      "Alien DNA Capsule"
     ],
     "product_rates": [
       10.0
@@ -49,18 +48,17 @@
   {
     "recipe_name": "Adhered Iron Plate",
     "resources": [
-      "Desc_IronPlate_C",
-      "Desc_Rubber_C"
+      "Iron Plate",
+      "Rubber"
     ],
     "resources_rates": [
       11.25,
       3.75
     ],
     "products": [
-      "Desc_IronPlateReinforced_C"
+      "Reinforced Iron Plate"
     ],
     "product_rates": [
-      11.25,
       3.75
     ],
     "power_consumption": 15.0,
@@ -74,19 +72,18 @@
   {
     "recipe_name": "Alclad Casing",
     "resources": [
-      "Desc_AluminumIngot_C",
-      "Desc_CopperIngot_C"
+      "Aluminum Ingot",
+      "Copper Ingot"
     ],
     "resources_rates": [
       150.0,
       75.0
     ],
     "products": [
-      "Desc_AluminumCasing_C"
+      "Aluminum Casing"
     ],
     "product_rates": [
-      150.0,
-      75.0
+      112.5
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -99,10 +96,10 @@
   {
     "recipe_name": "Automated Miner",
     "resources": [
-      "Desc_Motor_C",
-      "Desc_SteelPipe_C",
-      "Desc_IronRod_C",
-      "Desc_IronPlate_C"
+      "Motor",
+      "Steel Pipe",
+      "Iron Rod",
+      "Iron Plate"
     ],
     "resources_rates": [
       1.0,
@@ -111,13 +108,10 @@
       2.0
     ],
     "products": [
-      "BP_ItemDescriptorPortableMiner_C"
+      "Portable Miner"
     ],
     "product_rates": [
-      1.0,
-      4.0,
-      4.0,
-      2.0
+      1.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -130,9 +124,9 @@
   {
     "recipe_name": "Crystal Beacon",
     "resources": [
-      "Desc_SteelPlate_C",
-      "Desc_SteelPipe_C",
-      "Desc_CrystalOscillator_C"
+      "Steel Beam",
+      "Steel Pipe",
+      "Crystal Oscillator"
     ],
     "resources_rates": [
       2.0,
@@ -140,12 +134,10 @@
       0.5
     ],
     "products": [
-      "BP_EquipmentDescriptorBeacon_C"
+      "Beacon"
     ],
     "product_rates": [
-      2.0,
-      8.0,
-      0.5
+      10.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -158,19 +150,18 @@
   {
     "recipe_name": "Bolted Frame",
     "resources": [
-      "Desc_IronPlateReinforced_C",
-      "Desc_IronScrew_C"
+      "Reinforced Iron Plate",
+      "Screw"
     ],
     "resources_rates": [
       7.5,
       140.0
     ],
     "products": [
-      "Desc_ModularFrame_C"
+      "Modular Frame"
     ],
     "product_rates": [
-      7.5,
-      140.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -183,19 +174,18 @@
   {
     "recipe_name": "Insulated Cable",
     "resources": [
-      "Desc_Wire_C",
-      "Desc_Rubber_C"
+      "Wire",
+      "Rubber"
     ],
     "resources_rates": [
       45.0,
       30.0
     ],
     "products": [
-      "Desc_Cable_C"
+      "Cable"
     ],
     "product_rates": [
-      45.0,
-      30.0
+      100.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -208,19 +198,18 @@
   {
     "recipe_name": "Quickwire Cable",
     "resources": [
-      "Desc_HighSpeedWire_C",
-      "Desc_Rubber_C"
+      "Quickwire",
+      "Rubber"
     ],
     "resources_rates": [
       7.5,
       5.0
     ],
     "products": [
-      "Desc_Cable_C"
+      "Cable"
     ],
     "product_rates": [
-      7.5,
-      5.0
+      27.5
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -233,19 +222,18 @@
   {
     "recipe_name": "Silicon Circuit Board",
     "resources": [
-      "Desc_CopperSheet_C",
-      "Desc_Silica_C"
+      "Copper Sheet",
+      "Silica"
     ],
     "resources_rates": [
       27.5,
       27.5
     ],
     "products": [
-      "Desc_CircuitBoard_C"
+      "Circuit Board"
     ],
     "product_rates": [
-      27.5,
-      27.5
+      12.5
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -258,19 +246,18 @@
   {
     "recipe_name": "Caterium Circuit Board",
     "resources": [
-      "Desc_Plastic_C",
-      "Desc_HighSpeedWire_C"
+      "Plastic",
+      "Quickwire"
     ],
     "resources_rates": [
       12.5,
       37.5
     ],
     "products": [
-      "Desc_CircuitBoard_C"
+      "Circuit Board"
     ],
     "product_rates": [
-      12.5,
-      37.5
+      8.75
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -283,10 +270,10 @@
   {
     "recipe_name": "Classic Battery",
     "resources": [
-      "Desc_Sulfur_C",
-      "Desc_AluminumPlate_C",
-      "Desc_Plastic_C",
-      "Desc_Wire_C"
+      "Sulfur",
+      "Alclad Aluminum Sheet",
+      "Plastic",
+      "Wire"
     ],
     "resources_rates": [
       45.0,
@@ -295,13 +282,10 @@
       90.0
     ],
     "products": [
-      "Desc_Battery_C"
+      "Battery"
     ],
     "product_rates": [
-      45.0,
-      52.5,
-      60.0,
-      90.0
+      30.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -314,16 +298,16 @@
   {
     "recipe_name": "Charcoal",
     "resources": [
-      "Desc_Wood_C"
+      "Wood"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_Coal_C"
+      "Coal"
     ],
     "product_rates": [
-      15.0
+      150.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -336,16 +320,16 @@
   {
     "recipe_name": "Biocoal",
     "resources": [
-      "Desc_GenericBiomass_C"
+      "Biomass"
     ],
     "resources_rates": [
       37.5
     ],
     "products": [
-      "Desc_Coal_C"
+      "Coal"
     ],
     "product_rates": [
-      37.5
+      45.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -358,19 +342,18 @@
   {
     "recipe_name": "Coated Cable",
     "resources": [
-      "Desc_Wire_C",
-      "Desc_HeavyOilResidue_C"
+      "Wire",
+      "Heavy Oil Residue"
     ],
     "resources_rates": [
       37.5,
       15.0
     ],
     "products": [
-      "Desc_Cable_C"
+      "Cable"
     ],
     "product_rates": [
-      37.5,
-      15.0
+      67.5
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -383,19 +366,18 @@
   {
     "recipe_name": "Coated Iron Canister",
     "resources": [
-      "Desc_IronPlate_C",
-      "Desc_CopperSheet_C"
+      "Iron Plate",
+      "Copper Sheet"
     ],
     "resources_rates": [
       30.0,
       15.0
     ],
     "products": [
-      "Desc_FluidCanister_C"
+      "Empty Canister"
     ],
     "product_rates": [
-      30.0,
-      15.0
+      60.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -408,19 +390,18 @@
   {
     "recipe_name": "Coated Iron Plate",
     "resources": [
-      "Desc_IronIngot_C",
-      "Desc_Plastic_C"
+      "Iron Ingot",
+      "Plastic"
     ],
     "resources_rates": [
       50.0,
       10.0
     ],
     "products": [
-      "Desc_IronPlate_C"
+      "Iron Plate"
     ],
     "product_rates": [
-      50.0,
-      10.0
+      75.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -433,19 +414,18 @@
   {
     "recipe_name": "Coke Steel Ingot",
     "resources": [
-      "Desc_OreIron_C",
-      "Desc_PetroleumCoke_C"
+      "Iron Ore",
+      "Petroleum Coke"
     ],
     "resources_rates": [
       75.0,
       75.0
     ],
     "products": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "product_rates": [
-      75.0,
-      75.0
+      100.0
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -458,9 +438,9 @@
   {
     "recipe_name": "Caterium Computer",
     "resources": [
-      "Desc_CircuitBoard_C",
-      "Desc_HighSpeedWire_C",
-      "Desc_Rubber_C"
+      "Circuit Board",
+      "Quickwire",
+      "Rubber"
     ],
     "resources_rates": [
       26.25,
@@ -468,12 +448,10 @@
       45.0
     ],
     "products": [
-      "Desc_Computer_C"
+      "Computer"
     ],
     "product_rates": [
-      26.25,
-      105.0,
-      45.0
+      3.75
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -486,18 +464,17 @@
   {
     "recipe_name": "Crystal Computer",
     "resources": [
-      "Desc_CircuitBoard_C",
-      "Desc_CrystalOscillator_C"
+      "Circuit Board",
+      "Crystal Oscillator"
     ],
     "resources_rates": [
       7.5,
       2.8125
     ],
     "products": [
-      "Desc_Computer_C"
+      "Computer"
     ],
     "product_rates": [
-      7.5,
       2.8125
     ],
     "power_consumption": 15.0,
@@ -511,19 +488,18 @@
   {
     "recipe_name": "Fine Concrete",
     "resources": [
-      "Desc_Silica_C",
-      "Desc_Stone_C"
+      "Silica",
+      "Limestone"
     ],
     "resources_rates": [
       7.5,
       30.0
     ],
     "products": [
-      "Desc_Cement_C"
+      "Concrete"
     ],
     "product_rates": [
-      7.5,
-      30.0
+      25.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -536,9 +512,9 @@
   {
     "recipe_name": "Cooling Device",
     "resources": [
-      "Desc_AluminumPlateReinforced_C",
-      "Desc_Motor_C",
-      "Desc_NitrogenGas_C"
+      "Heat Sink",
+      "Motor",
+      "Nitrogen Gas"
     ],
     "resources_rates": [
       9.375,
@@ -546,12 +522,10 @@
       45.0
     ],
     "products": [
-      "Desc_CoolingSystem_C"
+      "Cooling System"
     ],
     "product_rates": [
-      9.375,
-      1.875,
-      45.0
+      3.75
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -564,19 +538,18 @@
   {
     "recipe_name": "Copper Alloy Ingot",
     "resources": [
-      "Desc_OreCopper_C",
-      "Desc_OreIron_C"
+      "Copper Ore",
+      "Iron Ore"
     ],
     "resources_rates": [
       50.0,
       25.0
     ],
     "products": [
-      "Desc_CopperIngot_C"
+      "Copper Ingot"
     ],
     "product_rates": [
-      50.0,
-      25.0
+      100.0
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -589,19 +562,18 @@
   {
     "recipe_name": "Copper Rotor",
     "resources": [
-      "Desc_CopperSheet_C",
-      "Desc_IronScrew_C"
+      "Copper Sheet",
+      "Screw"
     ],
     "resources_rates": [
       22.5,
       195.0
     ],
     "products": [
-      "Desc_Rotor_C"
+      "Rotor"
     ],
     "product_rates": [
-      22.5,
-      195.0
+      11.25
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -614,9 +586,9 @@
   {
     "recipe_name": "Insulated Crystal Oscillator",
     "resources": [
-      "Desc_QuartzCrystal_C",
-      "Desc_Rubber_C",
-      "Desc_CircuitBoardHighSpeed_C"
+      "Quartz Crystal",
+      "Rubber",
+      "AI Limiter"
     ],
     "resources_rates": [
       18.75,
@@ -624,11 +596,9 @@
       1.875
     ],
     "products": [
-      "Desc_CrystalOscillator_C"
+      "Crystal Oscillator"
     ],
     "product_rates": [
-      18.75,
-      13.125,
       1.875
     ],
     "power_consumption": 55.0,
@@ -642,18 +612,17 @@
   {
     "recipe_name": "Diluted Fuel",
     "resources": [
-      "Desc_HeavyOilResidue_C",
-      "Desc_Water_C"
+      "Heavy Oil Residue",
+      "Water"
     ],
     "resources_rates": [
       50.0,
       100.0
     ],
     "products": [
-      "Desc_LiquidFuel_C"
+      "Fuel"
     ],
     "product_rates": [
-      50.0,
       100.0
     ],
     "power_consumption": 75.0,
@@ -667,18 +636,17 @@
   {
     "recipe_name": "Diluted Packaged Fuel",
     "resources": [
-      "Desc_HeavyOilResidue_C",
-      "Desc_PackagedWater_C"
+      "Heavy Oil Residue",
+      "Packaged Water"
     ],
     "resources_rates": [
       30.0,
       60.0
     ],
     "products": [
-      "Desc_Fuel_C"
+      "Packaged Fuel"
     ],
     "product_rates": [
-      30.0,
       60.0
     ],
     "power_consumption": 0.0,
@@ -692,18 +660,17 @@
   {
     "recipe_name": "Electric Motor",
     "resources": [
-      "Desc_ElectromagneticControlRod_C",
-      "Desc_Rotor_C"
+      "Electromagnetic Control Rod",
+      "Rotor"
     ],
     "resources_rates": [
       3.75,
       7.5
     ],
     "products": [
-      "Desc_Motor_C"
+      "Motor"
     ],
     "product_rates": [
-      3.75,
       7.5
     ],
     "power_consumption": 15.0,
@@ -717,20 +684,20 @@
   {
     "recipe_name": "Electrode - Aluminum Scrap",
     "resources": [
-      "Desc_AluminaSolution_C",
-      "Desc_PetroleumCoke_C"
+      "Alumina Solution",
+      "Petroleum Coke"
     ],
     "resources_rates": [
       180.0,
       60.0
     ],
     "products": [
-      "Desc_AluminumScrap_C",
-      "Desc_Water_C"
+      "Aluminum Scrap",
+      "Water"
     ],
     "product_rates": [
-      180.0,
-      60.0
+      300.0,
+      105.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -743,19 +710,18 @@
   {
     "recipe_name": "Electrode Circuit Board",
     "resources": [
-      "Desc_Rubber_C",
-      "Desc_PetroleumCoke_C"
+      "Rubber",
+      "Petroleum Coke"
     ],
     "resources_rates": [
       30.0,
       45.0
     ],
     "products": [
-      "Desc_CircuitBoard_C"
+      "Circuit Board"
     ],
     "product_rates": [
-      30.0,
-      45.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -768,19 +734,18 @@
   {
     "recipe_name": "Electromagnetic Connection Rod",
     "resources": [
-      "Desc_Stator_C",
-      "Desc_HighSpeedConnector_C"
+      "Stator",
+      "High-Speed Connector"
     ],
     "resources_rates": [
       8.0,
       4.0
     ],
     "products": [
-      "Desc_ElectromagneticControlRod_C"
+      "Electromagnetic Control Rod"
     ],
     "product_rates": [
-      8.0,
-      4.0
+      8.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -793,19 +758,18 @@
   {
     "recipe_name": "Encased Industrial Pipe",
     "resources": [
-      "Desc_SteelPipe_C",
-      "Desc_Cement_C"
+      "Steel Pipe",
+      "Concrete"
     ],
     "resources_rates": [
       28.0,
       20.0
     ],
     "products": [
-      "Desc_SteelPlateReinforced_C"
+      "Encased Industrial Beam"
     ],
     "product_rates": [
-      28.0,
-      20.0
+      4.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -818,18 +782,17 @@
   {
     "recipe_name": "Compacted Coal",
     "resources": [
-      "Desc_Coal_C",
-      "Desc_Sulfur_C"
+      "Coal",
+      "Sulfur"
     ],
     "resources_rates": [
       25.0,
       25.0
     ],
     "products": [
-      "Desc_CompactedCoal_C"
+      "Compacted Coal"
     ],
     "product_rates": [
-      25.0,
       25.0
     ],
     "power_consumption": 15.0,
@@ -843,10 +806,10 @@
   {
     "recipe_name": "Fertile Uranium",
     "resources": [
-      "Desc_OreUranium_C",
-      "Desc_NuclearWaste_C",
-      "Desc_NitricAcid_C",
-      "Desc_SulfuricAcid_C"
+      "Uranium",
+      "Uranium Waste",
+      "Nitric Acid",
+      "Sulfuric Acid"
     ],
     "resources_rates": [
       25.0,
@@ -855,14 +818,12 @@
       25.0
     ],
     "products": [
-      "Desc_NonFissibleUranium_C",
-      "Desc_Water_C"
+      "Non-fissile Uranium",
+      "Water"
     ],
     "product_rates": [
-      25.0,
-      25.0,
-      15.0,
-      25.0
+      100.0,
+      40.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -875,9 +836,9 @@
   {
     "recipe_name": "Flexible Framework",
     "resources": [
-      "Desc_ModularFrame_C",
-      "Desc_SteelPlate_C",
-      "Desc_Rubber_C"
+      "Modular Frame",
+      "Steel Beam",
+      "Rubber"
     ],
     "resources_rates": [
       3.75,
@@ -885,12 +846,10 @@
       30.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_2_C"
+      "Versatile Framework"
     ],
     "product_rates": [
-      3.75,
-      22.5,
-      30.0
+      7.5
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -903,19 +862,18 @@
   {
     "recipe_name": "Fused Wire",
     "resources": [
-      "Desc_CopperIngot_C",
-      "Desc_GoldIngot_C"
+      "Copper Ingot",
+      "Caterium Ingot"
     ],
     "resources_rates": [
       12.0,
       3.0
     ],
     "products": [
-      "Desc_Wire_C"
+      "Wire"
     ],
     "product_rates": [
-      12.0,
-      3.0
+      90.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -928,19 +886,18 @@
   {
     "recipe_name": "Fine Black Powder",
     "resources": [
-      "Desc_Sulfur_C",
-      "Desc_CompactedCoal_C"
+      "Sulfur",
+      "Compacted Coal"
     ],
     "resources_rates": [
       7.5,
       3.75
     ],
     "products": [
-      "Desc_Gunpowder_C"
+      "Black Powder"
     ],
     "product_rates": [
-      7.5,
-      3.75
+      15.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -953,10 +910,10 @@
   {
     "recipe_name": "Heat-Fused Frame",
     "resources": [
-      "Desc_ModularFrameHeavy_C",
-      "Desc_AluminumIngot_C",
-      "Desc_NitricAcid_C",
-      "Desc_LiquidFuel_C"
+      "Heavy Modular Frame",
+      "Aluminum Ingot",
+      "Nitric Acid",
+      "Fuel"
     ],
     "resources_rates": [
       3.0,
@@ -965,13 +922,10 @@
       30.0
     ],
     "products": [
-      "Desc_ModularFrameFused_C"
+      "Fused Modular Frame"
     ],
     "product_rates": [
-      3.0,
-      150.0,
-      24.0,
-      30.0
+      3.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -984,19 +938,18 @@
   {
     "recipe_name": "Heat Exchanger",
     "resources": [
-      "Desc_AluminumCasing_C",
-      "Desc_Rubber_C"
+      "Aluminum Casing",
+      "Rubber"
     ],
     "resources_rates": [
       30.0,
       30.0
     ],
     "products": [
-      "Desc_AluminumPlateReinforced_C"
+      "Heat Sink"
     ],
     "product_rates": [
-      30.0,
-      30.0
+      10.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1009,10 +962,10 @@
   {
     "recipe_name": "Heavy Flexible Frame",
     "resources": [
-      "Desc_ModularFrame_C",
-      "Desc_SteelPlateReinforced_C",
-      "Desc_Rubber_C",
-      "Desc_IronScrew_C"
+      "Modular Frame",
+      "Encased Industrial Beam",
+      "Rubber",
+      "Screw"
     ],
     "resources_rates": [
       18.75,
@@ -1021,13 +974,10 @@
       390.0
     ],
     "products": [
-      "Desc_ModularFrameHeavy_C"
+      "Heavy Modular Frame"
     ],
     "product_rates": [
-      18.75,
-      11.25,
-      75.0,
-      390.0
+      3.75
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1040,17 +990,18 @@
   {
     "recipe_name": "Heavy Oil Residue",
     "resources": [
-      "Desc_LiquidOil_C"
+      "Crude Oil"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_HeavyOilResidue_C",
-      "Desc_PolymerResin_C"
+      "Heavy Oil Residue",
+      "Polymer Resin"
     ],
     "product_rates": [
-      30.0
+      40.0,
+      20.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1063,9 +1014,9 @@
   {
     "recipe_name": "Silicon High-Speed Connector",
     "resources": [
-      "Desc_HighSpeedWire_C",
-      "Desc_Silica_C",
-      "Desc_CircuitBoard_C"
+      "Quickwire",
+      "Silica",
+      "Circuit Board"
     ],
     "resources_rates": [
       90.0,
@@ -1073,11 +1024,9 @@
       3.0
     ],
     "products": [
-      "Desc_HighSpeedConnector_C"
+      "High-Speed Connector"
     ],
     "product_rates": [
-      90.0,
-      37.5,
       3.0
     ],
     "power_consumption": 55.0,
@@ -1091,9 +1040,9 @@
   {
     "recipe_name": "Automated Speed Wiring",
     "resources": [
-      "Desc_Stator_C",
-      "Desc_Wire_C",
-      "Desc_HighSpeedConnector_C"
+      "Stator",
+      "Wire",
+      "High-Speed Connector"
     ],
     "resources_rates": [
       3.75,
@@ -1101,12 +1050,10 @@
       1.875
     ],
     "products": [
-      "Desc_SpaceElevatorPart_3_C"
+      "Automated Wiring"
     ],
     "product_rates": [
-      3.75,
-      75.0,
-      1.875
+      7.5
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1119,19 +1066,18 @@
   {
     "recipe_name": "Iron Alloy Ingot",
     "resources": [
-      "Desc_OreIron_C",
-      "Desc_OreCopper_C"
+      "Iron Ore",
+      "Copper Ore"
     ],
     "resources_rates": [
       20.0,
       20.0
     ],
     "products": [
-      "Desc_IronIngot_C"
+      "Iron Ingot"
     ],
     "product_rates": [
-      20.0,
-      20.0
+      50.0
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -1144,19 +1090,18 @@
   {
     "recipe_name": "Solid Steel Ingot",
     "resources": [
-      "Desc_IronIngot_C",
-      "Desc_Coal_C"
+      "Iron Ingot",
+      "Coal"
     ],
     "resources_rates": [
       40.0,
       40.0
     ],
     "products": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "product_rates": [
-      40.0,
-      40.0
+      60.0
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -1169,19 +1114,18 @@
   {
     "recipe_name": "Compacted Steel Ingot",
     "resources": [
-      "Desc_OreIron_C",
-      "Desc_CompactedCoal_C"
+      "Iron Ore",
+      "Compacted Coal"
     ],
     "resources_rates": [
       22.5,
       11.25
     ],
     "products": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "product_rates": [
-      22.5,
-      11.25
+      37.5
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -1194,18 +1138,17 @@
   {
     "recipe_name": "Instant Plutonium Cell",
     "resources": [
-      "Desc_NonFissibleUranium_C",
-      "Desc_AluminumCasing_C"
+      "Non-fissile Uranium",
+      "Aluminum Casing"
     ],
     "resources_rates": [
       75.0,
       10.0
     ],
     "products": [
-      "Desc_PlutoniumCell_C"
+      "Encased Plutonium Cell"
     ],
     "product_rates": [
-      75.0,
       10.0
     ],
     "power_consumption": 1000.0,
@@ -1219,10 +1162,10 @@
   {
     "recipe_name": "Instant Scrap",
     "resources": [
-      "Desc_OreBauxite_C",
-      "Desc_Coal_C",
-      "Desc_SulfuricAcid_C",
-      "Desc_Water_C"
+      "Bauxite",
+      "Coal",
+      "Sulfuric Acid",
+      "Water"
     ],
     "resources_rates": [
       150.0,
@@ -1231,14 +1174,12 @@
       60.0
     ],
     "products": [
-      "Desc_AluminumScrap_C",
-      "Desc_Water_C"
+      "Aluminum Scrap",
+      "Water"
     ],
     "product_rates": [
-      150.0,
-      100.0,
-      50.0,
-      60.0
+      300.0,
+      50.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -1251,10 +1192,10 @@
   {
     "recipe_name": "Heavy Encased Frame",
     "resources": [
-      "Desc_ModularFrame_C",
-      "Desc_SteelPlateReinforced_C",
-      "Desc_SteelPipe_C",
-      "Desc_Cement_C"
+      "Modular Frame",
+      "Encased Industrial Beam",
+      "Steel Pipe",
+      "Concrete"
     ],
     "resources_rates": [
       7.5,
@@ -1263,13 +1204,10 @@
       20.625
     ],
     "products": [
-      "Desc_ModularFrameHeavy_C"
+      "Heavy Modular Frame"
     ],
     "product_rates": [
-      7.5,
-      9.375,
-      33.75,
-      20.625
+      2.8125
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1282,19 +1220,18 @@
   {
     "recipe_name": "Steeled Frame",
     "resources": [
-      "Desc_IronPlateReinforced_C",
-      "Desc_SteelPipe_C"
+      "Reinforced Iron Plate",
+      "Steel Pipe"
     ],
     "resources_rates": [
       2.0,
       10.0
     ],
     "products": [
-      "Desc_ModularFrame_C"
+      "Modular Frame"
     ],
     "product_rates": [
-      2.0,
-      10.0
+      3.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1307,9 +1244,9 @@
   {
     "recipe_name": "Rigour Motor",
     "resources": [
-      "Desc_Rotor_C",
-      "Desc_Stator_C",
-      "Desc_CrystalOscillator_C"
+      "Rotor",
+      "Stator",
+      "Crystal Oscillator"
     ],
     "resources_rates": [
       3.75,
@@ -1317,12 +1254,10 @@
       1.25
     ],
     "products": [
-      "Desc_Motor_C"
+      "Motor"
     ],
     "product_rates": [
-      3.75,
-      3.75,
-      1.25
+      7.5
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1335,10 +1270,10 @@
   {
     "recipe_name": "Uranium Fuel Unit",
     "resources": [
-      "Desc_UraniumCell_C",
-      "Desc_ElectromagneticControlRod_C",
-      "Desc_CrystalOscillator_C",
-      "BP_EquipmentDescriptorBeacon_C"
+      "Encased Uranium Cell",
+      "Electromagnetic Control Rod",
+      "Crystal Oscillator",
+      "Beacon"
     ],
     "resources_rates": [
       20.0,
@@ -1347,13 +1282,10 @@
       1.2000000000000002
     ],
     "products": [
-      "Desc_NuclearFuelRod_C"
+      "Uranium Fuel Rod"
     ],
     "product_rates": [
-      20.0,
-      2.0,
-      0.6000000000000001,
-      1.2000000000000002
+      0.6000000000000001
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1366,19 +1298,18 @@
   {
     "recipe_name": "OC Supercomputer",
     "resources": [
-      "Desc_ModularFrameLightweight_C",
-      "Desc_CoolingSystem_C"
+      "Radio Control Unit",
+      "Cooling System"
     ],
     "resources_rates": [
       9.0,
       9.0
     ],
     "products": [
-      "Desc_ComputerSuper_C"
+      "Supercomputer"
     ],
     "product_rates": [
-      9.0,
-      9.0
+      3.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1391,9 +1322,9 @@
   {
     "recipe_name": "Plastic Smart Plating",
     "resources": [
-      "Desc_IronPlateReinforced_C",
-      "Desc_Rotor_C",
-      "Desc_Plastic_C"
+      "Reinforced Iron Plate",
+      "Rotor",
+      "Plastic"
     ],
     "resources_rates": [
       2.5,
@@ -1401,12 +1332,10 @@
       7.5
     ],
     "products": [
-      "Desc_SpaceElevatorPart_1_C"
+      "Smart Plating"
     ],
     "product_rates": [
-      2.5,
-      2.5,
-      7.5
+      5.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1419,19 +1348,18 @@
   {
     "recipe_name": "Recycled Plastic",
     "resources": [
-      "Desc_Rubber_C",
-      "Desc_LiquidFuel_C"
+      "Rubber",
+      "Fuel"
     ],
     "resources_rates": [
       30.0,
       30.0
     ],
     "products": [
-      "Desc_Plastic_C"
+      "Plastic"
     ],
     "product_rates": [
-      30.0,
-      30.0
+      60.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1444,18 +1372,17 @@
   {
     "recipe_name": "Plutonium Fuel Unit",
     "resources": [
-      "Desc_PlutoniumCell_C",
-      "Desc_PressureConversionCube_C"
+      "Encased Plutonium Cell",
+      "Pressure Conversion Cube"
     ],
     "resources_rates": [
       10.0,
       0.5
     ],
     "products": [
-      "Desc_PlutoniumFuelRod_C"
+      "Plutonium Fuel Rod"
     ],
     "product_rates": [
-      10.0,
       0.5
     ],
     "power_consumption": 15.0,
@@ -1469,18 +1396,17 @@
   {
     "recipe_name": "Polyester Fabric",
     "resources": [
-      "Desc_PolymerResin_C",
-      "Desc_Water_C"
+      "Polymer Resin",
+      "Water"
     ],
     "resources_rates": [
       30.0,
       30.0
     ],
     "products": [
-      "Desc_Fabric_C"
+      "Fabric"
     ],
     "product_rates": [
-      30.0,
       30.0
     ],
     "power_consumption": 0.0,
@@ -1494,17 +1420,18 @@
   {
     "recipe_name": "Polymer Resin",
     "resources": [
-      "Desc_LiquidOil_C"
+      "Crude Oil"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_PolymerResin_C",
-      "Desc_HeavyOilResidue_C"
+      "Polymer Resin",
+      "Heavy Oil Residue"
     ],
     "product_rates": [
-      60.0
+      130.0,
+      20.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1517,19 +1444,18 @@
   {
     "recipe_name": "Pure Caterium Ingot",
     "resources": [
-      "Desc_OreGold_C",
-      "Desc_Water_C"
+      "Caterium Ore",
+      "Water"
     ],
     "resources_rates": [
       24.0,
       24.0
     ],
     "products": [
-      "Desc_GoldIngot_C"
+      "Caterium Ingot"
     ],
     "product_rates": [
-      24.0,
-      24.0
+      12.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1542,19 +1468,18 @@
   {
     "recipe_name": "Pure Copper Ingot",
     "resources": [
-      "Desc_OreCopper_C",
-      "Desc_Water_C"
+      "Copper Ore",
+      "Water"
     ],
     "resources_rates": [
       15.0,
       10.0
     ],
     "products": [
-      "Desc_CopperIngot_C"
+      "Copper Ingot"
     ],
     "product_rates": [
-      15.0,
-      10.0
+      37.5
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1567,19 +1492,18 @@
   {
     "recipe_name": "Pure Iron Ingot",
     "resources": [
-      "Desc_OreIron_C",
-      "Desc_Water_C"
+      "Iron Ore",
+      "Water"
     ],
     "resources_rates": [
       35.0,
       20.0
     ],
     "products": [
-      "Desc_IronIngot_C"
+      "Iron Ingot"
     ],
     "product_rates": [
-      35.0,
-      20.0
+      65.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1592,19 +1516,18 @@
   {
     "recipe_name": "Pure Quartz Crystal",
     "resources": [
-      "Desc_RawQuartz_C",
-      "Desc_Water_C"
+      "Raw Quartz",
+      "Water"
     ],
     "resources_rates": [
       67.5,
       37.5
     ],
     "products": [
-      "Desc_QuartzCrystal_C"
+      "Quartz Crystal"
     ],
     "product_rates": [
-      67.5,
-      37.5
+      52.5
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1617,19 +1540,18 @@
   {
     "recipe_name": "Fused Quickwire",
     "resources": [
-      "Desc_GoldIngot_C",
-      "Desc_CopperIngot_C"
+      "Caterium Ingot",
+      "Copper Ingot"
     ],
     "resources_rates": [
       7.5,
       37.5
     ],
     "products": [
-      "Desc_HighSpeedWire_C"
+      "Quickwire"
     ],
     "product_rates": [
-      7.5,
-      37.5
+      90.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1642,10 +1564,10 @@
   {
     "recipe_name": "Radio Control System",
     "resources": [
-      "Desc_CrystalOscillator_C",
-      "Desc_CircuitBoard_C",
-      "Desc_AluminumCasing_C",
-      "Desc_Rubber_C"
+      "Crystal Oscillator",
+      "Circuit Board",
+      "Aluminum Casing",
+      "Rubber"
     ],
     "resources_rates": [
       1.5,
@@ -1654,13 +1576,10 @@
       45.0
     ],
     "products": [
-      "Desc_ModularFrameLightweight_C"
+      "Radio Control Unit"
     ],
     "product_rates": [
-      1.5,
-      15.0,
-      90.0,
-      45.0
+      4.5
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1673,9 +1592,9 @@
   {
     "recipe_name": "Radio Connection Unit",
     "resources": [
-      "Desc_AluminumPlateReinforced_C",
-      "Desc_HighSpeedConnector_C",
-      "Desc_QuartzCrystal_C"
+      "Heat Sink",
+      "High-Speed Connector",
+      "Quartz Crystal"
     ],
     "resources_rates": [
       15.0,
@@ -1683,12 +1602,10 @@
       45.0
     ],
     "products": [
-      "Desc_ModularFrameLightweight_C"
+      "Radio Control Unit"
     ],
     "product_rates": [
-      15.0,
-      7.5,
-      45.0
+      3.75
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -1701,19 +1618,18 @@
   {
     "recipe_name": "Recycled Rubber",
     "resources": [
-      "Desc_Plastic_C",
-      "Desc_LiquidFuel_C"
+      "Plastic",
+      "Fuel"
     ],
     "resources_rates": [
       30.0,
       30.0
     ],
     "products": [
-      "Desc_Rubber_C"
+      "Rubber"
     ],
     "product_rates": [
-      30.0,
-      30.0
+      60.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1726,19 +1642,18 @@
   {
     "recipe_name": "Bolted Iron Plate",
     "resources": [
-      "Desc_IronPlate_C",
-      "Desc_IronScrew_C"
+      "Iron Plate",
+      "Screw"
     ],
     "resources_rates": [
       90.0,
       250.0
     ],
     "products": [
-      "Desc_IronPlateReinforced_C"
+      "Reinforced Iron Plate"
     ],
     "product_rates": [
-      90.0,
-      250.0
+      15.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1751,19 +1666,18 @@
   {
     "recipe_name": "Stitched Iron Plate",
     "resources": [
-      "Desc_IronPlate_C",
-      "Desc_Wire_C"
+      "Iron Plate",
+      "Wire"
     ],
     "resources_rates": [
       18.75,
       37.5
     ],
     "products": [
-      "Desc_IronPlateReinforced_C"
+      "Reinforced Iron Plate"
     ],
     "product_rates": [
-      18.75,
-      37.5
+      5.625
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1776,19 +1690,18 @@
   {
     "recipe_name": "Steel Rotor",
     "resources": [
-      "Desc_SteelPipe_C",
-      "Desc_Wire_C"
+      "Steel Pipe",
+      "Wire"
     ],
     "resources_rates": [
       10.0,
       30.0
     ],
     "products": [
-      "Desc_Rotor_C"
+      "Rotor"
     ],
     "product_rates": [
-      10.0,
-      30.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1801,19 +1714,18 @@
   {
     "recipe_name": "Rubber Concrete",
     "resources": [
-      "Desc_Stone_C",
-      "Desc_Rubber_C"
+      "Limestone",
+      "Rubber"
     ],
     "resources_rates": [
       50.0,
       10.0
     ],
     "products": [
-      "Desc_Cement_C"
+      "Concrete"
     ],
     "product_rates": [
-      50.0,
-      10.0
+      45.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1826,16 +1738,16 @@
   {
     "recipe_name": "Steel Screw",
     "resources": [
-      "Desc_SteelPlate_C"
+      "Steel Beam"
     ],
     "resources_rates": [
       5.0
     ],
     "products": [
-      "Desc_IronScrew_C"
+      "Screw"
     ],
     "product_rates": [
-      5.0
+      260.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -1848,16 +1760,16 @@
   {
     "recipe_name": "Cast Screw",
     "resources": [
-      "Desc_IronIngot_C"
+      "Iron Ingot"
     ],
     "resources_rates": [
       12.5
     ],
     "products": [
-      "Desc_IronScrew_C"
+      "Screw"
     ],
     "product_rates": [
-      12.5
+      50.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -1870,19 +1782,18 @@
   {
     "recipe_name": "Cheap Silica",
     "resources": [
-      "Desc_RawQuartz_C",
-      "Desc_Stone_C"
+      "Raw Quartz",
+      "Limestone"
     ],
     "resources_rates": [
       11.25,
       18.75
     ],
     "products": [
-      "Desc_Silica_C"
+      "Silica"
     ],
     "product_rates": [
-      11.25,
-      18.75
+      26.25
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1895,19 +1806,18 @@
   {
     "recipe_name": "Sloppy Alumina",
     "resources": [
-      "Desc_OreBauxite_C",
-      "Desc_Water_C"
+      "Bauxite",
+      "Water"
     ],
     "resources_rates": [
       200.0,
       200.0
     ],
     "products": [
-      "Desc_AluminaSolution_C"
+      "Alumina Solution"
     ],
     "product_rates": [
-      200.0,
-      200.0
+      240.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -1920,19 +1830,18 @@
   {
     "recipe_name": "Quickwire Stator",
     "resources": [
-      "Desc_SteelPipe_C",
-      "Desc_HighSpeedWire_C"
+      "Steel Pipe",
+      "Quickwire"
     ],
     "resources_rates": [
       16.0,
       60.0
     ],
     "products": [
-      "Desc_Stator_C"
+      "Stator"
     ],
     "product_rates": [
-      16.0,
-      60.0
+      8.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -1945,18 +1854,17 @@
   {
     "recipe_name": "Steamed Copper Sheet",
     "resources": [
-      "Desc_CopperIngot_C",
-      "Desc_Water_C"
+      "Copper Ingot",
+      "Water"
     ],
     "resources_rates": [
       22.5,
       22.5
     ],
     "products": [
-      "Desc_CopperSheet_C"
+      "Copper Sheet"
     ],
     "product_rates": [
-      22.5,
       22.5
     ],
     "power_consumption": 0.0,
@@ -1970,16 +1878,16 @@
   {
     "recipe_name": "Steel Canister",
     "resources": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_FluidCanister_C"
+      "Empty Canister"
     ],
     "product_rates": [
-      60.0
+      40.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -1992,19 +1900,18 @@
   {
     "recipe_name": "Steel Coated Plate",
     "resources": [
-      "Desc_SteelIngot_C",
-      "Desc_Plastic_C"
+      "Steel Ingot",
+      "Plastic"
     ],
     "resources_rates": [
       7.5,
       5.0
     ],
     "products": [
-      "Desc_IronPlate_C"
+      "Iron Plate"
     ],
     "product_rates": [
-      7.5,
-      5.0
+      45.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -2017,16 +1924,16 @@
   {
     "recipe_name": "Steel Rod",
     "resources": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "resources_rates": [
       12.0
     ],
     "products": [
-      "Desc_IronRod_C"
+      "Iron Rod"
     ],
     "product_rates": [
-      12.0
+      48.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2039,10 +1946,10 @@
   {
     "recipe_name": "Super-State Computer",
     "resources": [
-      "Desc_Computer_C",
-      "Desc_ElectromagneticControlRod_C",
-      "Desc_Battery_C",
-      "Desc_Wire_C"
+      "Computer",
+      "Electromagnetic Control Rod",
+      "Battery",
+      "Wire"
     ],
     "resources_rates": [
       3.5999999999999996,
@@ -2051,13 +1958,10 @@
       54.0
     ],
     "products": [
-      "Desc_ComputerSuper_C"
+      "Supercomputer"
     ],
     "product_rates": [
-      3.5999999999999996,
-      2.4,
-      24.0,
-      54.0
+      2.4
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -2070,10 +1974,10 @@
   {
     "recipe_name": "Turbo Blend Fuel",
     "resources": [
-      "Desc_LiquidFuel_C",
-      "Desc_HeavyOilResidue_C",
-      "Desc_Sulfur_C",
-      "Desc_PetroleumCoke_C"
+      "Fuel",
+      "Heavy Oil Residue",
+      "Sulfur",
+      "Petroleum Coke"
     ],
     "resources_rates": [
       15.0,
@@ -2082,13 +1986,10 @@
       22.5
     ],
     "products": [
-      "Desc_LiquidTurboFuel_C"
+      "Turbofuel"
     ],
     "product_rates": [
-      15.0,
-      30.0,
-      22.5,
-      22.5
+      45.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -2101,18 +2002,17 @@
   {
     "recipe_name": "Turbo Heavy Fuel",
     "resources": [
-      "Desc_HeavyOilResidue_C",
-      "Desc_CompactedCoal_C"
+      "Heavy Oil Residue",
+      "Compacted Coal"
     ],
     "resources_rates": [
       37.5,
       30.0
     ],
     "products": [
-      "Desc_LiquidTurboFuel_C"
+      "Turbofuel"
     ],
     "product_rates": [
-      37.5,
       30.0
     ],
     "power_consumption": 0.0,
@@ -2126,10 +2026,10 @@
   {
     "recipe_name": "Turbo Electric Motor",
     "resources": [
-      "Desc_Motor_C",
-      "Desc_ModularFrameLightweight_C",
-      "Desc_ElectromagneticControlRod_C",
-      "Desc_Rotor_C"
+      "Motor",
+      "Radio Control Unit",
+      "Electromagnetic Control Rod",
+      "Rotor"
     ],
     "resources_rates": [
       6.5625,
@@ -2138,13 +2038,10 @@
       6.5625
     ],
     "products": [
-      "Desc_MotorLightweight_C"
+      "Turbo Motor"
     ],
     "product_rates": [
-      6.5625,
-      8.4375,
-      4.6875,
-      6.5625
+      2.8125
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -2157,10 +2054,10 @@
   {
     "recipe_name": "Turbo Pressure Motor",
     "resources": [
-      "Desc_Motor_C",
-      "Desc_PressureConversionCube_C",
-      "Desc_PackagedNitrogenGas_C",
-      "Desc_Stator_C"
+      "Motor",
+      "Pressure Conversion Cube",
+      "Packaged Nitrogen Gas",
+      "Stator"
     ],
     "resources_rates": [
       7.5,
@@ -2169,13 +2066,10 @@
       15.0
     ],
     "products": [
-      "Desc_MotorLightweight_C"
+      "Turbo Motor"
     ],
     "product_rates": [
-      7.5,
-      1.875,
-      45.0,
-      15.0
+      3.75
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -2188,19 +2082,18 @@
   {
     "recipe_name": "Turbofuel",
     "resources": [
-      "Desc_LiquidFuel_C",
-      "Desc_CompactedCoal_C"
+      "Fuel",
+      "Compacted Coal"
     ],
     "resources_rates": [
       22.5,
       15.0
     ],
     "products": [
-      "Desc_LiquidTurboFuel_C"
+      "Turbofuel"
     ],
     "product_rates": [
-      22.5,
-      15.0
+      18.75
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -2213,10 +2106,10 @@
   {
     "recipe_name": "Infused Uranium Cell",
     "resources": [
-      "Desc_OreUranium_C",
-      "Desc_Silica_C",
-      "Desc_Sulfur_C",
-      "Desc_HighSpeedWire_C"
+      "Uranium",
+      "Silica",
+      "Sulfur",
+      "Quickwire"
     ],
     "resources_rates": [
       25.0,
@@ -2225,13 +2118,10 @@
       75.0
     ],
     "products": [
-      "Desc_UraniumCell_C"
+      "Encased Uranium Cell"
     ],
     "product_rates": [
-      25.0,
-      15.0,
-      25.0,
-      75.0
+      20.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -2244,19 +2134,18 @@
   {
     "recipe_name": "Wet Concrete",
     "resources": [
-      "Desc_Stone_C",
-      "Desc_Water_C"
+      "Limestone",
+      "Water"
     ],
     "resources_rates": [
       120.0,
       100.0
     ],
     "products": [
-      "Desc_Cement_C"
+      "Concrete"
     ],
     "product_rates": [
-      120.0,
-      100.0
+      80.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -2269,16 +2158,16 @@
   {
     "recipe_name": "Iron Wire",
     "resources": [
-      "Desc_IronIngot_C"
+      "Iron Ingot"
     ],
     "resources_rates": [
       12.5
     ],
     "products": [
-      "Desc_Wire_C"
+      "Wire"
     ],
     "product_rates": [
-      12.5
+      22.5
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2291,16 +2180,16 @@
   {
     "recipe_name": "Caterium Wire",
     "resources": [
-      "Desc_GoldIngot_C"
+      "Caterium Ingot"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_Wire_C"
+      "Wire"
     ],
     "product_rates": [
-      15.0
+      120.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2313,20 +2202,20 @@
   {
     "recipe_name": "Alumina Solution",
     "resources": [
-      "Desc_OreBauxite_C",
-      "Desc_Water_C"
+      "Bauxite",
+      "Water"
     ],
     "resources_rates": [
       120.0,
       180.0
     ],
     "products": [
-      "Desc_AluminaSolution_C",
-      "Desc_Silica_C"
+      "Alumina Solution",
+      "Silica"
     ],
     "product_rates": [
       120.0,
-      180.0
+      50.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -2339,16 +2228,16 @@
   {
     "recipe_name": "Aluminum Casing",
     "resources": [
-      "Desc_AluminumIngot_C"
+      "Aluminum Ingot"
     ],
     "resources_rates": [
       90.0
     ],
     "products": [
-      "Desc_AluminumCasing_C"
+      "Aluminum Casing"
     ],
     "product_rates": [
-      90.0
+      60.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2361,19 +2250,19 @@
   {
     "recipe_name": "Aluminum Scrap",
     "resources": [
-      "Desc_AluminaSolution_C",
-      "Desc_Coal_C"
+      "Alumina Solution",
+      "Coal"
     ],
     "resources_rates": [
       240.0,
       120.0
     ],
     "products": [
-      "Desc_AluminumScrap_C",
-      "Desc_Water_C"
+      "Aluminum Scrap",
+      "Water"
     ],
     "product_rates": [
-      240.0,
+      360.0,
       120.0
     ],
     "power_consumption": 0.0,
@@ -2387,19 +2276,18 @@
   {
     "recipe_name": "Alclad Aluminum Sheet",
     "resources": [
-      "Desc_AluminumIngot_C",
-      "Desc_CopperIngot_C"
+      "Aluminum Ingot",
+      "Copper Ingot"
     ],
     "resources_rates": [
       30.0,
       10.0
     ],
     "products": [
-      "Desc_AluminumPlate_C"
+      "Alclad Aluminum Sheet"
     ],
     "product_rates": [
-      30.0,
-      10.0
+      30.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -2412,9 +2300,9 @@
   {
     "recipe_name": "Battery",
     "resources": [
-      "Desc_SulfuricAcid_C",
-      "Desc_AluminaSolution_C",
-      "Desc_AluminumCasing_C"
+      "Sulfuric Acid",
+      "Alumina Solution",
+      "Aluminum Casing"
     ],
     "resources_rates": [
       50.0,
@@ -2422,13 +2310,12 @@
       20.0
     ],
     "products": [
-      "Desc_Battery_C",
-      "Desc_Water_C"
+      "Battery",
+      "Water"
     ],
     "product_rates": [
-      50.0,
-      40.0,
-      20.0
+      20.0,
+      30.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -2441,16 +2328,16 @@
   {
     "recipe_name": "Solid Biofuel",
     "resources": [
-      "Desc_GenericBiomass_C"
+      "Biomass"
     ],
     "resources_rates": [
       120.0
     ],
     "products": [
-      "Desc_Biofuel_C"
+      "Solid Biofuel"
     ],
     "product_rates": [
-      120.0
+      60.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2463,16 +2350,16 @@
   {
     "recipe_name": "Biomass (Alien Protein)",
     "resources": [
-      "Desc_AlienProtein_C"
+      "Alien Protein"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_GenericBiomass_C"
+      "Biomass"
     ],
     "product_rates": [
-      15.0
+      1500.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2485,16 +2372,16 @@
   {
     "recipe_name": "Biomass (Leaves)",
     "resources": [
-      "Desc_Leaves_C"
+      "Leaves"
     ],
     "resources_rates": [
       120.0
     ],
     "products": [
-      "Desc_GenericBiomass_C"
+      "Biomass"
     ],
     "product_rates": [
-      120.0
+      60.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2507,16 +2394,16 @@
   {
     "recipe_name": "Biomass (Mycelia)",
     "resources": [
-      "Desc_Mycelia_C"
+      "Mycelia"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_GenericBiomass_C"
+      "Biomass"
     ],
     "product_rates": [
-      15.0
+      150.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2529,16 +2416,16 @@
   {
     "recipe_name": "Biomass (Wood)",
     "resources": [
-      "Desc_Wood_C"
+      "Wood"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_GenericBiomass_C"
+      "Biomass"
     ],
     "product_rates": [
-      60.0
+      300.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2551,16 +2438,16 @@
   {
     "recipe_name": "Cable",
     "resources": [
-      "Desc_Wire_C"
+      "Wire"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_Cable_C"
+      "Cable"
     ],
     "product_rates": [
-      60.0
+      30.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2573,16 +2460,16 @@
   {
     "recipe_name": "Candy Cane",
     "resources": [
-      "Desc_Gift_C"
+      "FICSMAS Gift"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_CandyCane_C"
+      "Candy Cane"
     ],
     "product_rates": [
-      15.0
+      5.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2595,9 +2482,9 @@
   {
     "recipe_name": "Turbo Rifle Ammo",
     "resources": [
-      "Desc_CartridgeStandard_C",
-      "Desc_AluminumCasing_C",
-      "Desc_LiquidTurboFuel_C"
+      "Rifle Ammo",
+      "Aluminum Casing",
+      "Turbofuel"
     ],
     "resources_rates": [
       125.0,
@@ -2605,12 +2492,10 @@
       15.0
     ],
     "products": [
-      "Desc_CartridgeChaos_C"
+      "Turbo Rifle Ammo"
     ],
     "product_rates": [
-      125.0,
-      15.0,
-      15.0
+      250.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -2623,19 +2508,18 @@
   {
     "recipe_name": "Circuit Board",
     "resources": [
-      "Desc_CopperSheet_C",
-      "Desc_Plastic_C"
+      "Copper Sheet",
+      "Plastic"
     ],
     "resources_rates": [
       15.0,
       30.0
     ],
     "products": [
-      "Desc_CircuitBoard_C"
+      "Circuit Board"
     ],
     "product_rates": [
-      15.0,
-      30.0
+      7.5
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -2648,16 +2532,16 @@
   {
     "recipe_name": "Color Cartridge",
     "resources": [
-      "Desc_FlowerPetals_C"
+      "Flower Petals"
     ],
     "resources_rates": [
       50.0
     ],
     "products": [
-      "Desc_ColorCartridge_C"
+      "Color Cartridge"
     ],
     "product_rates": [
-      50.0
+      100.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2670,10 +2554,10 @@
   {
     "recipe_name": "Supercomputer",
     "resources": [
-      "Desc_Computer_C",
-      "Desc_CircuitBoardHighSpeed_C",
-      "Desc_HighSpeedConnector_C",
-      "Desc_Plastic_C"
+      "Computer",
+      "AI Limiter",
+      "High-Speed Connector",
+      "Plastic"
     ],
     "resources_rates": [
       3.75,
@@ -2682,13 +2566,10 @@
       52.5
     ],
     "products": [
-      "Desc_ComputerSuper_C"
+      "Supercomputer"
     ],
     "product_rates": [
-      3.75,
-      3.75,
-      5.625,
-      52.5
+      1.875
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -2701,10 +2582,10 @@
   {
     "recipe_name": "Computer",
     "resources": [
-      "Desc_CircuitBoard_C",
-      "Desc_Cable_C",
-      "Desc_Plastic_C",
-      "Desc_IronScrew_C"
+      "Circuit Board",
+      "Cable",
+      "Plastic",
+      "Screw"
     ],
     "resources_rates": [
       25.0,
@@ -2713,13 +2594,10 @@
       130.0
     ],
     "products": [
-      "Desc_Computer_C"
+      "Computer"
     ],
     "product_rates": [
-      25.0,
-      22.5,
-      45.0,
-      130.0
+      2.5
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -2732,16 +2610,16 @@
   {
     "recipe_name": "Concrete",
     "resources": [
-      "Desc_Stone_C"
+      "Limestone"
     ],
     "resources_rates": [
       45.0
     ],
     "products": [
-      "Desc_Cement_C"
+      "Concrete"
     ],
     "product_rates": [
-      45.0
+      15.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2754,10 +2632,10 @@
   {
     "recipe_name": "Cooling System",
     "resources": [
-      "Desc_AluminumPlateReinforced_C",
-      "Desc_Rubber_C",
-      "Desc_Water_C",
-      "Desc_NitrogenGas_C"
+      "Heat Sink",
+      "Rubber",
+      "Water",
+      "Nitrogen Gas"
     ],
     "resources_rates": [
       12.0,
@@ -2766,13 +2644,10 @@
       150.0
     ],
     "products": [
-      "Desc_CoolingSystem_C"
+      "Cooling System"
     ],
     "product_rates": [
-      12.0,
-      12.0,
-      30.0,
-      150.0
+      6.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -2785,16 +2660,16 @@
   {
     "recipe_name": "Copper Powder",
     "resources": [
-      "Desc_CopperIngot_C"
+      "Copper Ingot"
     ],
     "resources_rates": [
       300.0
     ],
     "products": [
-      "Desc_CopperDust_C"
+      "Copper Powder"
     ],
     "product_rates": [
-      300.0
+      50.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2807,16 +2682,16 @@
   {
     "recipe_name": "Copper Sheet",
     "resources": [
-      "Desc_CopperIngot_C"
+      "Copper Ingot"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_CopperSheet_C"
+      "Copper Sheet"
     ],
     "product_rates": [
-      20.0
+      10.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2829,9 +2704,9 @@
   {
     "recipe_name": "Crystal Oscillator",
     "resources": [
-      "Desc_QuartzCrystal_C",
-      "Desc_Cable_C",
-      "Desc_IronPlateReinforced_C"
+      "Quartz Crystal",
+      "Cable",
+      "Reinforced Iron Plate"
     ],
     "resources_rates": [
       18.0,
@@ -2839,12 +2714,10 @@
       2.5
     ],
     "products": [
-      "Desc_CrystalOscillator_C"
+      "Crystal Oscillator"
     ],
     "product_rates": [
-      18.0,
-      14.0,
-      2.5
+      1.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -2857,18 +2730,17 @@
   {
     "recipe_name": "Electromagnetic Control Rod",
     "resources": [
-      "Desc_Stator_C",
-      "Desc_CircuitBoardHighSpeed_C"
+      "Stator",
+      "AI Limiter"
     ],
     "resources_rates": [
       6.0,
       4.0
     ],
     "products": [
-      "Desc_ElectromagneticControlRod_C"
+      "Electromagnetic Control Rod"
     ],
     "product_rates": [
-      6.0,
       4.0
     ],
     "power_consumption": 15.0,
@@ -2882,19 +2754,18 @@
   {
     "recipe_name": "Encased Industrial Beam",
     "resources": [
-      "Desc_SteelPlate_C",
-      "Desc_Cement_C"
+      "Steel Beam",
+      "Concrete"
     ],
     "resources_rates": [
       24.0,
       30.0
     ],
     "products": [
-      "Desc_SteelPlateReinforced_C"
+      "Encased Industrial Beam"
     ],
     "product_rates": [
-      24.0,
-      30.0
+      6.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -2907,19 +2778,18 @@
   {
     "recipe_name": "Fabric",
     "resources": [
-      "Desc_Mycelia_C",
-      "Desc_GenericBiomass_C"
+      "Mycelia",
+      "Biomass"
     ],
     "resources_rates": [
       15.0,
       75.0
     ],
     "products": [
-      "Desc_Fabric_C"
+      "Fabric"
     ],
     "product_rates": [
-      15.0,
-      75.0
+      15.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -2932,16 +2802,16 @@
   {
     "recipe_name": "Empty Canister",
     "resources": [
-      "Desc_Plastic_C"
+      "Plastic"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_FluidCanister_C"
+      "Empty Canister"
     ],
     "product_rates": [
-      30.0
+      60.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -2954,18 +2824,17 @@
   {
     "recipe_name": "Packaged Fuel",
     "resources": [
-      "Desc_LiquidFuel_C",
-      "Desc_FluidCanister_C"
+      "Fuel",
+      "Empty Canister"
     ],
     "resources_rates": [
       40.0,
       40.0
     ],
     "products": [
-      "Desc_Fuel_C"
+      "Packaged Fuel"
     ],
     "product_rates": [
-      40.0,
       40.0
     ],
     "power_consumption": 10.0,
@@ -2979,9 +2848,9 @@
   {
     "recipe_name": "Fused Modular Frame",
     "resources": [
-      "Desc_ModularFrameHeavy_C",
-      "Desc_AluminumCasing_C",
-      "Desc_NitrogenGas_C"
+      "Heavy Modular Frame",
+      "Aluminum Casing",
+      "Nitrogen Gas"
     ],
     "resources_rates": [
       1.5,
@@ -2989,12 +2858,10 @@
       37.5
     ],
     "products": [
-      "Desc_ModularFrameFused_C"
+      "Fused Modular Frame"
     ],
     "product_rates": [
-      1.5,
-      75.0,
-      37.5
+      1.5
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -3007,13 +2874,13 @@
   {
     "recipe_name": "Empty Fluid Tank",
     "resources": [
-      "Desc_AluminumIngot_C"
+      "Aluminum Ingot"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_GasTank_C"
+      "Empty Fluid Tank"
     ],
     "product_rates": [
       60.0
@@ -3029,19 +2896,18 @@
   {
     "recipe_name": "Smokeless Powder",
     "resources": [
-      "Desc_Gunpowder_C",
-      "Desc_HeavyOilResidue_C"
+      "Black Powder",
+      "Heavy Oil Residue"
     ],
     "resources_rates": [
       20.0,
       10.0
     ],
     "products": [
-      "Desc_GunpowderMK2_C"
+      "Smokeless Powder"
     ],
     "product_rates": [
-      20.0,
-      10.0
+      20.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -3054,19 +2920,18 @@
   {
     "recipe_name": "Heat Sink",
     "resources": [
-      "Desc_AluminumPlate_C",
-      "Desc_CopperSheet_C"
+      "Alclad Aluminum Sheet",
+      "Copper Sheet"
     ],
     "resources_rates": [
       37.5,
       22.5
     ],
     "products": [
-      "Desc_AluminumPlateReinforced_C"
+      "Heat Sink"
     ],
     "product_rates": [
-      37.5,
-      22.5
+      7.5
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -3079,9 +2944,9 @@
   {
     "recipe_name": "High-Speed Connector",
     "resources": [
-      "Desc_HighSpeedWire_C",
-      "Desc_Cable_C",
-      "Desc_CircuitBoard_C"
+      "Quickwire",
+      "Cable",
+      "Circuit Board"
     ],
     "resources_rates": [
       210.0,
@@ -3089,11 +2954,9 @@
       3.75
     ],
     "products": [
-      "Desc_HighSpeedConnector_C"
+      "High-Speed Connector"
     ],
     "product_rates": [
-      210.0,
-      37.5,
       3.75
     ],
     "power_consumption": 55.0,
@@ -3107,19 +2970,18 @@
   {
     "recipe_name": "Aluminum Ingot",
     "resources": [
-      "Desc_AluminumScrap_C",
-      "Desc_Silica_C"
+      "Aluminum Scrap",
+      "Silica"
     ],
     "resources_rates": [
       90.0,
       75.0
     ],
     "products": [
-      "Desc_AluminumIngot_C"
+      "Aluminum Ingot"
     ],
     "product_rates": [
-      90.0,
-      75.0
+      60.0
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -3132,16 +2994,16 @@
   {
     "recipe_name": "Caterium Ingot",
     "resources": [
-      "Desc_OreGold_C"
+      "Caterium Ore"
     ],
     "resources_rates": [
       45.0
     ],
     "products": [
-      "Desc_GoldIngot_C"
+      "Caterium Ingot"
     ],
     "product_rates": [
-      45.0
+      15.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -3154,13 +3016,13 @@
   {
     "recipe_name": "Copper Ingot",
     "resources": [
-      "Desc_OreCopper_C"
+      "Copper Ore"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_CopperIngot_C"
+      "Copper Ingot"
     ],
     "product_rates": [
       30.0
@@ -3176,13 +3038,13 @@
   {
     "recipe_name": "Iron Ingot",
     "resources": [
-      "Desc_OreIron_C"
+      "Iron Ore"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_IronIngot_C"
+      "Iron Ingot"
     ],
     "product_rates": [
       30.0
@@ -3198,18 +3060,17 @@
   {
     "recipe_name": "Steel Ingot",
     "resources": [
-      "Desc_OreIron_C",
-      "Desc_Coal_C"
+      "Iron Ore",
+      "Coal"
     ],
     "resources_rates": [
       45.0,
       45.0
     ],
     "products": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "product_rates": [
-      45.0,
       45.0
     ],
     "power_consumption": 16.0,
@@ -3223,19 +3084,18 @@
   {
     "recipe_name": "Reinforced Iron Plate",
     "resources": [
-      "Desc_IronPlate_C",
-      "Desc_IronScrew_C"
+      "Iron Plate",
+      "Screw"
     ],
     "resources_rates": [
       30.0,
       60.0
     ],
     "products": [
-      "Desc_IronPlateReinforced_C"
+      "Reinforced Iron Plate"
     ],
     "product_rates": [
-      30.0,
-      60.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -3248,16 +3108,16 @@
   {
     "recipe_name": "Iron Plate",
     "resources": [
-      "Desc_IronIngot_C"
+      "Iron Ingot"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_IronPlate_C"
+      "Iron Plate"
     ],
     "product_rates": [
-      30.0
+      20.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -3270,13 +3130,13 @@
   {
     "recipe_name": "Iron Rod",
     "resources": [
-      "Desc_IronIngot_C"
+      "Iron Ingot"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_IronRod_C"
+      "Iron Rod"
     ],
     "product_rates": [
       15.0
@@ -3292,19 +3152,18 @@
   {
     "recipe_name": "Liquid Biofuel",
     "resources": [
-      "Desc_Biofuel_C",
-      "Desc_Water_C"
+      "Solid Biofuel",
+      "Water"
     ],
     "resources_rates": [
       90.0,
       45.0
     ],
     "products": [
-      "Desc_LiquidBiofuel_C"
+      "Liquid Biofuel"
     ],
     "product_rates": [
-      90.0,
-      45.0
+      60.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -3317,17 +3176,18 @@
   {
     "recipe_name": "Fuel",
     "resources": [
-      "Desc_LiquidOil_C"
+      "Crude Oil"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_LiquidFuel_C",
-      "Desc_PolymerResin_C"
+      "Fuel",
+      "Polymer Resin"
     ],
     "product_rates": [
-      60.0
+      40.0,
+      30.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -3340,10 +3200,10 @@
   {
     "recipe_name": "Heavy Modular Frame",
     "resources": [
-      "Desc_ModularFrame_C",
-      "Desc_SteelPipe_C",
-      "Desc_SteelPlateReinforced_C",
-      "Desc_IronScrew_C"
+      "Modular Frame",
+      "Steel Pipe",
+      "Encased Industrial Beam",
+      "Screw"
     ],
     "resources_rates": [
       10.0,
@@ -3352,13 +3212,10 @@
       200.0
     ],
     "products": [
-      "Desc_ModularFrameHeavy_C"
+      "Heavy Modular Frame"
     ],
     "product_rates": [
-      10.0,
-      30.0,
-      10.0,
-      200.0
+      2.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -3371,19 +3228,18 @@
   {
     "recipe_name": "Modular Frame",
     "resources": [
-      "Desc_IronPlateReinforced_C",
-      "Desc_IronRod_C"
+      "Reinforced Iron Plate",
+      "Iron Rod"
     ],
     "resources_rates": [
       3.0,
       12.0
     ],
     "products": [
-      "Desc_ModularFrame_C"
+      "Modular Frame"
     ],
     "product_rates": [
-      3.0,
-      12.0
+      2.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -3396,10 +3252,10 @@
   {
     "recipe_name": "Turbo Motor",
     "resources": [
-      "Desc_CoolingSystem_C",
-      "Desc_ModularFrameLightweight_C",
-      "Desc_Motor_C",
-      "Desc_Rubber_C"
+      "Cooling System",
+      "Radio Control Unit",
+      "Motor",
+      "Rubber"
     ],
     "resources_rates": [
       7.5,
@@ -3408,13 +3264,10 @@
       45.0
     ],
     "products": [
-      "Desc_MotorLightweight_C"
+      "Turbo Motor"
     ],
     "product_rates": [
-      7.5,
-      3.75,
-      7.5,
-      45.0
+      1.875
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -3427,19 +3280,18 @@
   {
     "recipe_name": "Motor",
     "resources": [
-      "Desc_Rotor_C",
-      "Desc_Stator_C"
+      "Rotor",
+      "Stator"
     ],
     "resources_rates": [
       10.0,
       10.0
     ],
     "products": [
-      "Desc_Motor_C"
+      "Motor"
     ],
     "product_rates": [
-      10.0,
-      10.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -3452,9 +3304,9 @@
   {
     "recipe_name": "Nitric Acid",
     "resources": [
-      "Desc_NitrogenGas_C",
-      "Desc_Water_C",
-      "Desc_IronPlate_C"
+      "Nitrogen Gas",
+      "Water",
+      "Iron Plate"
     ],
     "resources_rates": [
       120.0,
@@ -3462,12 +3314,10 @@
       10.0
     ],
     "products": [
-      "Desc_NitricAcid_C"
+      "Nitric Acid"
     ],
     "product_rates": [
-      120.0,
-      30.0,
-      10.0
+      30.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -3480,10 +3330,10 @@
   {
     "recipe_name": "Non-fissile Uranium",
     "resources": [
-      "Desc_NuclearWaste_C",
-      "Desc_Silica_C",
-      "Desc_NitricAcid_C",
-      "Desc_SulfuricAcid_C"
+      "Uranium Waste",
+      "Silica",
+      "Nitric Acid",
+      "Sulfuric Acid"
     ],
     "resources_rates": [
       37.5,
@@ -3492,13 +3342,11 @@
       15.0
     ],
     "products": [
-      "Desc_NonFissibleUranium_C",
-      "Desc_Water_C"
+      "Non-fissile Uranium",
+      "Water"
     ],
     "product_rates": [
-      37.5,
-      25.0,
-      15.0,
+      50.0,
       15.0
     ],
     "power_consumption": 75.0,
@@ -3512,9 +3360,9 @@
   {
     "recipe_name": "Uranium Fuel Rod",
     "resources": [
-      "Desc_UraniumCell_C",
-      "Desc_SteelPlateReinforced_C",
-      "Desc_ElectromagneticControlRod_C"
+      "Encased Uranium Cell",
+      "Encased Industrial Beam",
+      "Electromagnetic Control Rod"
     ],
     "resources_rates": [
       20.0,
@@ -3522,12 +3370,10 @@
       2.0
     ],
     "products": [
-      "Desc_NuclearFuelRod_C"
+      "Uranium Fuel Rod"
     ],
     "product_rates": [
-      20.0,
-      1.2000000000000002,
-      2.0
+      0.4
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -3540,18 +3386,17 @@
   {
     "recipe_name": "Packaged Alumina Solution",
     "resources": [
-      "Desc_AluminaSolution_C",
-      "Desc_FluidCanister_C"
+      "Alumina Solution",
+      "Empty Canister"
     ],
     "resources_rates": [
       120.0,
       120.0
     ],
     "products": [
-      "Desc_PackagedAlumina_C"
+      "Packaged Alumina Solution"
     ],
     "product_rates": [
-      120.0,
       120.0
     ],
     "power_consumption": 10.0,
@@ -3565,18 +3410,17 @@
   {
     "recipe_name": "Packaged Liquid Biofuel",
     "resources": [
-      "Desc_LiquidBiofuel_C",
-      "Desc_FluidCanister_C"
+      "Liquid Biofuel",
+      "Empty Canister"
     ],
     "resources_rates": [
       40.0,
       40.0
     ],
     "products": [
-      "Desc_PackagedBiofuel_C"
+      "Packaged Liquid Biofuel"
     ],
     "product_rates": [
-      40.0,
       40.0
     ],
     "power_consumption": 10.0,
@@ -3590,18 +3434,17 @@
   {
     "recipe_name": "Packaged Oil",
     "resources": [
-      "Desc_LiquidOil_C",
-      "Desc_FluidCanister_C"
+      "Crude Oil",
+      "Empty Canister"
     ],
     "resources_rates": [
       30.0,
       30.0
     ],
     "products": [
-      "Desc_PackagedOil_C"
+      "Packaged Oil"
     ],
     "product_rates": [
-      30.0,
       30.0
     ],
     "power_consumption": 10.0,
@@ -3615,18 +3458,17 @@
   {
     "recipe_name": "Packaged Nitric Acid",
     "resources": [
-      "Desc_NitricAcid_C",
-      "Desc_GasTank_C"
+      "Nitric Acid",
+      "Empty Fluid Tank"
     ],
     "resources_rates": [
       30.0,
       30.0
     ],
     "products": [
-      "Desc_PackagedNitricAcid_C"
+      "Packaged Nitric Acid"
     ],
     "product_rates": [
-      30.0,
       30.0
     ],
     "power_consumption": 10.0,
@@ -3640,18 +3482,17 @@
   {
     "recipe_name": "Packaged Nitrogen Gas",
     "resources": [
-      "Desc_NitrogenGas_C",
-      "Desc_GasTank_C"
+      "Nitrogen Gas",
+      "Empty Fluid Tank"
     ],
     "resources_rates": [
       240.0,
       60.0
     ],
     "products": [
-      "Desc_PackagedNitrogenGas_C"
+      "Packaged Nitrogen Gas"
     ],
     "product_rates": [
-      240.0,
       60.0
     ],
     "power_consumption": 10.0,
@@ -3665,18 +3506,17 @@
   {
     "recipe_name": "Packaged Heavy Oil Residue",
     "resources": [
-      "Desc_HeavyOilResidue_C",
-      "Desc_FluidCanister_C"
+      "Heavy Oil Residue",
+      "Empty Canister"
     ],
     "resources_rates": [
       30.0,
       30.0
     ],
     "products": [
-      "Desc_PackagedOilResidue_C"
+      "Packaged Heavy Oil Residue"
     ],
     "product_rates": [
-      30.0,
       30.0
     ],
     "power_consumption": 10.0,
@@ -3690,18 +3530,17 @@
   {
     "recipe_name": "Packaged Sulfuric Acid",
     "resources": [
-      "Desc_SulfuricAcid_C",
-      "Desc_FluidCanister_C"
+      "Sulfuric Acid",
+      "Empty Canister"
     ],
     "resources_rates": [
       40.0,
       40.0
     ],
     "products": [
-      "Desc_PackagedSulfuricAcid_C"
+      "Packaged Sulfuric Acid"
     ],
     "product_rates": [
-      40.0,
       40.0
     ],
     "power_consumption": 10.0,
@@ -3715,18 +3554,17 @@
   {
     "recipe_name": "Packaged Turbofuel",
     "resources": [
-      "Desc_LiquidTurboFuel_C",
-      "Desc_FluidCanister_C"
+      "Turbofuel",
+      "Empty Canister"
     ],
     "resources_rates": [
       20.0,
       20.0
     ],
     "products": [
-      "Desc_TurboFuel_C"
+      "Packaged Turbofuel"
     ],
     "product_rates": [
-      20.0,
       20.0
     ],
     "power_consumption": 10.0,
@@ -3740,18 +3578,17 @@
   {
     "recipe_name": "Packaged Water",
     "resources": [
-      "Desc_Water_C",
-      "Desc_FluidCanister_C"
+      "Water",
+      "Empty Canister"
     ],
     "resources_rates": [
       60.0,
       60.0
     ],
     "products": [
-      "Desc_PackagedWater_C"
+      "Packaged Water"
     ],
     "product_rates": [
-      60.0,
       60.0
     ],
     "power_consumption": 10.0,
@@ -3765,16 +3602,16 @@
   {
     "recipe_name": "Petroleum Coke",
     "resources": [
-      "Desc_HeavyOilResidue_C"
+      "Heavy Oil Residue"
     ],
     "resources_rates": [
       40.0
     ],
     "products": [
-      "Desc_PetroleumCoke_C"
+      "Petroleum Coke"
     ],
     "product_rates": [
-      40.0
+      120.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -3787,17 +3624,18 @@
   {
     "recipe_name": "Plastic",
     "resources": [
-      "Desc_LiquidOil_C"
+      "Crude Oil"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_Plastic_C",
-      "Desc_HeavyOilResidue_C"
+      "Plastic",
+      "Heavy Oil Residue"
     ],
     "product_rates": [
-      30.0
+      20.0,
+      10.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -3810,19 +3648,18 @@
   {
     "recipe_name": "Encased Plutonium Cell",
     "resources": [
-      "Desc_PlutoniumPellet_C",
-      "Desc_Cement_C"
+      "Plutonium Pellet",
+      "Concrete"
     ],
     "resources_rates": [
       10.0,
       20.0
     ],
     "products": [
-      "Desc_PlutoniumCell_C"
+      "Encased Plutonium Cell"
     ],
     "product_rates": [
-      10.0,
-      20.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -3835,10 +3672,10 @@
   {
     "recipe_name": "Plutonium Fuel Rod",
     "resources": [
-      "Desc_PlutoniumCell_C",
-      "Desc_SteelPlate_C",
-      "Desc_ElectromagneticControlRod_C",
-      "Desc_AluminumPlateReinforced_C"
+      "Encased Plutonium Cell",
+      "Steel Beam",
+      "Electromagnetic Control Rod",
+      "Heat Sink"
     ],
     "resources_rates": [
       7.5,
@@ -3847,13 +3684,10 @@
       2.5
     ],
     "products": [
-      "Desc_PlutoniumFuelRod_C"
+      "Plutonium Fuel Rod"
     ],
     "product_rates": [
-      7.5,
-      4.5,
-      1.5,
-      2.5
+      0.25
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -3866,19 +3700,18 @@
   {
     "recipe_name": "Plutonium Pellet",
     "resources": [
-      "Desc_NonFissibleUranium_C",
-      "Desc_NuclearWaste_C"
+      "Non-fissile Uranium",
+      "Uranium Waste"
     ],
     "resources_rates": [
       100.0,
       25.0
     ],
     "products": [
-      "Desc_PlutoniumPellet_C"
+      "Plutonium Pellet"
     ],
     "product_rates": [
-      100.0,
-      25.0
+      30.0
     ],
     "power_consumption": 1000.0,
     "production_method": [
@@ -3891,13 +3724,13 @@
   {
     "recipe_name": "Power Shard (1)",
     "resources": [
-      "Desc_Crystal_C"
+      "Blue Power Slug"
     ],
     "resources_rates": [
       7.5
     ],
     "products": [
-      "Desc_CrystalShard_C"
+      "Power Shard"
     ],
     "product_rates": [
       7.5
@@ -3913,16 +3746,16 @@
   {
     "recipe_name": "Power Shard (2)",
     "resources": [
-      "Desc_Crystal_mk2_C"
+      "Yellow Power Slug"
     ],
     "resources_rates": [
       5.0
     ],
     "products": [
-      "Desc_CrystalShard_C"
+      "Power Shard"
     ],
     "product_rates": [
-      5.0
+      10.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -3935,16 +3768,16 @@
   {
     "recipe_name": "Power Shard (5)",
     "resources": [
-      "Desc_Crystal_mk3_C"
+      "Purple Power Slug"
     ],
     "resources_rates": [
       2.5
     ],
     "products": [
-      "Desc_CrystalShard_C"
+      "Power Shard"
     ],
     "product_rates": [
-      2.5
+      12.5
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -3957,19 +3790,18 @@
   {
     "recipe_name": "Pressure Conversion Cube",
     "resources": [
-      "Desc_ModularFrameFused_C",
-      "Desc_ModularFrameLightweight_C"
+      "Fused Modular Frame",
+      "Radio Control Unit"
     ],
     "resources_rates": [
       1.0,
       2.0
     ],
     "products": [
-      "Desc_PressureConversionCube_C"
+      "Pressure Conversion Cube"
     ],
     "product_rates": [
-      1.0,
-      2.0
+      1.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -3982,13 +3814,13 @@
   {
     "recipe_name": "Hatcher Protein",
     "resources": [
-      "Desc_HatcherParts_C"
+      "Hatcher Remains"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_AlienProtein_C"
+      "Alien Protein"
     ],
     "product_rates": [
       20.0
@@ -4004,13 +3836,13 @@
   {
     "recipe_name": "Hog Protein",
     "resources": [
-      "Desc_HogParts_C"
+      "Hog Remains"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_AlienProtein_C"
+      "Alien Protein"
     ],
     "product_rates": [
       20.0
@@ -4026,13 +3858,13 @@
   {
     "recipe_name": "Spitter Protein",
     "resources": [
-      "Desc_SpitterParts_C"
+      "Plasma Spitter Remains"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_AlienProtein_C"
+      "Alien Protein"
     ],
     "product_rates": [
       20.0
@@ -4048,13 +3880,13 @@
   {
     "recipe_name": "Stinger Protein",
     "resources": [
-      "Desc_StingerParts_C"
+      "Stinger Remains"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_AlienProtein_C"
+      "Alien Protein"
     ],
     "product_rates": [
       20.0
@@ -4070,16 +3902,16 @@
   {
     "recipe_name": "Pure Aluminum Ingot",
     "resources": [
-      "Desc_AluminumScrap_C"
+      "Aluminum Scrap"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_AluminumIngot_C"
+      "Aluminum Ingot"
     ],
     "product_rates": [
-      60.0
+      30.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4092,16 +3924,16 @@
   {
     "recipe_name": "Quartz Crystal",
     "resources": [
-      "Desc_RawQuartz_C"
+      "Raw Quartz"
     ],
     "resources_rates": [
       37.5
     ],
     "products": [
-      "Desc_QuartzCrystal_C"
+      "Quartz Crystal"
     ],
     "product_rates": [
-      37.5
+      22.5
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4114,16 +3946,16 @@
   {
     "recipe_name": "Quickwire",
     "resources": [
-      "Desc_GoldIngot_C"
+      "Caterium Ingot"
     ],
     "resources_rates": [
       12.0
     ],
     "products": [
-      "Desc_HighSpeedWire_C"
+      "Quickwire"
     ],
     "product_rates": [
-      12.0
+      60.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4136,9 +3968,9 @@
   {
     "recipe_name": "Radio Control Unit",
     "resources": [
-      "Desc_AluminumCasing_C",
-      "Desc_CrystalOscillator_C",
-      "Desc_Computer_C"
+      "Aluminum Casing",
+      "Crystal Oscillator",
+      "Computer"
     ],
     "resources_rates": [
       40.0,
@@ -4146,12 +3978,10 @@
       1.25
     ],
     "products": [
-      "Desc_ModularFrameLightweight_C"
+      "Radio Control Unit"
     ],
     "product_rates": [
-      40.0,
-      1.25,
-      1.25
+      2.5
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -4164,16 +3994,16 @@
   {
     "recipe_name": "Residual Fuel",
     "resources": [
-      "Desc_HeavyOilResidue_C"
+      "Heavy Oil Residue"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_LiquidFuel_C"
+      "Fuel"
     ],
     "product_rates": [
-      60.0
+      40.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -4186,18 +4016,17 @@
   {
     "recipe_name": "Residual Plastic",
     "resources": [
-      "Desc_PolymerResin_C",
-      "Desc_Water_C"
+      "Polymer Resin",
+      "Water"
     ],
     "resources_rates": [
       60.0,
       20.0
     ],
     "products": [
-      "Desc_Plastic_C"
+      "Plastic"
     ],
     "product_rates": [
-      60.0,
       20.0
     ],
     "power_consumption": 0.0,
@@ -4211,19 +4040,18 @@
   {
     "recipe_name": "Residual Rubber",
     "resources": [
-      "Desc_PolymerResin_C",
-      "Desc_Water_C"
+      "Polymer Resin",
+      "Water"
     ],
     "resources_rates": [
       40.0,
       40.0
     ],
     "products": [
-      "Desc_Rubber_C"
+      "Rubber"
     ],
     "product_rates": [
-      40.0,
-      40.0
+      20.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -4236,19 +4064,18 @@
   {
     "recipe_name": "Rotor",
     "resources": [
-      "Desc_IronRod_C",
-      "Desc_IronScrew_C"
+      "Iron Rod",
+      "Screw"
     ],
     "resources_rates": [
       20.0,
       100.0
     ],
     "products": [
-      "Desc_Rotor_C"
+      "Rotor"
     ],
     "product_rates": [
-      20.0,
-      100.0
+      4.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -4261,17 +4088,18 @@
   {
     "recipe_name": "Rubber",
     "resources": [
-      "Desc_LiquidOil_C"
+      "Crude Oil"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_Rubber_C",
-      "Desc_HeavyOilResidue_C"
+      "Rubber",
+      "Heavy Oil Residue"
     ],
     "product_rates": [
-      30.0
+      20.0,
+      20.0
     ],
     "power_consumption": 0.0,
     "production_method": [
@@ -4284,16 +4112,16 @@
   {
     "recipe_name": "Screw",
     "resources": [
-      "Desc_IronRod_C"
+      "Iron Rod"
     ],
     "resources_rates": [
       10.0
     ],
     "products": [
-      "Desc_IronScrew_C"
+      "Screw"
     ],
     "product_rates": [
-      10.0
+      40.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4306,16 +4134,16 @@
   {
     "recipe_name": "Silica",
     "resources": [
-      "Desc_RawQuartz_C"
+      "Raw Quartz"
     ],
     "resources_rates": [
       22.5
     ],
     "products": [
-      "Desc_Silica_C"
+      "Silica"
     ],
     "product_rates": [
-      22.5
+      37.5
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4328,16 +4156,16 @@
   {
     "recipe_name": "Actual Snow",
     "resources": [
-      "Desc_Gift_C"
+      "FICSMAS Gift"
     ],
     "resources_rates": [
       25.0
     ],
     "products": [
-      "Desc_Snow_C"
+      "Actual Snow"
     ],
     "product_rates": [
-      25.0
+      10.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4350,16 +4178,16 @@
   {
     "recipe_name": "Snowball",
     "resources": [
-      "Desc_Snow_C"
+      "Actual Snow"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_SnowballProjectile_C"
+      "Snowball"
     ],
     "product_rates": [
-      15.0
+      5.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4372,18 +4200,17 @@
   {
     "recipe_name": "Smart Plating",
     "resources": [
-      "Desc_IronPlateReinforced_C",
-      "Desc_Rotor_C"
+      "Reinforced Iron Plate",
+      "Rotor"
     ],
     "resources_rates": [
       2.0,
       2.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_1_C"
+      "Smart Plating"
     ],
     "product_rates": [
-      2.0,
       2.0
     ],
     "power_consumption": 15.0,
@@ -4397,19 +4224,18 @@
   {
     "recipe_name": "Versatile Framework",
     "resources": [
-      "Desc_ModularFrame_C",
-      "Desc_SteelPlate_C"
+      "Modular Frame",
+      "Steel Beam"
     ],
     "resources_rates": [
       2.5,
       30.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_2_C"
+      "Versatile Framework"
     ],
     "product_rates": [
-      2.5,
-      30.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -4422,19 +4248,18 @@
   {
     "recipe_name": "Automated Wiring",
     "resources": [
-      "Desc_Stator_C",
-      "Desc_Cable_C"
+      "Stator",
+      "Cable"
     ],
     "resources_rates": [
       2.5,
       50.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_3_C"
+      "Automated Wiring"
     ],
     "product_rates": [
-      2.5,
-      50.0
+      2.5
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -4447,9 +4272,9 @@
   {
     "recipe_name": "Modular Engine",
     "resources": [
-      "Desc_Motor_C",
-      "Desc_Rubber_C",
-      "Desc_SpaceElevatorPart_1_C"
+      "Motor",
+      "Rubber",
+      "Smart Plating"
     ],
     "resources_rates": [
       2.0,
@@ -4457,12 +4282,10 @@
       2.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_4_C"
+      "Modular Engine"
     ],
     "product_rates": [
-      2.0,
-      15.0,
-      2.0
+      1.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -4475,10 +4298,10 @@
   {
     "recipe_name": "Adaptive Control Unit",
     "resources": [
-      "Desc_SpaceElevatorPart_3_C",
-      "Desc_CircuitBoard_C",
-      "Desc_ModularFrameHeavy_C",
-      "Desc_Computer_C"
+      "Automated Wiring",
+      "Circuit Board",
+      "Heavy Modular Frame",
+      "Computer"
     ],
     "resources_rates": [
       7.5,
@@ -4487,12 +4310,9 @@
       1.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_5_C"
+      "Adaptive Control Unit"
     ],
     "product_rates": [
-      7.5,
-      5.0,
-      1.0,
       1.0
     ],
     "power_consumption": 55.0,
@@ -4506,9 +4326,9 @@
   {
     "recipe_name": "Magnetic Field Generator",
     "resources": [
-      "Desc_SpaceElevatorPart_2_C",
-      "Desc_ElectromagneticControlRod_C",
-      "Desc_Battery_C"
+      "Versatile Framework",
+      "Electromagnetic Control Rod",
+      "Battery"
     ],
     "resources_rates": [
       2.5,
@@ -4516,12 +4336,10 @@
       5.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_6_C"
+      "Magnetic Field Generator"
     ],
     "product_rates": [
-      2.5,
-      1.0,
-      5.0
+      1.0
     ],
     "power_consumption": 55.0,
     "production_method": [
@@ -4534,18 +4352,17 @@
   {
     "recipe_name": "Assembly Director System",
     "resources": [
-      "Desc_SpaceElevatorPart_5_C",
-      "Desc_ComputerSuper_C"
+      "Adaptive Control Unit",
+      "Supercomputer"
     ],
     "resources_rates": [
       1.5,
       0.75
     ],
     "products": [
-      "Desc_SpaceElevatorPart_7_C"
+      "Assembly Director System"
     ],
     "product_rates": [
-      1.5,
       0.75
     ],
     "power_consumption": 15.0,
@@ -4559,10 +4376,10 @@
   {
     "recipe_name": "Thermal Propulsion Rocket",
     "resources": [
-      "Desc_SpaceElevatorPart_4_C",
-      "Desc_MotorLightweight_C",
-      "Desc_CoolingSystem_C",
-      "Desc_ModularFrameFused_C"
+      "Modular Engine",
+      "Turbo Motor",
+      "Cooling System",
+      "Fused Modular Frame"
     ],
     "resources_rates": [
       2.5,
@@ -4571,12 +4388,9 @@
       1.0
     ],
     "products": [
-      "Desc_SpaceElevatorPart_8_C"
+      "Thermal Propulsion Rocket"
     ],
     "product_rates": [
-      2.5,
-      1.0,
-      3.0,
       1.0
     ],
     "power_consumption": 55.0,
@@ -4590,18 +4404,17 @@
   {
     "recipe_name": "Nuclear Pasta",
     "resources": [
-      "Desc_CopperDust_C",
-      "Desc_PressureConversionCube_C"
+      "Copper Powder",
+      "Pressure Conversion Cube"
     ],
     "resources_rates": [
       100.0,
       0.5
     ],
     "products": [
-      "Desc_SpaceElevatorPart_9_C"
+      "Nuclear Pasta"
     ],
     "product_rates": [
-      100.0,
       0.5
     ],
     "power_consumption": 1000.0,
@@ -4615,19 +4428,18 @@
   {
     "recipe_name": "Stator",
     "resources": [
-      "Desc_SteelPipe_C",
-      "Desc_Wire_C"
+      "Steel Pipe",
+      "Wire"
     ],
     "resources_rates": [
       15.0,
       40.0
     ],
     "products": [
-      "Desc_Stator_C"
+      "Stator"
     ],
     "product_rates": [
-      15.0,
-      40.0
+      5.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -4640,16 +4452,16 @@
   {
     "recipe_name": "Steel Beam",
     "resources": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_SteelPlate_C"
+      "Steel Beam"
     ],
     "product_rates": [
-      60.0
+      15.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4662,16 +4474,16 @@
   {
     "recipe_name": "Steel Pipe",
     "resources": [
-      "Desc_SteelIngot_C"
+      "Steel Ingot"
     ],
     "resources_rates": [
       30.0
     ],
     "products": [
-      "Desc_SteelPipe_C"
+      "Steel Pipe"
     ],
     "product_rates": [
-      30.0
+      20.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4684,18 +4496,17 @@
   {
     "recipe_name": "Sulfuric Acid",
     "resources": [
-      "Desc_Sulfur_C",
-      "Desc_Water_C"
+      "Sulfur",
+      "Water"
     ],
     "resources_rates": [
       50.0,
       50.0
     ],
     "products": [
-      "Desc_SulfuricAcid_C"
+      "Sulfuric Acid"
     ],
     "product_rates": [
-      50.0,
       50.0
     ],
     "power_consumption": 0.0,
@@ -4709,16 +4520,17 @@
   {
     "recipe_name": "Unpackage Alumina Solution",
     "resources": [
-      "Desc_PackagedAlumina_C"
+      "Packaged Alumina Solution"
     ],
     "resources_rates": [
       120.0
     ],
     "products": [
-      "Desc_AluminaSolution_C",
-      "Desc_FluidCanister_C"
+      "Alumina Solution",
+      "Empty Canister"
     ],
     "product_rates": [
+      120.0,
       120.0
     ],
     "power_consumption": 10.0,
@@ -4732,16 +4544,17 @@
   {
     "recipe_name": "Unpackage Liquid Biofuel",
     "resources": [
-      "Desc_PackagedBiofuel_C"
+      "Packaged Liquid Biofuel"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_LiquidBiofuel_C",
-      "Desc_FluidCanister_C"
+      "Liquid Biofuel",
+      "Empty Canister"
     ],
     "product_rates": [
+      60.0,
       60.0
     ],
     "power_consumption": 10.0,
@@ -4755,16 +4568,17 @@
   {
     "recipe_name": "Unpackage Fuel",
     "resources": [
-      "Desc_Fuel_C"
+      "Packaged Fuel"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_LiquidFuel_C",
-      "Desc_FluidCanister_C"
+      "Fuel",
+      "Empty Canister"
     ],
     "product_rates": [
+      60.0,
       60.0
     ],
     "power_consumption": 10.0,
@@ -4778,16 +4592,17 @@
   {
     "recipe_name": "Unpackage Nitric Acid",
     "resources": [
-      "Desc_PackagedNitricAcid_C"
+      "Packaged Nitric Acid"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_NitricAcid_C",
-      "Desc_GasTank_C"
+      "Nitric Acid",
+      "Empty Fluid Tank"
     ],
     "product_rates": [
+      20.0,
       20.0
     ],
     "power_consumption": 10.0,
@@ -4801,16 +4616,17 @@
   {
     "recipe_name": "Unpackage Nitrogen Gas",
     "resources": [
-      "Desc_PackagedNitrogenGas_C"
+      "Packaged Nitrogen Gas"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_NitrogenGas_C",
-      "Desc_GasTank_C"
+      "Nitrogen Gas",
+      "Empty Fluid Tank"
     ],
     "product_rates": [
+      240.0,
       60.0
     ],
     "power_consumption": 10.0,
@@ -4824,16 +4640,17 @@
   {
     "recipe_name": "Unpackage Heavy Oil Residue",
     "resources": [
-      "Desc_PackagedOilResidue_C"
+      "Packaged Heavy Oil Residue"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_HeavyOilResidue_C",
-      "Desc_FluidCanister_C"
+      "Heavy Oil Residue",
+      "Empty Canister"
     ],
     "product_rates": [
+      20.0,
       20.0
     ],
     "power_consumption": 10.0,
@@ -4847,16 +4664,17 @@
   {
     "recipe_name": "Unpackage Oil",
     "resources": [
-      "Desc_PackagedOil_C"
+      "Packaged Oil"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_LiquidOil_C",
-      "Desc_FluidCanister_C"
+      "Crude Oil",
+      "Empty Canister"
     ],
     "product_rates": [
+      60.0,
       60.0
     ],
     "power_consumption": 10.0,
@@ -4870,16 +4688,17 @@
   {
     "recipe_name": "Unpackage Sulfuric Acid",
     "resources": [
-      "Desc_PackagedSulfuricAcid_C"
+      "Packaged Sulfuric Acid"
     ],
     "resources_rates": [
       60.0
     ],
     "products": [
-      "Desc_SulfuricAcid_C",
-      "Desc_FluidCanister_C"
+      "Sulfuric Acid",
+      "Empty Canister"
     ],
     "product_rates": [
+      60.0,
       60.0
     ],
     "power_consumption": 10.0,
@@ -4893,16 +4712,17 @@
   {
     "recipe_name": "Unpackage Turbofuel",
     "resources": [
-      "Desc_TurboFuel_C"
+      "Packaged Turbofuel"
     ],
     "resources_rates": [
       20.0
     ],
     "products": [
-      "Desc_LiquidTurboFuel_C",
-      "Desc_FluidCanister_C"
+      "Turbofuel",
+      "Empty Canister"
     ],
     "product_rates": [
+      20.0,
       20.0
     ],
     "power_consumption": 10.0,
@@ -4916,16 +4736,17 @@
   {
     "recipe_name": "Unpackage Water",
     "resources": [
-      "Desc_PackagedWater_C"
+      "Packaged Water"
     ],
     "resources_rates": [
       120.0
     ],
     "products": [
-      "Desc_Water_C",
-      "Desc_FluidCanister_C"
+      "Water",
+      "Empty Canister"
     ],
     "product_rates": [
+      120.0,
       120.0
     ],
     "power_consumption": 10.0,
@@ -4939,9 +4760,9 @@
   {
     "recipe_name": "Encased Uranium Cell",
     "resources": [
-      "Desc_OreUranium_C",
-      "Desc_Cement_C",
-      "Desc_SulfuricAcid_C"
+      "Uranium",
+      "Concrete",
+      "Sulfuric Acid"
     ],
     "resources_rates": [
       50.0,
@@ -4949,13 +4770,12 @@
       40.0
     ],
     "products": [
-      "Desc_UraniumCell_C",
-      "Desc_SulfuricAcid_C"
+      "Encased Uranium Cell",
+      "Sulfuric Acid"
     ],
     "product_rates": [
-      50.0,
-      15.0,
-      40.0
+      25.0,
+      10.0
     ],
     "power_consumption": 75.0,
     "production_method": [
@@ -4968,16 +4788,16 @@
   {
     "recipe_name": "Wire",
     "resources": [
-      "Desc_CopperIngot_C"
+      "Copper Ingot"
     ],
     "resources_rates": [
       15.0
     ],
     "products": [
-      "Desc_Wire_C"
+      "Wire"
     ],
     "product_rates": [
-      15.0
+      30.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -4990,13 +4810,13 @@
   {
     "recipe_name": "Red FICSMAS Ornament",
     "resources": [
-      "Desc_Gift_C"
+      "FICSMAS Gift"
     ],
     "resources_rates": [
       5.0
     ],
     "products": [
-      "Desc_XmasBall1_C"
+      "Red FICSMAS Ornament"
     ],
     "product_rates": [
       5.0
@@ -5012,16 +4832,16 @@
   {
     "recipe_name": "Blue FICSMAS Ornament",
     "resources": [
-      "Desc_Gift_C"
+      "FICSMAS Gift"
     ],
     "resources_rates": [
       5.0
     ],
     "products": [
-      "Desc_XmasBall2_C"
+      "Blue FICSMAS Ornament"
     ],
     "product_rates": [
-      5.0
+      10.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -5034,19 +4854,18 @@
   {
     "recipe_name": "Copper FICSMAS Ornament",
     "resources": [
-      "Desc_XmasBall1_C",
-      "Desc_CopperIngot_C"
+      "Red FICSMAS Ornament",
+      "Copper Ingot"
     ],
     "resources_rates": [
       10.0,
       10.0
     ],
     "products": [
-      "Desc_XmasBall3_C"
+      "Copper FICSMAS Ornament"
     ],
     "product_rates": [
-      10.0,
-      10.0
+      5.0
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -5059,19 +4878,18 @@
   {
     "recipe_name": "Iron FICSMAS Ornament",
     "resources": [
-      "Desc_XmasBall2_C",
-      "Desc_IronIngot_C"
+      "Blue FICSMAS Ornament",
+      "Iron Ingot"
     ],
     "resources_rates": [
       15.0,
       15.0
     ],
     "products": [
-      "Desc_XmasBall4_C"
+      "Iron FICSMAS Ornament"
     ],
     "product_rates": [
-      15.0,
-      15.0
+      5.0
     ],
     "power_consumption": 16.0,
     "production_method": [
@@ -5084,18 +4902,17 @@
   {
     "recipe_name": "FICSMAS Ornament Bundle",
     "resources": [
-      "Desc_XmasBall3_C",
-      "Desc_XmasBall4_C"
+      "Copper FICSMAS Ornament",
+      "Iron FICSMAS Ornament"
     ],
     "resources_rates": [
       5.0,
       5.0
     ],
     "products": [
-      "Desc_XmasBallCluster_C"
+      "FICSMAS Ornament Bundle"
     ],
     "product_rates": [
-      5.0,
       5.0
     ],
     "power_consumption": 15.0,
@@ -5109,16 +4926,16 @@
   {
     "recipe_name": "FICSMAS Bow",
     "resources": [
-      "Desc_Gift_C"
+      "FICSMAS Gift"
     ],
     "resources_rates": [
       10.0
     ],
     "products": [
-      "Desc_XmasBow_C"
+      "FICSMAS Bow"
     ],
     "product_rates": [
-      10.0
+      5.0
     ],
     "power_consumption": 4.0,
     "production_method": [
@@ -5131,13 +4948,13 @@
   {
     "recipe_name": "FICSMAS Tree Branch",
     "resources": [
-      "Desc_Gift_C"
+      "FICSMAS Gift"
     ],
     "resources_rates": [
       10.0
     ],
     "products": [
-      "Desc_XmasBranch_C"
+      "FICSMAS Tree Branch"
     ],
     "product_rates": [
       10.0
@@ -5153,19 +4970,18 @@
   {
     "recipe_name": "FICSMAS Wonder Star",
     "resources": [
-      "Desc_XmasWreath_C",
-      "Desc_CandyCane_C"
+      "FICSMAS Decoration",
+      "Candy Cane"
     ],
     "resources_rates": [
       5.0,
       20.0
     ],
     "products": [
-      "Desc_XmasStar_C"
+      "FICSMAS Wonder Star"
     ],
     "product_rates": [
-      5.0,
-      20.0
+      1.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -5178,19 +4994,18 @@
   {
     "recipe_name": "FICSMAS Decoration",
     "resources": [
-      "Desc_XmasBranch_C",
-      "Desc_XmasBallCluster_C"
+      "FICSMAS Tree Branch",
+      "FICSMAS Ornament Bundle"
     ],
     "resources_rates": [
       15.0,
       6.0
     ],
     "products": [
-      "Desc_XmasWreath_C"
+      "FICSMAS Decoration"
     ],
     "product_rates": [
-      15.0,
-      6.0
+      2.0
     ],
     "power_consumption": 15.0,
     "production_method": [
@@ -5203,19 +5018,18 @@
   {
     "recipe_name": "Uranium Fuel Rod (burning)",
     "resources": [
-      "Desc_NuclearFuelRod_C",
-      "Desc_Water_C"
+      "Uranium Fuel Rod",
+      "Water"
     ],
     "resources_rates": [
       0.2,
       240.0
     ],
     "products": [
-      "Desc_NuclearWaste_C"
+      "Uranium Waste"
     ],
     "product_rates": [
-      0.2,
-      240.0
+      10.0
     ],
     "power_consumption": 2500.0,
     "production_method": [
@@ -5228,19 +5042,18 @@
   {
     "recipe_name": "Plutonium Fuel Rod (burning)",
     "resources": [
-      "Desc_PlutoniumFuelRod_C",
-      "Desc_Water_C"
+      "Plutonium Fuel Rod",
+      "Water"
     ],
     "resources_rates": [
       0.1,
       240.0
     ],
     "products": [
-      "Desc_PlutoniumWaste_C"
+      "Plutonium Waste"
     ],
     "product_rates": [
-      0.1,
-      240.0
+      1.0
     ],
     "power_consumption": 2500.0,
     "production_method": [
@@ -5249,5 +5062,213 @@
     "unlock_tags": [
       "[[Tier 8]] - Particle Enrichment"
     ]
+  },
+  {
+    "recipe_name": "[Mining] Bauxite",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Bauxite"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Caterium Ore",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Caterium Ore"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Copper Ore",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Copper Ore"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Iron Ore",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Iron Ore"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Limestone",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Limestone"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Raw Quartz",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Raw Quartz"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] SAM Ore",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "SAM Ore"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Sulfur",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Sulfur"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Uranium",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Uranium"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Mining] Coal",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Coal"
+    ],
+    "product_rates": [
+      60.0
+    ],
+    "power_consumption": 5.0,
+    "production_method": [
+      "Miner Mk.1"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Extracting] Crude Oil",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Crude Oil"
+    ],
+    "product_rates": [
+      120.0
+    ],
+    "power_consumption": 40.0,
+    "production_method": [
+      "Oil Extractor"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Extracting] Water",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Water"
+    ],
+    "product_rates": [
+      120.0
+    ],
+    "power_consumption": 20.0,
+    "production_method": [
+      "Water Extractor"
+    ],
+    "unlock_tags": []
+  },
+  {
+    "recipe_name": "[Extracting] Nitrogen Gas",
+    "resources": [],
+    "resources_rates": [],
+    "products": [
+      "Nitrogen Gas"
+    ],
+    "product_rates": [
+      360.0
+    ],
+    "power_consumption": 150.0,
+    "production_method": [
+      "Resource Well Extractors"
+    ],
+    "unlock_tags": []
   }
 ]

@@ -41,7 +41,7 @@ pub struct Graph{
     pub topological_sort_result: HashMap<String, (u64, u64)>
 }
 
-static WORLD_ROOT: &str = "world_root";
+pub static WORLD_ROOT: &str = "world_root";
 
 impl Graph {
     /// read json recipes, and construct a graph network of resources
