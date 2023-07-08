@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::prelude::*;
+//use std::fs::File;
+//use std::io::prelude::*;
+use ndarray::Array2;
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::hash::{Hash, Hasher};
-use ndarray::Array2;
-use minilp::{Problem, OptimizationDirection, ComparisonOp};
+use std::hash::Hasher; //Hash
+use std::rc::Rc;
+//use minilp::{Problem, OptimizationDirection, ComparisonOp};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Recipe {
@@ -35,10 +35,10 @@ pub struct Edge {
     pub recipe_name: String,
 }
 
-pub struct Graph{
+pub struct Graph {
     pub recipes: HashMap<String, Recipe>,
-    pub resources: HashMap<String,Rc<RefCell<ResourceNode>>>,
-    pub topological_sort_result: HashMap<String, (u64, u64)>
+    pub resources: HashMap<String, Rc<RefCell<ResourceNode>>>,
+    pub topological_sort_result: HashMap<String, (u64, u64)>,
 }
 
 pub static WORLD_ROOT: &str = "world_root";
@@ -46,51 +46,57 @@ pub static WORLD_ROOT: &str = "world_root";
 impl Graph {
     /// read json recipes, and construct a graph network of resources
     pub fn from_str(file: &str) -> Self {
-
         // let mut file = File::open(filename).expect("Unable to open JSON file");
         let mut json_data = file.to_string();
         // file.read_to_string(&mut json_data).expect("Unable to read JSON file");
-        let recipes_list: Vec<Recipe> = serde_json::from_str(&json_data).expect("Error parsing JSON file");
-        let mut recipes_table: std::collections::HashMap<String, Recipe>
-            = recipes_list.into_iter().map(|r| (r.recipe_name.clone(), r)).collect();
+        let recipes_list: Vec<Recipe> =
+            serde_json::from_str(&json_data).expect("Error parsing JSON file");
+        let mut recipes_table: std::collections::HashMap<String, Recipe> = recipes_list
+            .into_iter()
+            .map(|r| (r.recipe_name.clone(), r))
+            .collect();
 
-        let mut resource_table = std::collections::HashMap::<String, Rc<RefCell<ResourceNode>>>::new();
+        let mut resource_table =
+            std::collections::HashMap::<String, Rc<RefCell<ResourceNode>>>::new();
         for (recipe_name, recipe) in &recipes_table {
             for product in recipe.products.iter() {
                 if !resource_table.contains_key(product.as_str()) {
-                    resource_table.insert(product.clone(), Rc::new(RefCell::new(
-                        ResourceNode {
+                    resource_table.insert(
+                        product.clone(),
+                        Rc::new(RefCell::new(ResourceNode {
                             resource_name: product.clone(),
                             ingress_edges: vec![],
                             egress_edges: vec![],
-                        })));
+                        })),
+                    );
                 }
                 let mut process_recipes = recipe.resources.clone();
-                if process_recipes.is_empty(){
+                if process_recipes.is_empty() {
                     // The resource comes from the world directly
                     // replace the resource with WORLD_ROOT
                     process_recipes.push(WORLD_ROOT.to_string());
                 }
                 for resource in process_recipes.iter() {
                     if !resource_table.contains_key(resource.as_str()) {
-                        resource_table.insert(resource.clone(), Rc::new(RefCell::new(
-                            ResourceNode {
+                        resource_table.insert(
+                            resource.clone(),
+                            Rc::new(RefCell::new(ResourceNode {
                                 resource_name: resource.clone(),
                                 ingress_edges: vec![],
                                 egress_edges: vec![],
-                            })));
+                            })),
+                        );
                     }
                     let mut from_node = resource_table[resource].borrow_mut();
-                    let new_edge =
-                    Rc::new(Edge {
+                    let new_edge = Rc::new(Edge {
                         from: resource.clone(),
                         to: product.clone(),
                         recipe_name: recipe_name.clone(),
                     });
                     from_node.egress_edges.push(new_edge.clone());
-                    let mut to_node = if resource == product{
+                    let mut to_node = if resource == product {
                         from_node
-                    }else{
+                    } else {
                         resource_table[product].borrow_mut()
                     };
                     to_node.ingress_edges.push(new_edge);
@@ -131,10 +137,9 @@ impl Graph {
         return Self {
             recipes: recipes_table,
             resources: resource_table,
-            topological_sort_result: topology
+            topological_sort_result: topology,
         };
     }
-
 
     /// find all the resources that can be produced with the given avaliable resources
     ///
@@ -145,7 +150,9 @@ impl Graph {
             let cur_sources = avaliable_resources.clone();
             for source in cur_sources.iter() {
                 for egress in self.resources[source].borrow().egress_edges.iter() {
-                    if avaliable_resources.contains(egress.to.as_str()) { continue; };
+                    if avaliable_resources.contains(egress.to.as_str()) {
+                        continue;
+                    };
                     let mut condition_fulfilled = true;
                     for requirement in self.recipes[egress.recipe_name.as_str()].resources.iter() {
                         if !avaliable_resources.contains(requirement.as_str()) {
@@ -159,7 +166,9 @@ impl Graph {
                     }
                 }
             }
-            if !next_iter { break; }
+            if !next_iter {
+                break;
+            }
         }
     }
 
@@ -178,21 +187,29 @@ impl Graph {
     ///
     /// 0. All related resources, sorted in topological order (note: due to the fact DFS uses HashSet, the order is not always the same for different runs. But within one single process, the order is determined)
     /// 1. All related recipes, sorted in alphabetical order
-    pub fn find_all_related<'a, T: 'a + Iterator<Item=U>, U: 'a + ToString>(&self, target_resources: T)
-                                                                        -> (Vec<String>, Vec<String>) {
+    pub fn find_all_related<'a, T: 'a + Iterator<Item = U>, U: 'a + ToString>(
+        &self,
+        target_resources: T,
+    ) -> (Vec<String>, Vec<String>) {
         let mut pending: Vec<String> = target_resources.map(|u| u.to_string()).collect();
         let mut processed = HashSet::<String>::new();
         let mut related_recipes = HashSet::<String>::new();
         while !pending.is_empty() {
             let cur_item = pending.pop().unwrap();
-            if processed.contains(&cur_item) { continue; }
+            if processed.contains(&cur_item) {
+                continue;
+            }
             //push ingredients
             for edge in self.resources[&cur_item].borrow().ingress_edges.iter() {
                 pending.push(edge.from.clone());
                 let is_new = related_recipes.insert(edge.recipe_name.clone());
                 //if the pushed recipe contains byproduct, push it as well
-                if is_new{
-                    for byproduct in self.recipes[&edge.recipe_name].products.iter().filter(|s| **s != cur_item){
+                if is_new {
+                    for byproduct in self.recipes[&edge.recipe_name]
+                        .products
+                        .iter()
+                        .filter(|s| **s != cur_item)
+                    {
                         pending.push(byproduct.clone());
                     }
                 }
@@ -201,12 +218,16 @@ impl Graph {
         }
         let mut resource_vec: Vec<String> = processed.iter().map(|s| s.clone()).collect();
         let mut recipes_vec: Vec<String> = related_recipes.iter().map(|s| s.clone()).collect();
-        resource_vec.sort_by_key( |v| u64::MAX - self.topological_sort_result[v].1);
+        resource_vec.sort_by_key(|v| u64::MAX - self.topological_sort_result[v].1);
         recipes_vec.sort();
-        ( resource_vec, recipes_vec)
+        (resource_vec, recipes_vec)
     }
 
-    pub fn construct_matrix(&self, recipes: &Vec<String>, resources: &Vec<String>) -> (Array2<f64>, Vec<f64>){
+    pub fn construct_matrix(
+        &self,
+        recipes: &Vec<String>,
+        resources: &Vec<String>,
+    ) -> (Array2<f64>, Vec<f64>) {
         let mut matrix: Vec<Vec<f64>> = Vec::new();
         let mut cost_vec: Vec<f64> = Vec::new();
 
@@ -219,10 +240,10 @@ impl Graph {
         //     row_names.push(format!("[input] {}", sources));
         // }
         println!("{:?}", resources);
-        for recipe in recipes.iter(){
+        for recipe in recipes.iter() {
             let mut new_row = vec![0_f64; resources.len()];
             //add negative weights
-            for (i, product) in self.recipes[recipe].resources.iter().enumerate(){
+            for (i, product) in self.recipes[recipe].resources.iter().enumerate() {
                 let target_index = resources.iter().position(|v| v == product).unwrap();
                 new_row[target_index] -= self.recipes[recipe].resources_rates[i];
             }
@@ -235,10 +256,13 @@ impl Graph {
             matrix.push(new_row);
             cost_vec.push(self.recipes[recipe].power_consumption);
         }
-        (Array2::from_shape_vec((matrix.len(), resources.len()), matrix.concat()).unwrap(), cost_vec)
+        (
+            Array2::from_shape_vec((matrix.len(), resources.len()), matrix.concat()).unwrap(),
+            cost_vec,
+        )
     }
 
-    pub fn sort_topologically(&self, resource_list: &mut Vec<impl AsRef<str>>){
-        resource_list.sort_by_key( |v| u64::MAX - self.topological_sort_result[v.as_ref()].1);
+    pub fn sort_topologically(&self, resource_list: &mut Vec<impl AsRef<str>>) {
+        resource_list.sort_by_key(|v| u64::MAX - self.topological_sort_result[v.as_ref()].1);
     }
 }

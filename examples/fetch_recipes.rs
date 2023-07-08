@@ -12,7 +12,6 @@ use std::io::Write;
 //https://satisfactory.wiki.gg/wiki/Template:DocsBuildings.json
 //https://satisfactory.wiki.gg/wiki/Template:DocsRecipes.json
 
-
 #[derive(Debug, Deserialize)]
 struct SatisfactoryRecipe {
     #[serde(rename = "className")]
@@ -84,8 +83,8 @@ struct Recipe {
 impl Recipe {
     //String could be changed to something generic
     fn rename_items<V>(&mut self, rename_map: &std::collections::HashMap<String, V>)
-        where
-            V: ToString
+    where
+        V: ToString,
     {
         self.resources.iter_mut().for_each(|item| {
             if let Some(mapped_name) = rename_map.get(item) {
@@ -125,9 +124,17 @@ impl From<SatisfactoryRecipe> for Recipe {
         Recipe {
             recipe_name: source.name,
             resources: source.ingredients.iter().map(|m| m.item.clone()).collect(),
-            resources_rates: source.ingredients.iter().map(|m| m.amount * mutiplier).collect(),
+            resources_rates: source
+                .ingredients
+                .iter()
+                .map(|m| m.amount * mutiplier)
+                .collect(),
             products: source.products.iter().map(|m| m.item.clone()).collect(),
-            product_rates: source.products.iter().map(|m| m.amount * mutiplier).collect(),
+            product_rates: source
+                .products
+                .iter()
+                .map(|m| m.amount * mutiplier)
+                .collect(),
             power_consumption: power,
             production_method: source.produced_in.clone(),
             unlock_tags: vec![source.unlocked_by],
@@ -143,7 +150,8 @@ struct SatisfactoryRecipeItemDef {
 
 fn satisfactory_wiki_get_content(page_title: &str) -> String {
     let client = reqwest::blocking::Client::new();
-    let response = client.get("https://satisfactory.wiki.gg/api.php")
+    let response = client
+        .get("https://satisfactory.wiki.gg/api.php")
         .query(&[
             ("action", "query"),
             ("format", "json"),
@@ -154,11 +162,14 @@ fn satisfactory_wiki_get_content(page_title: &str) -> String {
             ("rvprop", "content"),
             ("rvslots", "main"),
         ])
-        .send().unwrap();
+        .send()
+        .unwrap();
     let response_text = response.text().unwrap();
     let response_json: Value = serde_json::from_str(response_text.as_str()).unwrap();
     response_json["query"]["pages"][0]["revisions"][0]["slots"]["main"]["content"]
-        .as_str().unwrap().to_string()
+        .as_str()
+        .unwrap()
+        .to_string()
     //as_str() converts json_value to proper string
     //wheras to_string() directly on a json_value will yield stuff like "\"actual string\""
     //the latter case require a manual replacement for "\\\"" to "\"" and "\\n" to "\n"
@@ -166,48 +177,112 @@ fn satisfactory_wiki_get_content(page_title: &str) -> String {
 
 fn main() {
     let response_str = satisfactory_wiki_get_content("Template:DocsRecipes.json");
-    let recipe_json_str = response_str.split_once("\n").unwrap().1.rsplit_once("\n").unwrap().0; //remove first and last line
+    let recipe_json_str = response_str
+        .split_once("\n")
+        .unwrap()
+        .1
+        .rsplit_once("\n")
+        .unwrap()
+        .0; //remove first and last line
     let recipe_json: Value = serde_json::from_str(recipe_json_str).unwrap();
-    let recipes: Vec<SatisfactoryRecipe> = recipe_json.as_object().unwrap().iter().map(|(_, value)| serde_json::from_value(value[0].clone()).expect("Error when parsing JSON recipe object")).collect();
+    let recipes: Vec<SatisfactoryRecipe> = recipe_json
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(_, value)| {
+            serde_json::from_value(value[0].clone()).expect("Error when parsing JSON recipe object")
+        })
+        .collect();
     let response_str = satisfactory_wiki_get_content("Template:DocsItems.json");
-    let items_json_str = response_str.split_once("\n").unwrap().1.rsplit_once("\n").unwrap().0; //remove first and last line
+    let items_json_str = response_str
+        .split_once("\n")
+        .unwrap()
+        .1
+        .rsplit_once("\n")
+        .unwrap()
+        .0; //remove first and last line
     let items_json: Value = serde_json::from_str(items_json_str).unwrap();
-    let items: Vec<SatisfactoryItem> = items_json.as_object().unwrap().iter().map(|(_, value)| { serde_json::from_value(value[0].clone()).expect("Error when parsing JSON item object") }).collect();
-    let mut classname_map: std::collections::HashMap<String, String> = items.iter().map(|i| (i.class_name.clone(), i.name.clone())).collect();
+    let items: Vec<SatisfactoryItem> = items_json
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(_, value)| {
+            serde_json::from_value(value[0].clone()).expect("Error when parsing JSON item object")
+        })
+        .collect();
+    let mut classname_map: std::collections::HashMap<String, String> = items
+        .iter()
+        .map(|i| (i.class_name.clone(), i.name.clone()))
+        .collect();
     let response_str = satisfactory_wiki_get_content("Template:DocsBuildings.json");
-    let buildings_json_str = response_str.split_once("\n").unwrap().1.rsplit_once("\n").unwrap().0; //remove first and last line
+    let buildings_json_str = response_str
+        .split_once("\n")
+        .unwrap()
+        .1
+        .rsplit_once("\n")
+        .unwrap()
+        .0; //remove first and last line
     let buildings_json: Value = serde_json::from_str(buildings_json_str).unwrap();
 
-    classname_map.extend(  buildings_json.as_object().unwrap().iter().map(|(_, value) | { (value[0]["className"].as_str().unwrap().to_string(), value[0]["name"].as_str().unwrap().to_string())}) );
-    let items: Vec<SatisfactoryItem> = items_json.as_object().unwrap().iter().map(|(_, value)| { serde_json::from_value(value[0].clone()).expect("Error when parsing JSON item object") }).collect();
+    classname_map.extend(
+        buildings_json
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(_, value)| {
+                (
+                    value[0]["className"].as_str().unwrap().to_string(),
+                    value[0]["name"].as_str().unwrap().to_string(),
+                )
+            }),
+    );
+    let items: Vec<SatisfactoryItem> = items_json
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(_, value)| {
+            serde_json::from_value(value[0].clone()).expect("Error when parsing JSON item object")
+        })
+        .collect();
     let mut output = Vec::new();
     for recipe in recipes {
-        if recipe.in_workshop | recipe.in_customizer | recipe.in_build_gun { continue; }
+        if recipe.in_workshop | recipe.in_customizer | recipe.in_build_gun {
+            continue;
+        }
         output.push(Recipe::from(recipe));
     }
-
 
     //append Ore extractions
     //fetch minable ores
     let client = reqwest::blocking::Client::new();
-    let response = client.get("https://satisfactory.wiki.gg/api.php")
+    let response = client
+        .get("https://satisfactory.wiki.gg/api.php")
         .query(&[
             ("action", "query"),
             ("format", "json"),
             ("list", "categorymembers"),
             ("cmtitle", "Category:Ores"),
-        ]).send().unwrap();
+        ])
+        .send()
+        .unwrap();
     let response_text = response.text().unwrap();
     let response_json: Value = serde_json::from_str(response_text.as_str()).unwrap();
     let mut minable_ores = Vec::new();
-    response_json["query"]["categorymembers"].as_array().iter().next().unwrap()
-        .iter().for_each(|v| minable_ores.push(v["title"].as_str().unwrap().to_string()));
+    response_json["query"]["categorymembers"]
+        .as_array()
+        .iter()
+        .next()
+        .unwrap()
+        .iter()
+        .for_each(|v| minable_ores.push(v["title"].as_str().unwrap().to_string()));
 
-    output.iter_mut().for_each(|mut r| r.rename_items(&classname_map));
+    output
+        .iter_mut()
+        .for_each(|mut r| r.rename_items(&classname_map));
     //add coal
     minable_ores.push("Coal".to_string());
 
-    for ore in minable_ores.iter(){
+    for ore in minable_ores.iter() {
         output.push(Recipe {
             recipe_name: format!("[Mining] {}", ore),
             resources: vec![],
