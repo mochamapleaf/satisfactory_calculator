@@ -153,6 +153,56 @@ impl Component for App{
     }
 }
 
+#[derive(Properties, PartialEq)]
+pub struct RecipesTableRowProps{
+    recipe: Recipe,
+    amount: f64,
+    //TODO: move to discard callback function
+}
+
+
+#[function_component]
+fn RecipesTableRow(props: &RecipesTableRowProps) -> Html{
+    html!{
+        <tr>
+        <td>{props.recipe.recipe_name.clone()}</td>
+        <td style="verticle-align: middle; text-align: center;">{for (0..props.recipe.resources.len()).map(|i| html!{
+                <ValuedItem name={props.recipe.resources[i].clone()} amount={props.recipe.resources_rates[i]} />
+            }) }
+        {if !props.recipe.resources.is_empty() { html!{
+        <div style="verticle-align: middle; display: inline-flex; justify-content: center;">{'\u{2192}'}</div> //unicode right arrow
+        }}else{html!{}} }
+        {for (0..props.recipe.products.len()).map(|i| html!{
+                <ValuedItem name={props.recipe.products[i].clone()} amount={props.recipe.product_rates[i]} />
+            }) }
+        </td>
+        <td>{props.recipe.production_method.clone()}</td>
+        <td>{props.amount}</td>
+        </tr>
+    }
+}
+
+#[derive(Properties, PartialEq)]
+pub struct ValuedItemProps{
+    name: AttrValue,
+    amount: f64,
+}
+
+#[function_component]
+fn ValuedItem(props: &ValuedItemProps) -> Html{
+    html!{
+        <div style="height: 25px; border: 1px solid #41b349; border-radius: 6px; display: inline-flex;">
+            <div class="valued-item-icon">
+                <img src={generate_item_image_link(props.name.as_str())} width="25" height="25" />
+            </div>
+            <div style="flex-grow: 1; width: 1px; background-color: #41b349;"></div>
+            <div style="align-items: center; justify-content: center; padding: 5px; font-family: Arial; display: flex;">
+                <span>{props.amount}</span>
+            </div>
+        </div>
+    }
+}
+
 impl App{
     fn view_input_row(&self, ctx: &yew::Context<Self>, index: usize) -> Html{
         html! {
@@ -193,12 +243,7 @@ impl App{
         html!{
             <>
             {for self.output_recipes.iter().zip(self.output_quantites.iter()).map(|(k,v)| html!{
-                <tr>
-                <td>{k}</td>
-                <td>{self.data.recipes[k].product_rates[0]}<img src={generate_item_image_link(&self.data.recipes[k].products[0])} width="25" height="25"/></td>
-                <td>{self.data.recipes[k].production_method.clone()}<img src={generate_item_image_link(&self.data.recipes[k].production_method[0])} width="25" height="25"/></td>
-                <td>{v}</td>
-                </tr>
+                <RecipesTableRow recipe={self.data.recipes[k].clone()} amount={v} />
             })}
             </>
         }

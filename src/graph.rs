@@ -9,7 +9,7 @@ use std::hash::{Hash, Hasher};
 use ndarray::Array2;
 use minilp::{Problem, OptimizationDirection, ComparisonOp};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Recipe {
     pub recipe_name: String,
     pub resources: Vec<String>,
