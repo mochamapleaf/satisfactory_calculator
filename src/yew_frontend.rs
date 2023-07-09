@@ -30,6 +30,7 @@ pub enum Msg {
     Clear,
     Calculate,
 }
+
 impl Component for App {
     type Properties = ();
     type Message = Msg;
@@ -120,8 +121,16 @@ impl Component for App {
     }
     fn view(&self, _ctx: &yew::Context<Self>) -> Html {
         html! {
-            <div class="container">
-                <SelectionBox selections={vec!["a".to_string(), "b".to_string(), "c".to_string()]} selected=2/>
+            <div class="page-container">
+                <div class="config-menu">
+                <h4>{"Mode"}</h4>
+                <SelectionBox selections={vec!["GreatEq".to_string(), "Exact".to_string()]} selected=0/>
+                <h4>{"Minimize"}</h4>
+                <SelectionBox selections={vec!["Power".to_string(), "Efficiency".to_string(), "Custom".to_string()]} selected=1/>
+                <h4>{"Recipe Display Mode"}</h4>
+                <SelectionBox selections={vec!["Total".to_string(), "Per Machine".to_string()]} selected=0/>
+                </div>
+                <div class="content">
                 <h1>{"Satisfactory Calculator"}</h1>
                  <div class="button-group">
                             <button onclick={_ctx.link().callback(|_| Msg::AddRow)}>{ "Add Row" }</button>
@@ -163,6 +172,7 @@ impl Component for App {
                     </div>
                 </div>
             </div>
+            </div>
         }
     }
 }
@@ -178,6 +188,7 @@ pub struct RecipesTableRowProps {
 #[function_component]
 fn RecipesTableRow(props: &RecipesTableRowProps) -> Html {
     html! {
+        //TODO: Move these style to scss
         <tr style={if props.index & 0b1 == 0{
             "background-color: #f2f2f2;"
             }else{
@@ -209,12 +220,11 @@ pub struct SelectionBoxProps {
 #[function_component]
 fn SelectionBox(props: &SelectionBoxProps) -> Html {
     html! {
-        <div class="selection-container" style="background-color: gray; display: flex">
+        <div class="selection-container">
             {for props.selections.iter().enumerate().map(|(i, opt)|{
                 html!{
-                    <div class={if i == props.selected {"selected"} else {""}}>{opt}</div>
-                }
-            })}
+                    <button class={if i == props.selected {"option selected"} else {"option"}}>{opt}</button>
+                } } ) }
         </div>
     }
 }
@@ -228,12 +238,10 @@ pub struct ValuedItemProps {
 #[function_component]
 fn ValuedItem(props: &ValuedItemProps) -> Html {
     html! {
-        <div style="height: 25px; border: 1px solid #41b349; border-radius: 6px; display: inline-flex; margin: 3px;">
-            <div class="valued-item-icon">
-                <img src={generate_item_image_link(props.name.as_str())} width="25" height="25" alt={props.name.clone()}/>
-            </div>
-            <div style="flex-grow: 1; width: 1px; background-color: #41b349;"></div>
-            <div style="align-items: center; justify-content: center; padding: 5px; font-family: Arial; display: flex;">
+        <div class="valued-item-container">
+            <img class="icon" src={generate_item_image_link(props.name.as_str())} alt={props.name.clone()}/>
+            <div class="split-line"></div>
+            <div class="text-value">
                 <span>{
             if props.amount.fract() == 0.0{
                 format!("{:.0}", props.amount)
