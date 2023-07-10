@@ -1,3 +1,11 @@
+.material-symbols-outlined {
+  font-variation-settings:
+          'FILL' 1,
+          'wght' 300,
+          'GRAD' 0,
+          'opsz' 48
+}
+
 .page-container {
   font-family: "Roboto", sans-serif;
   margin-right: 200px;
@@ -5,16 +13,6 @@
   height: 98vh;
 }
 
-.config-menu {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 200px;
-  height: 100vh;
-  border-left: 1px solid gray;
-  padding: 10px;
-  background-color: white;
-}
 
 td, th {
   white-space: nowrap;
@@ -40,9 +38,13 @@ td, th {
   flex-grow: 1;
 }
 
+.selection-container .option:not(.selected):hover {
+  background-color: rgba(255,255,255,0.4);
+}
+
 .selection-container .selected {
   background-color: white;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
   color: black;
 }
 
@@ -69,6 +71,62 @@ td, th {
   align-items: center;
   justify-content: center;
   padding: 5px;
-  font-family: Arial;
   display: flex;
+}
+
+
+.config-button {
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  border: none;
+  background-color: transparent;
+  margin: 3px;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  top: 0;
+  right: 0;
+  position: fixed;
+}
+
+.config-button span::after{
+  content: "settings";
+}
+
+.config-button:hover {
+  background-color: rgba(0,0,0,0.1);
+}
+
+#settings-menu-button:checked ~ .config-button span::after{
+  content: "arrow_forward_ios";
+}
+
+#settings-menu-button:checked ~ .config-menu {
+  display: block;
+}
+
+#settings-menu-button {
+  display: none;
+}
+
+.config-menu-container{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: calc(100vh - 96px);
+  padding: 10px;
+  background: transparent;
+}
+
+.config-menu {
+  //border-left: 1px solid gray;
+  padding: 10px;
+  background-color: white;
+  display: none;
+  z-index: 1;
+  height: 100%;
+  width: 100%;
 }
