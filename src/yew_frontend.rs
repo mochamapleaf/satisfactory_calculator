@@ -124,11 +124,14 @@ impl Component for App {
                 let (solution, objective) =
                     solve_lp(&matrix_A, &cost_vec, &target_vals, self.lp_mode);
                 self.output_objective = objective;
-                let temp: Vec<_> = solution
+                let mut temp: Vec<_> = solution
                     .iter()
                     .zip(recipes.iter())
                     .filter(|(&s, _)| s > 10000.0 * f64::EPSILON)
                     .collect();
+                let mut temp_graph = self.data.select(temp.iter().map(|(_, s)| s) );
+                temp.sort_unstable_by_key(|(_, s)| self.data.recipes[*s].resources.iter().map(|v| temp_graph.topological_sort_result[v].1).min().unwrap_or(u64::MAX));
+                temp.reverse();
                 self.output_recipes = temp.iter().map(|(_, s)| (*s).clone()).collect();
                 self.output_quantites = temp.iter().map(|(&v, _)| v).collect();
             },

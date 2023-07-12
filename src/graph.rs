@@ -5,7 +5,8 @@ use ndarray::Array2;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::hash::Hasher; //Hash
+use std::hash::Hasher;
+//Hash
 use std::rc::Rc;
 //use minilp::{Problem, OptimizationDirection, ComparisonOp};
 
@@ -35,6 +36,7 @@ pub struct Edge {
     pub recipe_name: String,
 }
 
+#[derive(Default)]
 pub struct Graph {
     pub recipes: HashMap<String, Recipe>,
     pub resources: HashMap<String, Rc<RefCell<ResourceNode>>>,
@@ -55,57 +57,77 @@ impl Graph {
             .into_iter()
             .map(|r| (r.recipe_name.clone(), r))
             .collect();
-
         let mut resource_table =
             std::collections::HashMap::<String, Rc<RefCell<ResourceNode>>>::new();
+
+        let mut ret: Graph = Graph::default();
         for (recipe_name, recipe) in &recipes_table {
-            for product in recipe.products.iter() {
-                if !resource_table.contains_key(product.as_str()) {
-                    resource_table.insert(
-                        product.clone(),
-                        Rc::new(RefCell::new(ResourceNode {
-                            resource_name: product.clone(),
-                            ingress_edges: vec![],
-                            egress_edges: vec![],
-                        })),
-                    );
-                }
-                let mut process_recipes = recipe.resources.clone();
-                if process_recipes.is_empty() {
-                    // The resource comes from the world directly
-                    // replace the resource with WORLD_ROOT
-                    process_recipes.push(WORLD_ROOT.to_string());
-                }
-                for resource in process_recipes.iter() {
-                    if !resource_table.contains_key(resource.as_str()) {
-                        resource_table.insert(
-                            resource.clone(),
-                            Rc::new(RefCell::new(ResourceNode {
-                                resource_name: resource.clone(),
-                                ingress_edges: vec![],
-                                egress_edges: vec![],
-                            })),
-                        );
-                    }
-                    let mut from_node = resource_table[resource].borrow_mut();
-                    let new_edge = Rc::new(Edge {
-                        from: resource.clone(),
-                        to: product.clone(),
-                        recipe_name: recipe_name.clone(),
-                    });
-                    from_node.egress_edges.push(new_edge.clone());
-                    let mut to_node = if resource == product {
-                        from_node
-                    } else {
-                        resource_table[product].borrow_mut()
-                    };
-                    to_node.ingress_edges.push(new_edge);
-                }
+            ret.add_recipe(recipe);
+        }
+        ret.topological_sort();
+        ret
+
+    }
+
+    //consumes an iterator that can yield &str results, select the names from the current graph,
+    //creates a subgraph
+    pub fn select<T: IntoIterator<Item=impl AsRef<str>>>(&self, selected_recipes: T) -> Self
+    {
+        let mut new_graph = Graph::default();
+        for recipe in selected_recipes{
+            assert!(self.recipes.contains_key(recipe.as_ref()));
+            new_graph.add_recipe(&self.recipes[recipe.as_ref()]);
+        }
+        new_graph.topological_sort();
+        new_graph
+    }
+
+    pub fn add_recipe(&mut self, recipe: &Recipe) {
+        let recipe_name: &String = &recipe.recipe_name;
+        self.recipes.insert(recipe_name.clone(), recipe.clone());
+        for product in recipe.products.iter() {
+            self.add_resource_node(product);
+            let mut process_recipes = recipe.resources.clone();
+            if process_recipes.is_empty() {
+                // The resource comes from the world directly
+                // replace the resource with WORLD_ROOT
+                process_recipes.push(WORLD_ROOT.to_string());
+            }
+            for resource in process_recipes.iter() {
+                self.add_resource_node(resource);
+                let mut from_node = self.resources[resource].borrow_mut();
+                let new_edge = Rc::new(Edge {
+                    from: resource.clone(),
+                    to: product.clone(),
+                    recipe_name: recipe_name.clone(),
+                });
+                from_node.egress_edges.push(new_edge.clone());
+                let mut to_node = if resource == product {
+                    from_node
+                } else {
+                    self.resources[product].borrow_mut()
+                };
+                to_node.ingress_edges.push(new_edge);
             }
         }
+    }
 
+    fn add_resource_node(&mut self, product: &String) -> bool {
+        if self.resources.contains_key(product.as_str()) { return false; }
+        self.resources.insert(
+            product.clone(),
+            Rc::new(RefCell::new(ResourceNode {
+                resource_name: product.clone(),
+                ingress_edges: vec![],
+                egress_edges: vec![],
+            })),
+        );
+        true
+    }
+
+    pub fn topological_sort(&mut self){
         //dfs for topological sort
-        let mut pending: HashSet<String> = resource_table.keys().map(|s| s.clone()).collect();
+        let mut pending: HashSet<String> = self.resources.keys().map(|s| s.clone()).collect();
         let mut topology: HashMap<String, (u64, u64)> = HashMap::new();
         //a single resource node must be either in 'pending' or 'topology', not both
         let mut cur = 0_u64;
@@ -121,7 +143,7 @@ impl Graph {
                     cur += 1;
                     dfs_stack.push(s.clone()); //add it back for second discovery
                     pending.remove(s.as_str());
-                    for egress in resource_table[&s].borrow().egress_edges.iter() {
+                    for egress in self.resources[&s].borrow().egress_edges.iter() {
                         if !topology.contains_key(egress.to.as_str()) {
                             dfs_stack.push(egress.to.clone());
                         }
@@ -133,12 +155,7 @@ impl Graph {
                 }
             }
         }
-
-        return Self {
-            recipes: recipes_table,
-            resources: resource_table,
-            topological_sort_result: topology,
-        };
+        self.topological_sort_result = topology;
     }
 
     /// find all the resources that can be produced with the given avaliable resources
@@ -187,7 +204,7 @@ impl Graph {
     ///
     /// 0. All related resources, sorted in topological order (note: due to the fact DFS uses HashSet, the order is not always the same for different runs. But within one single process, the order is determined)
     /// 1. All related recipes, sorted in alphabetical order
-    pub fn find_all_related<'a, T: 'a + Iterator<Item = U>, U: 'a + ToString>(
+    pub fn find_all_related<'a, T: 'a + Iterator<Item=U>, U: 'a + ToString>(
         &self,
         target_resources: T,
     ) -> (Vec<String>, Vec<String>) {
