@@ -95,6 +95,7 @@ impl Component for App {
                 self.output_objective = 0_f64;
             }
             Msg::Calculate => {
+                //TODO: Feature? Check if the answer from last calculation is reusable
                 self.lp_mode = match self.config["lp_mode"].as_str(){
                     "Exact" => ComparisonOp::Eq,
                     _ => ComparisonOp::Ge, //GreatEq
@@ -130,7 +131,7 @@ impl Component for App {
                     .filter(|(&s, _)| s > 10000.0 * f64::EPSILON)
                     .collect();
                 let mut temp_graph = self.data.select(temp.iter().map(|(_, s)| s) );
-                temp.sort_unstable_by_key(|(_, s)| self.data.recipes[*s].resources.iter().map(|v| temp_graph.topological_sort_result[v].1).min().unwrap_or(u64::MAX));
+                temp.sort_by_key(|(_, s)| self.data.recipes[*s].resources.iter().map(|v| temp_graph.topological_sort_result[v].1).min().unwrap_or(u64::MAX));
                 temp.reverse();
                 self.output_recipes = temp.iter().map(|(_, s)| (*s).clone()).collect();
                 self.output_quantites = temp.iter().map(|(&v, _)| v).collect();
@@ -202,7 +203,7 @@ impl Component for App {
                                 {self.generate_output_table(_ctx)}
                             </tbody>
                         </table>
-                        <div>{"Total power usage: "} {self.output_objective}</div>
+                        <div>{format!("Total power usage: {:.2}", self.output_objective)}</div>
                     </div>
                 </div>
             </div>
@@ -242,7 +243,7 @@ fn RecipesTableRow(props: &RecipesTableRowProps) -> Html {
             }) }
         </td>
         <td>{props.recipe.production_method.clone()}</td>
-        <td>{props.amount}</td>
+        <td>{format!("{:.2}",props.amount)}</td>
         </tr>
     }
 }
@@ -390,7 +391,8 @@ pub fn filtered_item_selection(props: &FilteredItemSelectionProps) -> Html {
             <input type="text" class={input_text_css} {oninput} value={(*input_text).clone()} {onfocus} />
             <div style={if *dropdown_visible {"display: block;"} else {""}} class={dropdown_menu_css}>
                 <ul class={ul_css}>
-                    {for std::iter::once(&"".to_string()).chain(props.selections.iter().filter(|&v| v.starts_with(&*input_text)) ).map(|option| html!{
+                    <li onclick={onclick(&"".to_string())}></li>
+                    {for props.selections.iter().filter(|&v| v.starts_with(&*input_text) ).map(|option| html!{
                         //TODO: filter out world_root
                         //TODO: Use editing distance to filter
                         //TODO: Add Clear Button

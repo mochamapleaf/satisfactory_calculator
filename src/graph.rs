@@ -127,13 +127,16 @@ impl Graph {
 
     pub fn topological_sort(&mut self){
         //dfs for topological sort
-        let mut pending: HashSet<String> = self.resources.keys().map(|s| s.clone()).collect();
+        let mut pending: Vec<String> = self.resources.keys().map(|s| s.clone()).collect();
+        pending.sort_unstable(); //pending could be a HashSet, since all names comes from HashMap
+        //Using Vec here to gurantee consistent result with each run
+        //since the node number is likely < 200 for any automation game, vector is enough
         let mut topology: HashMap<String, (u64, u64)> = HashMap::new();
         //a single resource node must be either in 'pending' or 'topology', not both
         let mut cur = 0_u64;
         //stack implementation to replace recursive program
         while !pending.is_empty() {
-            let next = pending.iter().next().unwrap();
+            let next = pending.pop().unwrap();
             let mut dfs_stack: Vec<String> = Vec::new();
             dfs_stack.push(next.to_string());
             while let Some(s) = dfs_stack.pop() {
@@ -142,7 +145,8 @@ impl Graph {
                     topology.insert(s.clone(), (cur, u64::MAX));
                     cur += 1;
                     dfs_stack.push(s.clone()); //add it back for second discovery
-                    pending.remove(s.as_str());
+                    //pending.remove(s.as_str()); if using hashset
+                    if let Some(i) = pending.iter().position(|v| v == &s){ pending.remove(i); }
                     for egress in self.resources[&s].borrow().egress_edges.iter() {
                         if !topology.contains_key(egress.to.as_str()) {
                             dfs_stack.push(egress.to.clone());
