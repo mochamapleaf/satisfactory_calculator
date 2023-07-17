@@ -5,8 +5,6 @@ use ndarray::Array2;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::hash::Hasher;
-//Hash
 use std::rc::Rc;
 //use minilp::{Problem, OptimizationDirection, ComparisonOp};
 
@@ -49,19 +47,17 @@ impl Graph {
     /// read json recipes, and construct a graph network of resources
     pub fn from_str(file: &str) -> Self {
         // let mut file = File::open(filename).expect("Unable to open JSON file");
-        let mut json_data = file.to_string();
+        let json_data = file.to_string();
         // file.read_to_string(&mut json_data).expect("Unable to read JSON file");
         let recipes_list: Vec<Recipe> =
             serde_json::from_str(&json_data).expect("Error parsing JSON file");
-        let mut recipes_table: std::collections::HashMap<String, Recipe> = recipes_list
+        let recipes_table: std::collections::HashMap<String, Recipe> = recipes_list
             .into_iter()
             .map(|r| (r.recipe_name.clone(), r))
             .collect();
-        let mut resource_table =
-            std::collections::HashMap::<String, Rc<RefCell<ResourceNode>>>::new();
 
         let mut ret: Graph = Graph::default();
-        for (recipe_name, recipe) in &recipes_table {
+        for (_recipe_name, recipe) in &recipes_table {
             ret.add_recipe(recipe);
         }
         ret.topological_sort();
@@ -165,6 +161,7 @@ impl Graph {
     /// find all the resources that can be produced with the given avaliable resources
     ///
     /// The parameter HashSet is modified in place, so it is changed after the function call
+    #[allow(dead_code)]
     pub fn expand_coverage(&self, avaliable_resources: &mut HashSet<String>) {
         loop {
             let mut next_iter = false;
@@ -283,6 +280,7 @@ impl Graph {
         )
     }
 
+    #[allow(dead_code)]
     pub fn sort_topologically(&self, resource_list: &mut Vec<impl AsRef<str>>) {
         resource_list.sort_by_key(|v| u64::MAX - self.topological_sort_result[v.as_ref()].1);
     }

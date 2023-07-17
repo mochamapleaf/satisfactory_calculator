@@ -11,9 +11,13 @@ use std::collections::HashMap;
 use crate::graph::*;
 use crate::utilities::*;
 
-use stylist::yew::{styled_component};
 
-const DEFAULT_JSON: &str = include_str!("../recipes/auto_output.json");
+mod filtered_item_selection;
+use filtered_item_selection::FilteredItemSelection;
+mod valued_item;
+use valued_item::ValuedItem;
+
+const DEFAULT_JSON: &str = include_str!("../../recipes/auto_output.json");
 
 pub struct App {
     target_resources: Vec<String>,
@@ -104,7 +108,7 @@ impl Component for App {
                 let (mut resources, recipes) = self
                     .data
                     .find_all_related(self.target_resources.iter().map(|s| s.as_str()));
-                let (mut matrix, mut cost_vec) = self.data.construct_matrix(&recipes, &resources);
+                let (matrix, cost_vec) = self.data.construct_matrix(&recipes, &resources);
 
                 let col_num = matrix.ncols();
                 let root_pos = resources.iter().position(|v| v == WORLD_ROOT).unwrap();
@@ -112,25 +116,25 @@ impl Component for App {
                 col_selector.remove(root_pos);
                 resources.remove(root_pos);
                 let matrix = matrix.select(ndarray::Axis(1), &col_selector); //remove empty column "world root"
-                let mut matrix_A = matrix.t().to_owned();
+                let matrix_a = matrix.t().to_owned();
                 let target_map: HashMap<_, _> = self
                     .target_resources
                     .iter()
                     .zip(self.target_quanties.iter())
                     .collect();
-                let mut target_vals: Vec<f64> = resources
+                let target_vals: Vec<f64> = resources
                     .iter()
                     .map(|r| **target_map.get(r).unwrap_or(&&0_f64))
                     .collect();
                 let (solution, objective) =
-                    solve_lp(&matrix_A, &cost_vec, &target_vals, self.lp_mode);
+                    solve_lp(&matrix_a, &cost_vec, &target_vals, self.lp_mode);
                 self.output_objective = objective;
                 let mut temp: Vec<_> = solution
                     .iter()
                     .zip(recipes.iter())
                     .filter(|(&s, _)| s > 10000.0 * f64::EPSILON)
                     .collect();
-                let mut temp_graph = self.data.select(temp.iter().map(|(_, s)| s) );
+                let temp_graph = self.data.select(temp.iter().map(|(_, s)| s) );
                 temp.sort_by_key(|(_, s)| self.data.recipes[*s].resources.iter().map(|v| temp_graph.topological_sort_result[v].1).min().unwrap_or(u64::MAX));
                 temp.reverse();
                 self.output_recipes = temp.iter().map(|(_, s)| (*s).clone()).collect();
@@ -142,7 +146,6 @@ impl Component for App {
         true
     }
     fn view(&self, _ctx: &yew::Context<Self>) -> Html {
-        let lp_mode_callback: Callback<String> =  _ctx.link().callback(|config: String| Msg::UpdateConfig("lp_mode".to_string(), config));
         html! {
             <div class="page-container">
                 <div class="config-menu-container">
@@ -260,7 +263,7 @@ fn SelectionBox(props: &SelectionBoxProps) -> Html {
     let temp_cb = (props.option_callback).clone();
     html! {
         <div class="selection-container">
-            {for props.selections.iter().enumerate().map(|(i, opt)|{
+            {for props.selections.iter().enumerate().map(|(_, opt)|{
                 let onselection = {
                     let click_callback =  temp_cb.clone();
                     let option = opt.clone();
@@ -271,138 +274,6 @@ fn SelectionBox(props: &SelectionBoxProps) -> Html {
                     {opt}</button>
                 }  })
             } //end for
-        </div>
-    }
-}
-
-#[derive(Properties, PartialEq)]
-pub struct ValuedItemProps {
-    name: AttrValue,
-    amount: f64,
-}
-
-#[function_component]
-fn ValuedItem(props: &ValuedItemProps) -> Html {
-    html! {
-        <div class="valued-item-container">
-            <img class="icon" src={generate_item_image_link(props.name.as_str())} alt={props.name.clone()}/>
-            <div class="split-line"></div>
-            <div class="text-value">
-                <span>{
-            if props.amount.fract() == 0.0{
-                format!("{:.0}", props.amount)
-            }else{
-                format!("{:.2}", props.amount)
-            }}</span>
-            </div>
-        </div>
-    }
-}
-
-#[derive(PartialEq, Properties)]
-pub struct FilteredItemSelectionProps {
-    selections: Vec<String>,
-    selection_callback: Callback<String>,
-}
-
-#[styled_component(FilteredItemSelection)]
-pub fn filtered_item_selection(props: &FilteredItemSelectionProps) -> Html {
-    let input_text = use_state(|| String::new());
-    let dropdown_visible = use_state(|| false);
-
-    let container_css = css!{r#"
-        background: transparent;
-        width: 200px;
-        position: relative;
-    "#};
-
-    let input_text_css = css!{r#"
-        background: transparent;
-        border: none;
-        border-bottom: solid 1px black;
-        outline: none;
-        height: 30px;
-        width: 100%;
-        box-sizing: border-box;
-        font-size: 18px;
-        padding: 0 10px;
-        display: inline-flex;
-        &:focus {
-            background: rgba(0,0,0,0.05);
-        }
-    "#};
-
-    let dropdown_menu_css = css!{r#"
-        display: none;
-        left: 0;
-        width: 100%;
-        position: absolute;
-        background-color: white;
-        padding: 0;
-        max-height: calc(50vh);
-        overflow-y: auto;
-    "#};
-
-    let ul_css = css!{r#"
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        & li{
-            display: flex;
-            align-items: center;
-            justify-content: left;
-            height: 30px;
-        }
-        & li:hover{
-            background-color: lightcyan;
-        }
-    "#};
-    let cb_clone = props.selection_callback.clone();
-
-    let oninput = {
-        let text_val = input_text.clone();
-        Callback::from(move |e: InputEvent| {
-            let target = e.dyn_into::<Event>().unwrap_throw().target().unwrap_throw().dyn_into::<HtmlInputElement>().unwrap_throw();
-            text_val.set(target.value().to_owned());
-        })
-    };
-
-    let onclick = |change_to: &String| {
-        let text_val = input_text.clone();
-        let dropdown_status = dropdown_visible.clone();
-        let change_to = change_to.to_string();
-        let select_callback = cb_clone.clone();
-        Callback::from(move |e: MouseEvent|{
-            text_val.set(change_to.clone());
-            dropdown_status.set(false);
-            select_callback.emit(change_to.clone());
-        })
-    };
-
-    let onfocus = {
-        let dropdown_status = dropdown_visible.clone();
-        Callback::from(move |_| dropdown_status.set(true))
-    };
-
-    html! {
-        <div class={container_css}>
-            <input type="text" class={input_text_css} {oninput} value={(*input_text).clone()} {onfocus} />
-            <div style={if *dropdown_visible {"display: block;"} else {""}} class={dropdown_menu_css}>
-                <ul class={ul_css}>
-                    <li onclick={onclick(&"".to_string())}></li>
-                    {for props.selections.iter().filter(|&v| v.starts_with(&*input_text) ).map(|option| html!{
-                        //TODO: filter out world_root
-                        //TODO: Use editing distance to filter
-                        //TODO: Add Clear Button
-                        <li onclick={onclick(option)}>
-                            <img style="height: 80%; margin-right: 10px;" src={generate_item_image_link(option.as_str())} alt={option.clone()}/>
-                            {option.clone()}
-                        </li>
-                    })}
-                </ul>
-            </div>
         </div>
     }
 }
@@ -435,7 +306,7 @@ impl App {
                 </tr>
             }
     }
-    fn generate_output_table(&self, ctx: &yew::Context<App>) -> Html {
+    fn generate_output_table(&self, _ctx: &yew::Context<App>) -> Html {
         html! {
             <>
             {for self.output_recipes.iter().zip(self.output_quantites.iter()).enumerate().map(|(i,(k,v))| html!{

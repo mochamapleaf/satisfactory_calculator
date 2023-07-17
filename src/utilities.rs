@@ -1,5 +1,5 @@
 use md5::{Digest, Md5};
-use minilp::{ComparisonOp, OptimizationDirection, Problem};
+use minilp::{OptimizationDirection, Problem};
 use ndarray::Array2;
 
 pub fn solve_lp(
