@@ -1,0 +1,28 @@
+on:
+  push:
+    branches:
+    - master
+jobs:
+  build-site:
+    name: build site
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v3.5.3
+      
+    - name: trunk-action
+      uses: jetli/trunk-action@v0.4.0
+      
+    - name: run trunk command
+      run: |
+        trunk build --release --public-url="satisfactory-calculator"
+    
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v2.0.0
+      with:
+        # Path of the directory containing the static assets.
+        path: dist/
+    
+    - name: Deploy GitHub Pages site
+      uses: actions/deploy-pages@v2.0.3
