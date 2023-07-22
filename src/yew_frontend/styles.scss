@@ -8,8 +8,8 @@
 
 .page-container {
   font-family: "Roboto", sans-serif;
-  margin-right: 200px;
-  overflow-x: auto;
+  overflow-x: scroll;
+  overflow-y: scroll;
   height: 98vh;
 }
 
@@ -63,7 +63,7 @@ td, th {
   z-index: 10;
   top: 0;
   right: 0;
-  position: fixed;
+  position: absolute;
 }
 
 .config-button span::after{
@@ -78,8 +78,14 @@ td, th {
   content: "arrow_forward_ios";
 }
 
-#settings-menu-button:checked ~ .config-menu {
-  display: block;
+.config-menu-container:has(#settings-menu-button:checked) ~ .content{
+  margin-right: 200px;
+}
+
+.config-menu-container:has(#settings-menu-button:checked){
+  background-color: white;
+  width: 200px;
+  height: calc(100vh - 72px);
 }
 
 #settings-menu-button {
@@ -90,18 +96,16 @@ td, th {
   position: absolute;
   top: 0;
   right: 0;
-  width: 200px;
-  height: calc(100vh - 96px);
-  padding: 10px;
+  width: 30px;
+  height: 0px;
+  padding: 40px 10px 10px;
   background: transparent;
+  overflow: hidden;
+  transition: container-expand 0.2s;
+  display: inline-block;
 }
 
-.config-menu {
-  //border-left: 1px solid gray;
-  padding: 10px;
-  background-color: white;
-  display: none;
-  z-index: 1;
-  height: 100%;
+.row{
   width: 100%;
+  overflow-x: scroll;
 }

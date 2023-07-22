@@ -153,7 +153,6 @@ impl Component for App {
                     <label for="settings-menu-button" class="config-button">
                         <span class="material-symbols-outlined"></span>
                     </label>
-                <div class="config-menu">
                 <h4>{"Mode"}</h4>
                 <SelectionBox selections={vec!["GreatEq".to_string(), "Exact".to_string()]} option_callback={
                 _ctx.link().callback(|config: String| Msg::UpdateConfig("lp_mode".to_string(), config))
@@ -166,7 +165,6 @@ impl Component for App {
                 <SelectionBox selections={vec!["Total".to_string(), "Per Machine".to_string()]} option_callback={
                 _ctx.link().callback(|config: String| Msg::UpdateConfig("recipe_display".to_string(), config))
             } selected={self.config["recipe_display"].clone()}/>
-                </div>
                 </div>
                 <div class="content">
                 <h1>{"Satisfactory Calculator"}</h1>

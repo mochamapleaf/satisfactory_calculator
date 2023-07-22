@@ -161,7 +161,6 @@ impl Graph {
     /// find all the resources that can be produced with the given avaliable resources
     ///
     /// The parameter HashSet is modified in place, so it is changed after the function call
-    #[allow(dead_code)]
     pub fn expand_coverage(&self, avaliable_resources: &mut HashSet<String>) {
         loop {
             let mut next_iter = false;
@@ -280,7 +279,6 @@ impl Graph {
         )
     }
 
-    #[allow(dead_code)]
     pub fn sort_topologically(&self, resource_list: &mut Vec<impl AsRef<str>>) {
         resource_list.sort_by_key(|v| u64::MAX - self.topological_sort_result[v.as_ref()].1);
     }
