@@ -11,6 +11,12 @@ jobs:
     - name: checkout repo
       uses: actions/checkout@v3.5.3
       
+    - name: Setup Rust and Cargo
+      uses: moonrepo/setup-rust@v0.6.1
+      with:
+        # Comma-separated list of additional targets to install.
+        targets: wasm32-unknown-unknown
+        
     - name: trunk-action
       uses: jetli/trunk-action@v0.4.0
       
