@@ -6,6 +6,13 @@ jobs:
   build-site:
     name: build site
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
     - name: checkout repo
@@ -31,4 +38,5 @@ jobs:
         path: dist/
     
     - name: Deploy GitHub Pages site
+      id: deployment
       uses: actions/deploy-pages@v2.0.3
