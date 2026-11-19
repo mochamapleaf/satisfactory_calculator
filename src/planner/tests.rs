@@ -146,6 +146,8 @@ fn resource_limit_infeasible() {
     let d = data();
     let mut s = settings(&[("Reinforced Iron Plate", 60.0)]);
     s.resource_limits.insert("Desc_OreIron_C".into(), Some(100.0));
+    assert_eq!(plan(&d, &s).status, Status::Infeasible);
+    s.allow_ore_conversion = true;
     // 1.0 Converter recipes (Iron Ore (Limestone) + SAM) make this feasible ...
     let p = plan(&d, &s);
     assert_eq!(p.status, Status::Optimal);

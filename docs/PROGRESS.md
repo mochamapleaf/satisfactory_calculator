@@ -28,3 +28,18 @@ memo project: `satisfactory-calculator` (e3ea2a723535). Branch: `refactor`.
   supplies; alternates never worse; HMF/Turbo Motor/Aluminum/FMF/Nuclear Pasta × 3 objectives × alts balance.
 - `wasm-pack build --release --target web --out-dir react-frontend/src/wasm-pkg` works (368 KB wasm).
 - Not done: shadow prices / duals (minilp doesn't expose them), power generators as recipes.
+
+## 2026-11-19 · Steps 4–6 — UI, graph view, deploy pipeline
+- `react-frontend/` rewritten (React 19 + Vite 7, @xyflow/react + dagre): targets with rates, objective
+  (resources / buildings / power), global clock, alternates (all / per recipe), Converter ore conversion
+  toggle (off by default — scarcity weighting otherwise picks ~250 MW converters), available inputs,
+  editable resource limits, per-recipe Somersloops and "exclude recipe" in the plan table, building counts,
+  production + extraction power, belt/pipe tier per raw/output line, flow graph (LR dagre layout,
+  pipes blue, edge width ∝ rate). Settings persist in the URL hash (shareable) and localStorage.
+- Checked in the browser (dev + `vite preview` of the production build): 10 RIP/min → 4/3/2/3/2 machines,
+  120 ore, 78 MW; RIP + Turbo Motor with all alternates solves instantly, graph renders (44 nodes, 81 edges).
+- `.github/workflows/build-site.yml` replaced (trunk/Yew → cargo test + wasm-pack + Vite → Pages
+  artifact v3 / deploy-pages v4). **Not pushed** — the decision desk must be told before pushing to GitHub.
+  Repo Settings → Pages must be set to "GitHub Actions" for the deploy job.
+- Open follow-ups: shadow prices (needs a solver with duals, e.g. replace minilp or compute via
+  sensitivity), power generators as recipes (fuel → MW), per-recipe clock speeds, item icons.

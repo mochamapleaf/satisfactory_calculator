@@ -43,6 +43,9 @@ pub struct PlanSettings {
     /// Override world limit per raw item id; `null` = unlimited.
     pub resource_limits: HashMap<String, Option<f64>>,
     pub ignore_limits: bool,
+    /// Allow Converter recipes that turn one raw ore into another (e.g. Bauxite (Copper)).
+    /// Off by default: scarcity weighting otherwise favours them despite ~250 MW each.
+    pub allow_ore_conversion: bool,
     /// Clock speed in percent (1..=250) applied to every production building.
     pub clock_percent: f64,
     /// Somersloops per recipe id (clamped to the building's slots).
@@ -60,6 +63,7 @@ impl Default for PlanSettings {
             disabled_recipes: vec![],
             resource_limits: HashMap::new(),
             ignore_limits: false,
+            allow_ore_conversion: false,
             clock_percent: 100.0,
             somersloops: HashMap::new(),
         }

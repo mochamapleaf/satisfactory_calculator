@@ -1,17 +1,8 @@
 #!/bin/bash
-
-# Build script for Satisfactory Calculator React + WASM
-
+# Production build: Rust planner -> WASM, then the React front end (output: react-frontend/dist)
 set -e
-
-echo "Building WASM module..."
-wasm-pack build --target web --out-dir react-frontend/src/wasm-pkg --out-name satisfactory-calculator
-
-echo "Installing frontend dependencies..."
+cargo test
+wasm-pack build --release --target web --out-dir react-frontend/src/wasm-pkg --out-name satisfactory_calculator
 cd react-frontend
-npm install
-
-echo "Building React frontend..."
+npm ci
 npm run build
-
-echo "Build complete! Output in react-frontend/dist/"

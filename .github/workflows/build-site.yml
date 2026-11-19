@@ -1,42 +1,59 @@
+name: build site
 on:
   push:
-    branches:
-    - master
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
-  build-site:
-    name: build site
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-      
+    steps:
+      - uses: actions/checkout@v4
+
+      # rust-toolchain.toml pins the version and the wasm32 target
+      - name: Install Rust toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Test planner
+        run: cargo test
+
+      - name: Build WASM
+        run: wasm-pack build --release --target web --out-dir react-frontend/src/wasm-pkg --out-name satisfactory_calculator
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: react-frontend/package-lock.json
+
+      - name: Build front end
+        working-directory: react-frontend
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: react-frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:
-    - name: checkout repo
-      uses: actions/checkout@v3.5.3
-      
-    - name: Setup Rust and Cargo
-      uses: moonrepo/setup-rust@v0.6.1
-      with:
-        # Comma-separated list of additional targets to install.
-        targets: wasm32-unknown-unknown
-        
-    - name: trunk-action
-      uses: jetli/trunk-action@v0.4.0
-      
-    - name: run trunk command
-      run: |
-        trunk build --release --public-url="${{ github.event.repository.name }}"
-    
-    - name: Upload GitHub Pages artifact
-      uses: actions/upload-pages-artifact@v2.0.0
-      with:
-        # Path of the directory containing the static assets.
-        path: dist/
-    
-    - name: Deploy GitHub Pages site
-      id: deployment
-      uses: actions/deploy-pages@v2.0.3
+      - id: deployment
+        uses: actions/deploy-pages@v4

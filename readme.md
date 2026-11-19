@@ -166,3 +166,18 @@ WP值越小代表某种物资越不珍贵，对于无限速率采集的水，WP 
 
 
 ### 运输方式的选择（TODO）
+
+
+### 2026-11 更新：LP 求解
+
+上面的方阵方法保留在 `src/planner/matrix.rs`，测试里用它验证 LP（强化铁板 60/min：24 台熔炉、720 铁矿，与上表一致）。
+多配方、副产品、有环时 Aᵀ 不是方阵或不可逆，于是改成线性规划（`src/planner/lp.rs`）：
+
+```math
+\min\ c^Tx + w^Ts \quad \text{s.t.}\quad A^Tx + s + u - e = b,\quad 0 \le s \le \text{limit},\ 0\le u \le \text{supply},\ x, e \ge 0
+```
+
+x 为每个配方的机器数，s 为原矿开采（世界上限），u 为已有的输入，e 为多余产物（副产品）。目标可选：原矿（按 1/世界上限加权）、建筑数、电力。
+当每种物品只有一个配方且没有副产品时，可行解唯一，LP 的结果就等于 $x = (A^T)^{-1} b$。
+
+网页版：`react-frontend/`（React + Vite，调用 WASM），构建见 `PROJECT_STRUCTURE.md`。

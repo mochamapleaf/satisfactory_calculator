@@ -1,15 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
+// base './' so the build works under any GitHub Pages sub-path
 export default defineConfig({
+  base: './',
   plugins: [react()],
-  server: {
-    fs: {
-      allow: ['..']
-    }
-  },
-  optimizeDeps: {
-    exclude: ['satisfactory-calculator-wasm']
-  }
+  build: { target: 'es2022' },
 })

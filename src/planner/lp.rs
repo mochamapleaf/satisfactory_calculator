@@ -47,7 +47,14 @@ pub fn allowed_recipes<'a>(data: &'a GameData, s: &PlanSettings) -> Vec<&'a Reci
         .iter()
         .filter(|r| !s.disabled_recipes.contains(&r.id))
         .filter(|r| !r.alt || s.allow_all_alternates || s.enabled_alternates.contains(&r.id))
+        .filter(|r| s.allow_ore_conversion || !is_ore_conversion(data, r))
         .collect()
+}
+
+/// Converter recipe whose product is a raw resource (ore → ore).
+pub fn is_ore_conversion(data: &GameData, r: &Recipe) -> bool {
+    r.building == "Desc_Converter_C"
+        && r.outputs.iter().any(|(it, _)| data.item(it).map(|i| i.raw).unwrap_or(false))
 }
 
 /// Recipes that can contribute to the targets (upstream closure).

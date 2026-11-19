@@ -1,17 +1,19 @@
 {
-  "name": "react-frontend",
+  "name": "satisfactory-planner",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run build:wasm && vite",
-    "build": "npm run build:wasm && tsc -b && vite build",
-    "build:wasm": "wasm-pack build --target web --out-dir react-frontend/src/wasm-pkg --out-name satisfactory-calculator ../",
-    "build:wasm:dev": "wasm-pack build --dev --target web --out-dir react-frontend/src/wasm-pkg --out-name satisfactory-calculator ../",
+    "build:wasm": "cd .. && wasm-pack build --release --target web --out-dir react-frontend/src/wasm-pkg --out-name satisfactory_calculator",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "build:all": "npm run build:wasm && npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^1.1.8",
+    "@xyflow/react": "^12.12.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
