@@ -6,7 +6,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
+// Removed unused lazy_static import
 //use minilp::{Problem, OptimizationDirection, ComparisonOp};
+
+// Removed incomplete lazy_static declaration
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Recipe {

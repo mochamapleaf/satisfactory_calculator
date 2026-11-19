@@ -184,6 +184,7 @@ fn main() {
         .rsplit_once("\n")
         .unwrap()
         .0; //remove first and last line
+    println!("{}", recipe_json_str);
     let recipe_json: Value = serde_json::from_str(recipe_json_str).unwrap();
     let recipes: Vec<SatisfactoryRecipe> = recipe_json
         .as_object()

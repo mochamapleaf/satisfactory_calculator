@@ -2,3 +2,22 @@
 *.DS_Store
 /dist
 Cargo.lock
+
+# WASM build artifacts
+/react-frontend/src/wasm-pkg/
+/pkg/
+
+# React build artifacts
+/react-frontend/dist/
+/react-frontend/node_modules/
+
+# Development artifacts
+*.log
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.DS_Store.from-G
+.idea/aws.xml
+/_from-mac-2026-10-29/
+**/node_modules/

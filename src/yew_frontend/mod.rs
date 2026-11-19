@@ -1,3 +1,5 @@
+//trunk bulid
+
 use yew::prelude::*;
 use yew::callback::Callback;
 
@@ -63,7 +65,7 @@ impl Component for App {
         let href = web_sys::window().unwrap().location().href().unwrap();
         let url = Url::new(&href).unwrap();
         let params = url.search_params();
-        let info = params.get("item").unwrap_or("Plastic".to_string());
+        let info = params.get("item").unwrap_or("Plutonium Fuel Rod".to_string());
         default.target_resources.push(info);
         default.target_quanties.push(1.0);
         _ctx.link().send_message(Msg::Calculate);

@@ -1,13 +1,13 @@
-#[cfg(target_arch = "wasm32")]
+#[cfg(not(target_arch = "wasm32"))]
 mod yew_frontend;
-#[cfg(target_arch = "wasm32")]
+#[cfg(not(target_arch = "wasm32"))]
 use yew_frontend::*;
 
 mod graph;
 mod utilities;
 
-#[cfg(target_arch = "wasm32")]
-fn main() {
+#[cfg(not(target_arch = "wasm32"))]
+fn main_yew() {
     yew::Renderer::<App>::new().render();
 }
 
