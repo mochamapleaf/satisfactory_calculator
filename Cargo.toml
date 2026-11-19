@@ -1,59 +1,22 @@
 [package]
 name = "satisfactory_calculator"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
-
-[[bin]]
-name = "satisfactory_calculator"
-path = "src/main.rs"
-required-features = ["native"]
-
-[features]
-default = []
-native = []
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies.wasm-bindgen]
-version = "0.2.87"
-features = ["serde-serialize"]
-
-[dependencies.web-sys]
-version = "0.3.64"
-features = [
-  "console",
-]
-
-[dependencies.js-sys]
-version = "0.3.64"
-
-[dependencies.wasm-bindgen-futures]
-version = "0.4.37"
-
-[dependencies.tsify]
-version = "0.4.5"
-features = ["js"]
-
-[dependencies.console_error_panic_hook]
-version = "0.1.7"
-
-[dependencies.serde-wasm-bindgen]
-version = "0.6.5"
-
-[dev-dependencies.wasm-bindgen-test]
-version = "0.3.37"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-reqwest = { version = "0.11.18", features = ["blocking","json"] }
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-serde = { version = "1.0.160", features = ["derive"] }
-serde_json = "1.0.95"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 md-5 = "0.10.5"
 minilp = "0.2.2"
 ndarray = "0.15.6"
-lazy_static = "1.4.0"
-thiserror = "1.0.40"
+wasm-bindgen = "0.2"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+reqwest = { version = "0.11.18", features = ["blocking", "json"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
