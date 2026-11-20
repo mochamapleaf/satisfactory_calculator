@@ -115,17 +115,93 @@ fn byproduct_plastic() {
 }
 
 #[test]
-fn overclock_power_exponent() {
+fn overclock_with_shards() {
     let d = data();
     let mut s = settings(&[("Reinforced Iron Plate", 60.0)]);
-    s.clock_percent = 250.0;
+    s.max_clock_percent = 250.0;
+    s.objective = Objective::Buildings;
     let p = plan(&d, &s);
-    let m = machines(&p);
-    assert!(close(m["Reinforced Iron Plate"], 4.8));
+    assert!(p.proven_optimal);
     let rip = p.recipes.iter().find(|r| r.name == "Reinforced Iron Plate").unwrap();
-    let expected = 4.8 * 15.0 * 2.5f64.powf(1.321929);
-    assert!((rip.power - expected).abs() < 1e-3, "{} vs {}", rip.power, expected);
+    // 12 machine-equivalents at ≤ 250 % → 5 buildings; 12 ≤ 5 + 0.5·shards → 14 shards
+    assert_eq!(rip.machines, 5.0);
+    assert_eq!(rip.shards, 14.0);
+    let expected = 15.0 * (2.0f64.powf(1.321929) + 4.0 * 2.5f64.powf(1.321929));
+    assert!((rip.power - expected).abs() < 1e-2, "{} vs {}", rip.power, expected);
+    assert!(rip.groups.iter().all(|g| g.clock_percent <= 250.0 + 1e-6));
     assert_balanced(&p);
+    // no shards available → same as 100 %
+    s.shard_budget = Some(0);
+    let p = plan(&d, &s);
+    assert_eq!(machines(&p)["Reinforced Iron Plate"], 12.0);
+    assert_eq!(p.shards, 0.0);
+}
+
+#[test]
+fn integer_plan_is_whole_and_no_worse_than_rounding() {
+    let d = data();
+    for (target, rate) in [("Reinforced Iron Plate", 7.0), ("Modular Frame", 3.3), ("Computer", 1.7)] {
+        for alts in [false, true] {
+            let mut s = settings(&[(target, rate)]);
+            s.objective = Objective::Buildings;
+            s.allow_all_alternates = alts;
+            let ip = plan(&d, &s);
+            assert_eq!(ip.status, Status::Optimal, "{target}");
+            assert_balanced(&ip);
+            for r in &ip.recipes {
+                assert_eq!(r.machines, r.machines.round(), "{} not whole", r.name);
+                assert!(r.throughput <= r.machines + 1e-6, "{} over 100 %", r.name);
+            }
+            s.integer = false;
+            let lp = plan(&d, &s);
+            let rounded: f64 = lp.recipes.iter().map(|r| r.machines_ceil).sum();
+            assert!(ip.buildings <= rounded + 1e-9, "{target}: {} > {}", ip.buildings, rounded);
+            assert!(ip.objective >= lp.objective - 1e-6);
+        }
+    }
+}
+
+#[test]
+fn item_values_are_shadow_prices() {
+    let d = data();
+    let p = plan(&d, &settings(&[("Reinforced Iron Plate", 60.0)]));
+    let v: HashMap<_, _> = p.item_values.iter().map(|v| (v.item.clone(), v.value)).collect();
+    // 12 Iron Ore per plate at weight 1, plus a small per-building tie-break
+    let rip = v["Desc_IronPlateReinforced_C"];
+    assert!(rip > 12.0 && rip < 12.5, "{rip}");
+}
+
+#[test]
+fn custom_cost_function() {
+    let d = data();
+    let mut s = settings(&[("Reinforced Iron Plate", 10.0)]);
+    s.allow_all_alternates = true;
+    s.objective = Objective::Custom;
+    // iron is expensive, copper free → alternates that swap iron for copper win
+    s.cost = CostWeights { resources: 1.0, buildings: 0.0, ..Default::default() };
+    s.cost.resource_weights.insert("Desc_OreCopper_C".into(), 0.0);
+    let cheap_copper = plan(&d, &s);
+    s.cost.resource_weights.insert("Desc_OreCopper_C".into(), 100.0);
+    let dear_copper = plan(&d, &s);
+    let raw = |p: &Plan, it: &str| lp::raw_map(p).get(it).copied().unwrap_or(0.0);
+    assert!(raw(&cheap_copper, "Desc_OreIron_C") <= raw(&dear_copper, "Desc_OreIron_C"));
+    assert_eq!(raw(&dear_copper, "Desc_OreCopper_C"), 0.0);
+    assert_balanced(&cheap_copper);
+}
+
+#[test]
+fn power_objective_underclocks() {
+    let d = data();
+    let mut s = settings(&[("Iron Ingot", 45.0)]);
+    s.objective = Objective::Custom;
+    s.cost = CostWeights { resources: 0.0, buildings: 0.0, power: 1.0, ..Default::default() };
+    let p = plan(&d, &s);
+    // free buildings: power falls with more, slower smelters (down to the 10 % breakpoint)
+    assert!(p.recipes[0].machines > 2.0);
+    s.cost.buildings = 100.0;
+    let p = plan(&d, &s);
+    assert_eq!(p.recipes[0].machines, 2.0);
+    assert!((p.recipes[0].groups[0].clock_percent - 75.0).abs() < 1e-6);
 }
 
 #[test]
