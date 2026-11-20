@@ -58,10 +58,10 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
             continue;
         }
         let Some(b) = data.building(pid) else { continue };
-        let tier_label = if r.producers.len() > 1 { b.name.clone() } else { String::new() };
+        let tier_label = if r.producers.len() > 1 { data.pick(&b.name, &b.name_zh).to_string() } else { String::new() };
         out.push(Mode {
             key: b.id.clone(),
-            label: tier_label.clone(),
+            label: String::new(),
             building: b.id.clone(),
             speed: b.speed,
             out_mult: 1.0,
@@ -85,7 +85,8 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
             if e.products_only && !r.productivity_allowed {
                 continue;
             }
-            let label = if tier_label.is_empty() { e.name.clone() } else { format!("{tier_label} · {}", e.name) };
+            let en = data.pick(&e.name, &e.name_zh);
+            let label = if tier_label.is_empty() { en.to_string() } else { format!("{tier_label} · {en}") };
             let mode = if e.kind == "proliferator" {
                 let sprays = e.sprays.unwrap_or(1.0).max(1e-9);
                 let per_work: f64 = r.inputs.iter().map(|(_, q)| q).sum::<f64>() / sprays;

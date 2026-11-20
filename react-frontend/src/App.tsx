@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { latestRequest, loadSolver, solveAsync, type GameData, type Plan, type Settings } from './solver'
-import { loadSettings, saveSettings } from './urlState'
+import { GAMES, latestRequest, loadSolver, solveAsync, type Game, type GameData, type Plan, type Settings } from './solver'
+import { loadGame, loadSettings, saveSettings } from './urlState'
 import Sidebar from './Sidebar'
 import Results from './Results'
 import FlowGraph from './FlowGraph'
@@ -15,14 +15,17 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('table')
 
   useEffect(() => {
-    loadSolver().then(setData).catch(e => setError(String(e)))
-  }, [])
+    setData(null)
+    setPlan(null)
+    loadSolver(settings.game).then(setData).catch(e => setError(String(e)))
+  }, [settings.game])
+  const switchGame = (g: Game) => setSettings(() => loadGame(g))
   useEffect(() => saveSettings(settings), [settings])
 
   const [plan, setPlan] = useState<Plan | null>(null)
   const [solving, setSolving] = useState(false)
   useEffect(() => {
-    if (!data) return
+    if (!data || data.game !== settings.game) return
     setSolving(true)
     const t = setTimeout(() => {
       const req = solveAsync(settings)
@@ -41,7 +44,12 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>Satisfactory Planner</h1>
+        <h1>Factory Planner</h1>
+        <div className="seg gamesel">
+          {GAMES.map(g => (
+            <button key={g.id} className={settings.game === g.id ? 'on' : ''} onClick={() => switchGame(g.id)}>{g.name}</button>
+          ))}
+        </div>
         <span className="muted">MILP solver (Rust → WASM) · game data {data.version}</span>
         {solving && <span className="solving">solving…</span>}
       </header>

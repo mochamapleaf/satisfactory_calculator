@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { defaultSettings, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
+import { defaultSettings, dn, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
   data: GameData
@@ -13,8 +13,8 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
   const produced = useMemo(() => new Set(data.recipes.flatMap(r => r.out.map(o => o[0]))), [data])
   const options = data.items.filter(i => !producibleOnly || produced.has(i.id) || i.raw)
   const [text, setText] = useState('')
-  const byName = useMemo(() => new Map(data.items.map(i => [i.name.toLowerCase(), i.id])), [data])
-  const name = (id: string) => data.items.find(i => i.id === id)?.name ?? id
+  const byName = useMemo(() => new Map(data.items.flatMap(i => [[dn(i, data.game).toLowerCase(), i.id], [i.name.toLowerCase(), i.id]] as [string, string][])), [data])
+  const name = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)
   const add = (v: string) => {
     const id = byName.get(v.trim().toLowerCase())
     if (id && !list.some(t => t.item === id)) {
@@ -36,7 +36,7 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
       <input className="wide" list={producibleOnly ? 'items-prod' : 'items-all'} placeholder="+ add item…"
         value={text} onChange={e => add(e.target.value)} />
       <datalist id={producibleOnly ? 'items-prod' : 'items-all'}>
-        {options.map(i => <option key={i.id} value={i.name} />)}
+        {options.map(i => <option key={i.id} value={dn(i, data.game)} />)}
       </datalist>
     </div>
   )
@@ -62,7 +62,7 @@ function CostEditor({ data, cost, onChange }: { data: GameData; cost: CostWeight
     else m[id] = v
     set({ [key]: m } as Partial<CostWeights>)
   }
-  const usedBuildings = data.buildings.filter(b => data.recipes.some(r => r.building === b.id))
+  const usedBuildings = data.buildings.filter(b => data.recipes.some(r => r.building === b.id || r.producers?.includes(b.id)))
   return (
     <div className="costedit">
       {terms.map(([k, label, unit]) => (
@@ -75,8 +75,8 @@ function CostEditor({ data, cost, onChange }: { data: GameData; cost: CostWeight
         <summary>Weight per raw resource</summary>
         {data.resources.map(r => (
           <div className="row small" key={r.item}>
-            <span className="grow">{data.items.find(i => i.id === r.item)?.name ?? r.item}</span>
-            <Num value={cost.resource_weights[r.item]} placeholder={fmt(scarcity(r.limit), 3)}
+            <span className="grow">{dn(data.items.find(i => i.id === r.item), data.game, r.item)}</span>
+            <Num value={cost.resource_weights[r.item]} placeholder={fmt((r as { weight?: number }).weight ?? scarcity(r.limit), 3)}
               onChange={v => perMap('resource_weights', r.item, v)} />
           </div>
         ))}
@@ -86,7 +86,7 @@ function CostEditor({ data, cost, onChange }: { data: GameData; cost: CostWeight
         <summary>Weight per building type</summary>
         {usedBuildings.map(b => (
           <div className="row small" key={b.id}>
-            <span className="grow">{b.name}</span>
+            <span className="grow">{dn(b, data.game)}</span>
             <Num value={cost.building_weights[b.id]} placeholder="1" onChange={v => perMap('building_weights', b.id, v)} />
           </div>
         ))}
@@ -110,7 +110,11 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
       set({ enabled_alternates: s.enabled_alternates.includes(id) ? s.enabled_alternates.filter(x => x !== id) : [...s.enabled_alternates, id] })
     }
   }
-  const itemName = (id: string) => data.items.find(i => i.id === id)?.name ?? id
+  const itemName = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)
+  const sf = data.game === 'satisfactory'
+  // buildings that compete for some recipe (machine tiers)
+  const tiers = data.buildings.filter(b => data.recipes.some(r => (r.producers?.length ?? 0) > 1 && r.producers!.includes(b.id)))
+  const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter(x => x !== id) : [...list, id])
   const limitOf = (item: string, dflt: number | null) => (item in s.resource_limits ? s.resource_limits[item] : dflt)
 
   return (
@@ -133,7 +137,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           ))}
         </div>
         <p className="hint">
-          {s.objective === 'resources' && 'Raw resources weighted by scarcity (Iron Ore = 1, uranium ≈ 44); buildings break ties.'}
+          {s.objective === 'resources' && (sf ? 'Raw resources weighted by scarcity (Iron Ore = 1, uranium ≈ 44); buildings break ties.' : 'Raw resources (ores 1, water 0.01, oil 0.2, drops 10); buildings break ties.')}
           {s.objective === 'buildings' && 'Fewest whole buildings; raw resources break ties.'}
           {s.objective === 'power' && 'MW (production + extraction) + 1 per building, so it underclocks where that pays.'}
           {s.objective === 'custom' && 'Minimise the weighted sum below. Edit any weight; the plan re-solves.'}
@@ -160,6 +164,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             ? 'Branch-and-bound over whole buildings; each building can be underclocked freely. On timeout the best plan found is shown with its gap to the lower bound.'
             : 'Continuous LP: fractional buildings (the old "solve, then round up" view).'}
         </p>
+        {sf && <>
         <div className="row">
           <span className="grow">Max clock</span>
           <input type="range" min={1} max={250} value={s.max_clock_percent} className="grow"
@@ -186,7 +191,45 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             onChange={e => set({ somersloop_budget: e.target.value === '' ? null : Math.max(0, Math.round(+e.target.value)) })} />
         </div>
         <p className="hint">Each doubles a building's output at 4× its power. Fix a recipe's count in the plan table; the rest are placed within the budget.</p>
+        </>}
       </section>
+
+      {!sf && (
+        <section>
+          <h2>{data.game === 'dsp' ? 'Machines' : 'Machines'}</h2>
+          <p className="hint">Tiers the solver may use; it picks per recipe by the cost function.</p>
+          <div className="scroll">
+            {tiers.map(b => (
+              <label className="row small" key={b.id}>
+                <input type="checkbox" checked={!s.disabled_buildings.includes(b.id)}
+                  onChange={() => set({ disabled_buildings: toggle(s.disabled_buildings, b.id) })} />
+                <span className="grow">{dn(b, data.game)}</span>
+                <span className="muted">×{b.speed ?? 1}</span>
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!sf && (data.effects?.length ?? 0) > 0 && (
+        <section>
+          <h2>{data.game === 'dsp' ? 'Proliferator' : 'Modules'}</h2>
+          <p className="hint">
+            {data.game === 'dsp'
+              ? 'Enabled modes become options per recipe; spray use (one per input item) is added as an input, so the proliferator chain is planned too. Add it under Available inputs to treat it as free.'
+              : 'Each enabled module fills all slots of a machine (mixed loadouts and beacons: later). Productivity is capped at +300 % and only on allowed recipes.'}
+          </p>
+          {data.effects!.map(e => (
+            <label className="row small" key={e.id}>
+              <input type="checkbox" checked={s.effects.includes(e.id)} onChange={() => set({ effects: toggle(s.effects, e.id) })} />
+              <span className="grow">{dn(e, data.game)}</span>
+              <span className="muted">
+                {e.productivity ? `+${fmt(100 * e.productivity)}% out ` : ''}{e.speed ? `${e.speed > 0 ? '+' : ''}${fmt(100 * e.speed)}% speed ` : ''}
+              </span>
+            </label>
+          ))}
+        </section>
+      )}
 
       <section>
         <h2>Alternate recipes</h2>
@@ -195,10 +238,10 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             onChange={e => set({ allow_all_alternates: e.target.checked, enabled_alternates: [] })} />
           <span>Allow all {data.recipes.filter(r => r.alt).length} alternates</span>
         </label>
-        <label className="row">
+        {sf && <label className="row">
           <input type="checkbox" checked={s.allow_ore_conversion} onChange={e => set({ allow_ore_conversion: e.target.checked })} />
           <span>Converter ore conversion (e.g. Bauxite from Copper)</span>
-        </label>
+        </label>}
         <details>
           <summary>Choose individually ({s.allow_all_alternates ? 'all' : s.enabled_alternates.length} on)</summary>
           <input className="wide" placeholder="filter…" value={altFilter} onChange={e => setAltFilter(e.target.value)} />
@@ -206,7 +249,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             {alts.map(r => (
               <label className="row small" key={r.id}>
                 <input type="checkbox" checked={altEnabled(r.id)} onChange={() => toggleAlt(r.id)} />
-                <span>{r.name}</span>
+                <span>{dn(r, data.game)}</span>
               </label>
             ))}
           </div>
@@ -225,7 +268,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         <ItemRates data={data} list={s.supplies} onChange={supplies => set({ supplies })} />
       </section>
 
-      <section>
+      {sf && <section>
         <h2>Resource limits</h2>
         <label className="row">
           <input type="checkbox" checked={s.ignore_limits} onChange={e => set({ ignore_limits: e.target.checked })} />
@@ -245,10 +288,10 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           })}
           <a href="#" onClick={e => { e.preventDefault(); set({ resource_limits: {} }) }}>Reset to world maxima</a>
         </details>
-      </section>
+      </section>}
 
       <section>
-        <button className="wide" onClick={() => setSettings(() => defaultSettings())}>Reset everything</button>
+        <button className="wide" onClick={() => setSettings(() => defaultSettings(s.game))}>Reset everything</button>
         <p className="hint">The URL holds the whole plan; copy it to share.</p>
       </section>
     </aside>

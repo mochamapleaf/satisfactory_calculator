@@ -179,7 +179,14 @@ impl GameData {
         self.recipe(key)
             .or_else(|| self.recipes.iter().find(|r| r.name.eq_ignore_ascii_case(key)))
     }
+    /// Display names (Chinese for DSP when available).
     pub fn item_names(&self) -> HashMap<&str, &str> {
-        self.items.iter().map(|i| (i.id.as_str(), i.name.as_str())).collect()
+        self.items.iter().map(|i| (i.id.as_str(), self.pick(&i.name, &i.name_zh))).collect()
+    }
+    pub fn pick<'a>(&self, en: &'a str, zh: &'a Option<String>) -> &'a str {
+        match (self.game.as_str(), zh) {
+            ("dsp", Some(z)) if !z.is_empty() => z.as_str(),
+            _ => en,
+        }
     }
 }

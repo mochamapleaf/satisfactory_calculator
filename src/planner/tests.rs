@@ -317,7 +317,7 @@ fn dsp_machine_tiers() {
     assert_eq!(p.status, Status::Optimal);
     // Plane Smelter (speed 2) does 120/min: one building
     assert_eq!(p.buildings, 1.0);
-    assert_ne!(p.recipes[0].building, "Arc Smelter");
+    assert_ne!(p.recipes[0].building, "电弧熔炉");
     assert!(close(lp::raw_map(&p)["iron-ore"], 60.0));
     // only Arc Smelters allowed: 1 ingot/s each → 1 building as well; 61/min needs 2
     s.disabled_buildings = vec!["plane-smelter".into(), "df-negentropy-smelter".into()];

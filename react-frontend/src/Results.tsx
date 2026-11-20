@@ -57,7 +57,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
         {plan.shards > 0 && <div className="card"><div className="big">{fmt(plan.shards, 0)}</div><div className="muted">power shards</div></div>}
         {totalSloops > 0 && <div className="card"><div className="big">{fmt(totalSloops, 0)}</div><div className="muted">Somersloops</div></div>}
         <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}`}>
-          <div className="big">{!s.integer ? 'LP' : plan.proven_optimal ? 'optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
+          <div className="big">{!s.integer ? 'LP' : plan.proven_optimal ? 'optimal' : (plan.gap ?? 1) < 0.0005 ? '≈ optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
           <div className="muted">{s.integer ? 'whole buildings' : 'fractional buildings'} · {fmt(plan.solve_ms, 0)} ms</div>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       <div className="tablewrap">
         <table>
           <thead>
-            <tr><th>Recipe</th><th>Building</th><th className="num">Buildings</th><th>Clock</th><th>Somersloops</th><th className="num">MW</th><th>In (/min)</th><th>Out (/min)</th><th></th></tr>
+            <tr><th>Recipe</th><th>Building</th><th className="num">Buildings</th><th>Clock</th><th>{data.game === 'satisfactory' ? 'Somersloops' : ''}</th><th className="num">MW</th><th>In (/min)</th><th>Out (/min)</th><th></th></tr>
           </thead>
           <tbody>
             {plan.recipes.map(r => (
@@ -82,7 +82,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 </td>
                 <td className="small">{r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}</td>
                 <td>
-                  {slots(r.id) > 0
+                  {data.game === 'satisfactory' && slots(r.id) > 0
                     ? <select value={r.id in s.somersloops ? r.somersloops : 'auto'} onChange={e => setSloops(r.id, e.target.value === 'auto' ? -1 : +e.target.value)}>
                         {s.auto_somersloops && <option value="auto">auto ({r.somersloops})</option>}
                         {Array.from({ length: slots(r.id) + 1 }, (_, i) => <option key={i} value={i}>{i}/{slots(r.id)}</option>)}

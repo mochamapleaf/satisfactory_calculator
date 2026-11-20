@@ -1,14 +1,25 @@
 // Typed wrapper around the Rust/WASM planner (src/wasm_api.rs).
 import init, { game_data_json, solve_json } from './wasm-pkg/satisfactory_calculator.js'
 
-export interface Item { id: string; name: string; liquid: boolean; sink: number; raw: boolean }
+export type Game = 'satisfactory' | 'dsp' | 'factorio'
+export const GAMES: { id: Game; name: string }[] = [
+  { id: 'satisfactory', name: 'Satisfactory' },
+  { id: 'dsp', name: '戴森球计划' },
+  { id: 'factorio', name: 'Factorio' },
+]
+export interface Item { id: string; name: string; name_zh?: string | null; liquid: boolean; sink: number; raw: boolean }
 export interface Recipe {
-  id: string; name: string; alt: boolean; building: string; time: number
+  id: string; name: string; name_zh?: string | null; alt: boolean; building: string; producers?: string[]; time: number
   in: [string, number][]; out: [string, number][]; power?: number
 }
-export interface Building { id: string; name: string; power: number; power_exp: number; somersloop_slots: number }
+export interface Building {
+  id: string; name: string; name_zh?: string | null; power: number; power_exp: number; somersloop_slots: number
+  speed?: number; modules?: number
+}
+export interface Effect { id: string; name: string; name_zh?: string | null; kind: string; speed: number; productivity: number; consumption: number; sprays?: number | null; item: string }
 export interface Resource { item: string; limit: number | null; extractor: string; extractor_rate: number; extractor_power: number }
 export interface GameData {
+  game: Game; effects?: Effect[]
   version: string; source: string; items: Item[]; recipes: Recipe[]; buildings: Building[]
   resources: Resource[]; belts: number[]; pipes: number[]
 }
@@ -28,6 +39,7 @@ export function preset(o: Objective): CostWeights {
 export const scarcity = (limit: number | null) => (limit && limit > 0 ? 92100 / limit : 0.001)
 export interface ItemRate { item: string; rate: number }
 export interface Settings {
+  game: Game
   targets: ItemRate[]
   supplies: ItemRate[]
   objective: Objective
@@ -39,6 +51,8 @@ export interface Settings {
   allow_ore_conversion: boolean
   max_clock_percent: number
   somersloops: Record<string, number>
+  disabled_buildings: string[]
+  effects: string[]
   auto_somersloops: boolean
   somersloop_budget: number | null
   integer: boolean
@@ -64,8 +78,14 @@ export interface Plan {
   item_values: ItemValue[]; flows: Flow[]; warnings: string[]
 }
 
-export const defaultSettings = (): Settings => ({
-  targets: [{ item: 'Desc_IronPlateReinforced_C', rate: 10 }],
+const DEFAULT_TARGET: Record<Game, ItemRate> = {
+  satisfactory: { item: 'Desc_IronPlateReinforced_C', rate: 10 },
+  dsp: { item: 'electromagnetic-matrix', rate: 60 },
+  factorio: { item: 'electronic-circuit', rate: 60 },
+}
+export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
+  game,
+  targets: [DEFAULT_TARGET[game]],
   supplies: [],
   objective: 'resources',
   allow_all_alternates: false,
@@ -76,6 +96,9 @@ export const defaultSettings = (): Settings => ({
   allow_ore_conversion: false,
   max_clock_percent: 100,
   somersloops: {},
+  // DSP Dark Fog machines are endgame drops: off unless the player enables them
+  disabled_buildings: game === 'dsp' ? ['df-negentropy-smelter', 'df-recomposing-assembler', 'df-self-evolution-lab'] : [],
+  effects: [],
   auto_somersloops: false,
   somersloop_budget: null,
   integer: true,
@@ -84,10 +107,23 @@ export const defaultSettings = (): Settings => ({
   time_limit_ms: 4000,
 })
 
-let ready: Promise<GameData> | null = null
-export function loadSolver(): Promise<GameData> {
-  ready ??= init().then(() => JSON.parse(game_data_json()) as GameData)
-  return ready
+let wasm: Promise<unknown> | null = null
+const cache = new Map<Game, GameData>()
+export async function loadSolver(game: Game): Promise<GameData> {
+  wasm ??= init()
+  await wasm
+  if (!cache.has(game)) {
+    const d = JSON.parse(game_data_json(game)) as GameData
+    d.game ??= game // Satisfactory's JSON predates the field
+    cache.set(game, d)
+  }
+  return cache.get(game)!
+}
+
+/** Display name: Chinese for DSP when available. */
+export function dn(x: { name: string; name_zh?: string | null } | undefined, game: Game, fallback = ''): string {
+  if (!x) return fallback
+  return game === 'dsp' && x.name_zh ? x.name_zh : x.name
 }
 
 export function solve(s: Settings): Plan {
@@ -119,6 +155,7 @@ export const latestRequest = () => seq
 export function carrier(rate: number, liquid: boolean, data: GameData): string {
   const tiers = liquid ? data.pipes : data.belts
   const kind = liquid ? 'Pipe' : 'Belt'
+  if (!tiers.length) return '—'
   const i = tiers.findIndex(t => rate <= t + 1e-9)
   if (i >= 0) return `${kind} Mk.${i + 1}`
   const max = tiers[tiers.length - 1]
