@@ -3,18 +3,26 @@ use crate::planner::{self, GameData, PlanSettings};
 use std::sync::OnceLock;
 use wasm_bindgen::prelude::*;
 
-fn data() -> &'static GameData {
-    static DATA: OnceLock<GameData> = OnceLock::new();
-    DATA.get_or_init(GameData::default_data)
+fn data(game: &str) -> &'static GameData {
+    static SF: OnceLock<GameData> = OnceLock::new();
+    static DSP: OnceLock<GameData> = OnceLock::new();
+    static FAC: OnceLock<GameData> = OnceLock::new();
+    let cell = match game {
+        "dsp" => &DSP,
+        "factorio" => &FAC,
+        _ => &SF,
+    };
+    cell.get_or_init(|| GameData::for_game(game))
 }
 
-/// The embedded game data (items, recipes, buildings, resources) as JSON.
+/// The embedded game data (items, recipes, buildings, resources, effects) as JSON.
 #[wasm_bindgen]
-pub fn game_data_json() -> String {
-    planner::data::DEFAULT_GAME_DATA.to_string()
+pub fn game_data_json(game: &str) -> String {
+    planner::data::embedded(game).to_string()
 }
 
-/// Solve a plan. `settings_json` is a `PlanSettings`; returns a `Plan` as JSON.
+/// Solve a plan. `settings_json` is a `PlanSettings` (its `game` picks the data); returns a
+/// `Plan` as JSON.
 #[wasm_bindgen]
 pub fn solve_json(settings_json: &str) -> String {
     let settings: PlanSettings = match serde_json::from_str(settings_json) {
@@ -24,5 +32,5 @@ pub fn solve_json(settings_json: &str) -> String {
                 .to_string()
         }
     };
-    serde_json::to_string(&planner::plan(data(), &settings)).unwrap()
+    serde_json::to_string(&planner::plan(data(&settings.game), &settings)).unwrap()
 }

@@ -32,20 +32,96 @@ pub struct Mode {
     pub somersloops: u32,
 }
 
-/// Buildings that can run a recipe: `recipe.building` is a building id or a category.
-pub fn buildings_for<'a>(data: &'a GameData, r: &Recipe) -> Vec<&'a super::data::Building> {
-    let v: Vec<_> = data
-        .buildings
-        .iter()
-        .filter(|b| b.id == r.building || b.category.as_deref() == Some(r.building.as_str()))
-        .collect();
-    v
-}
-
 pub fn modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
     match data.game.as_str() {
+        "dsp" | "factorio" => tiered_modes(data, r, s),
         _ => satisfactory_modes(data, r, s),
     }
+}
+
+/// Factorio productivity cap (+300 %).
+const MAX_PRODUCTIVITY: f64 = 3.0;
+
+/// DSP / Factorio: every allowed machine tier, plain or with one enabled boost.
+/// DSP proliferator: one spray per input item, `sprays` items per proliferator; speed,
+/// extra products and power multipliers per the game. Factorio: all slots filled with one
+/// module type (mixed loadouts and beacons come later).
+fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
+    let producers: Vec<&str> = if r.producers.is_empty() {
+        vec![r.building.as_str()]
+    } else {
+        r.producers.iter().map(|p| p.as_str()).collect()
+    };
+    let mut out = Vec::new();
+    for pid in producers {
+        if s.disabled_buildings.iter().any(|d| d == pid) {
+            continue;
+        }
+        let Some(b) = data.building(pid) else { continue };
+        let tier_label = if r.producers.len() > 1 { b.name.clone() } else { String::new() };
+        out.push(Mode {
+            key: b.id.clone(),
+            label: tier_label.clone(),
+            building: b.id.clone(),
+            speed: b.speed,
+            out_mult: 1.0,
+            power_base: b.power,
+            power_exp: 1.0,
+            overclock: false,
+            extra_inputs: vec![],
+            held: vec![],
+            somersloops: 0,
+        });
+        if b.modules == 0 {
+            continue;
+        }
+        for eid in &s.effects {
+            let Some(e) = data.effect(eid) else { continue };
+            if e.productivity > 0.0
+                && (!r.productivity_allowed || b.disallowed_effects.iter().any(|x| x == "productivity"))
+            {
+                continue;
+            }
+            if e.products_only && !r.productivity_allowed {
+                continue;
+            }
+            let label = if tier_label.is_empty() { e.name.clone() } else { format!("{tier_label} · {}", e.name) };
+            let mode = if e.kind == "proliferator" {
+                let sprays = e.sprays.unwrap_or(1.0).max(1e-9);
+                let per_work: f64 = r.inputs.iter().map(|(_, q)| q).sum::<f64>() / sprays;
+                Mode {
+                    key: format!("{}|{}", b.id, e.id),
+                    label,
+                    building: b.id.clone(),
+                    speed: b.speed * (1.0 + e.speed),
+                    out_mult: 1.0 + e.productivity,
+                    power_base: b.power * (1.0 + e.consumption),
+                    power_exp: 1.0,
+                    overclock: false,
+                    extra_inputs: vec![(e.item.clone(), per_work)],
+                    held: vec![],
+                    somersloops: 0,
+                }
+            } else {
+                let n = b.modules as f64;
+                Mode {
+                    key: format!("{}|{}", b.id, e.id),
+                    label: format!("{label} ×{}", b.modules),
+                    building: b.id.clone(),
+                    speed: b.speed * (1.0 + n * e.speed).max(0.2),
+                    out_mult: 1.0 + (n * e.productivity).min(MAX_PRODUCTIVITY),
+                    power_base: b.power * (1.0 + n * e.consumption).max(0.2),
+                    power_exp: 1.0,
+                    overclock: false,
+                    extra_inputs: vec![],
+                    held: vec![(e.item.clone(), n)],
+                    somersloops: 0,
+                }
+            };
+            out.push(mode);
+        }
+    }
+    out
 }
 
 fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {

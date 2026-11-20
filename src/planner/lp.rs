@@ -109,6 +109,9 @@ pub fn resource_weight(data: &GameData, w: &CostWeights, item: &str) -> f64 {
     if let Some(v) = w.resource_weights.get(item) {
         return *v;
     }
+    if let Some(v) = data.resource(item).and_then(|r| r.weight) {
+        return v;
+    }
     match data.resource(item).and_then(|r| r.limit) {
         Some(l) if l > 0.0 => SCARCITY_REF / l,
         _ => DEFAULT_WATER_WEIGHT,

@@ -65,3 +65,13 @@ optimum and a user-defined cost function.
 - UI: solving in a Web Worker; cost-function editor; whole-building table with clock groups
   and shards; solve status card (optimal / gap, ms); Item values tab.
 - 16 tests pass. Preview: private claude.ai artifact 9EkeeHce4wpgBA3CtXg9QU (v2).
+
+## 2026-11-20 — Multi-game direction (Satisfactory + DSP + Factorio)
+- Core refactor: recipes run in per-game *modes* (`src/planner/rules.rs`); Satisfactory
+  Somersloop levels are modes with automatic placement under a budget (c3aa51f).
+- Survey of existing calculators: `docs/research/calculators-survey.md`. Key points:
+  FactorioLab (MIT) covers 14 games incl. all three with GLPK LP; its per-game data JSON is
+  the fastest data source. No other tool does whole-building MILP. DSP 量化计算器
+  (dsp-calc, MulanPSL-2) and 混带 tool dspqc (GPL-3) define the DSP-specific calculations.
+- Next: critic pass on the survey; DSP + Factorio data from FactorioLab; DSP proliferator
+  and Factorio module/beacon modes; transcribe 笑笑meow videos (needs Bilibili sign-in).

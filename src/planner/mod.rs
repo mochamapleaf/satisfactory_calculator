@@ -82,6 +82,8 @@ pub struct ItemRate {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlanSettings {
+    /// "satisfactory" (default) | "dsp" | "factorio"
+    pub game: String,
     pub targets: Vec<ItemRate>,
     /// Items already available (e.g. from another factory), up to `rate`, free.
     pub supplies: Vec<ItemRate>,
@@ -109,6 +111,10 @@ pub struct PlanSettings {
     pub integer: bool,
     /// Total power shards available; `None` = unlimited.
     pub shard_budget: Option<u32>,
+    /// Buildings not to use (DSP / Factorio machine tiers).
+    pub disabled_buildings: Vec<String>,
+    /// Enabled boosts: DSP proliferator modes, Factorio modules (effect ids).
+    pub effects: Vec<String>,
     /// Used when `objective` is `Custom`.
     pub cost: CostWeights,
     /// Branch-and-bound time limit; the best plan found so far is returned on timeout.
@@ -118,6 +124,7 @@ pub struct PlanSettings {
 impl Default for PlanSettings {
     fn default() -> Self {
         Self {
+            game: "satisfactory".into(),
             targets: vec![],
             supplies: vec![],
             objective: Objective::Resources,
@@ -131,6 +138,8 @@ impl Default for PlanSettings {
             somersloops: HashMap::new(),
             auto_somersloops: false,
             somersloop_budget: None,
+            disabled_buildings: vec![],
+            effects: vec![],
             integer: true,
             shard_budget: None,
             cost: CostWeights::default(),

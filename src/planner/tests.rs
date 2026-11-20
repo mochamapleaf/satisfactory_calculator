@@ -302,3 +302,80 @@ fn auto_somersloops_respect_budget() {
     s.somersloop_budget = Some(0);
     assert_eq!(plan(&d, &s).somersloops, 0.0);
 }
+
+fn game(g: &str, targets: &[(&str, f64)]) -> (GameData, PlanSettings) {
+    let mut s = settings(targets);
+    s.game = g.into();
+    (GameData::for_game(g), s)
+}
+
+#[test]
+fn dsp_machine_tiers() {
+    let (d, mut s) = game("dsp", &[("iron-ingot", 60.0)]);
+    s.objective = Objective::Buildings;
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    // Plane Smelter (speed 2) does 120/min: one building
+    assert_eq!(p.buildings, 1.0);
+    assert_ne!(p.recipes[0].building, "Arc Smelter");
+    assert!(close(lp::raw_map(&p)["iron-ore"], 60.0));
+    // only Arc Smelters allowed: 1 ingot/s each → 1 building as well; 61/min needs 2
+    s.disabled_buildings = vec!["plane-smelter".into(), "df-negentropy-smelter".into()];
+    s.targets[0].rate = 61.0;
+    assert_eq!(plan(&d, &s).buildings, 2.0);
+}
+
+#[test]
+fn dsp_proliferator_extra_products() {
+    let (d, mut s) = game("dsp", &[("circuit-board", 120.0)]);
+    let plain = plan(&d, &s);
+    assert_eq!(plain.status, Status::Optimal);
+    assert_balanced(&plain);
+    // free Mk.III proliferator: extra products (+25 %) cut raw ore on the board step
+    s.effects = vec!["proliferator-3-products".into()];
+    s.supplies.push(ItemRate { item: "proliferator-3".into(), rate: 1000.0 });
+    let pro = plan(&d, &s);
+    assert_balanced(&pro);
+    let ore = |p: &Plan| lp::raw_map(p).values().sum::<f64>();
+    assert!(ore(&pro) < ore(&plain) - 1.0, "{} vs {}", ore(&pro), ore(&plain));
+    assert!(pro.supplied.iter().any(|l| l.item == "proliferator-3"));
+}
+
+#[test]
+fn factorio_circuits_and_modules() {
+    let (d, mut s) = game("factorio", &[("electronic-circuit", 60.0)]);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert_balanced(&p);
+    let raw = lp::raw_map(&p);
+    // 1 iron plate + 3 cables (1.5 copper plate) per circuit
+    assert!(close(raw["iron-ore"] + raw["copper-ore"], 150.0), "{raw:?}");
+    s.effects = vec!["productivity-module-3".into()];
+    s.supplies.push(ItemRate { item: "productivity-module-3".into(), rate: 0.0 });
+    let pm = plan(&d, &s);
+    assert_balanced(&pm);
+    let r2 = lp::raw_map(&pm);
+    assert!(r2["iron-ore"] + r2["copper-ore"] < 150.0 - 1.0, "{r2:?}");
+}
+
+#[test]
+fn every_game_solves_its_items() {
+    for g in ["dsp", "factorio"] {
+        let d = GameData::for_game(g);
+        let produced: std::collections::BTreeSet<_> =
+            d.recipes.iter().flat_map(|r| r.outputs.iter().map(|o| o.0.clone())).collect();
+        let mut bad = vec![];
+        for it in &produced {
+            let mut s = settings(&[(it.as_str(), 10.0)]);
+            s.game = g.into();
+            s.integer = false;
+            let p = plan(&d, &s);
+            if p.status != Status::Optimal {
+                bad.push(it.clone());
+            } else {
+                assert_balanced(&p);
+            }
+        }
+        assert!(bad.is_empty(), "{g}: unsolvable {bad:?}");
+    }
+}

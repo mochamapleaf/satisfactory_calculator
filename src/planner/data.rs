@@ -6,6 +6,8 @@ use std::collections::HashMap;
 pub struct Item {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub name_zh: Option<String>,
     pub liquid: bool,
     pub sink: f64,
     pub raw: bool,
@@ -15,8 +17,17 @@ pub struct Item {
 pub struct Recipe {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub name_zh: Option<String>,
     pub alt: bool,
+    /// Default building (first producer).
     pub building: String,
+    /// All buildings that can run it (DSP / Factorio tiers); empty = just `building`.
+    #[serde(default)]
+    pub producers: Vec<String>,
+    /// Productivity effects (DSP extra products, Factorio prod modules) allowed.
+    #[serde(default = "yes")]
+    pub productivity_allowed: bool,
     pub time: f64,
     /// (item id, per minute at 100 % clock)
     #[serde(rename = "in")]
@@ -34,6 +45,13 @@ pub struct Recipe {
 pub struct Building {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub name_zh: Option<String>,
+    /// Module / proliferator slots.
+    #[serde(default)]
+    pub modules: u32,
+    #[serde(default)]
+    pub disallowed_effects: Vec<String>,
     pub power: f64,
     pub power_exp: f64,
     #[serde(default)]
@@ -54,6 +72,36 @@ pub struct Resource {
     pub extractor: String,
     pub extractor_rate: f64,
     pub extractor_power: f64,
+    /// Cost of one unit/min; `None` = scarcity from `limit` (Satisfactory).
+    #[serde(default)]
+    pub weight: Option<f64>,
+}
+
+/// A boost: DSP proliferator mode or Factorio module.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Effect {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub name_zh: Option<String>,
+    /// "proliferator" | "module"
+    pub kind: String,
+    #[serde(default)]
+    pub speed: f64,
+    #[serde(default)]
+    pub productivity: f64,
+    #[serde(default)]
+    pub consumption: f64,
+    #[serde(default)]
+    pub quality: f64,
+    /// Proliferator: items sprayed per proliferator item.
+    #[serde(default)]
+    pub sprays: Option<f64>,
+    /// Item consumed (proliferator) or held (module).
+    pub item: String,
+    /// Only on recipes that allow productivity (DSP extra-products mode).
+    #[serde(default)]
+    pub products_only: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,8 +117,13 @@ pub struct GameData {
     pub resources: Vec<Resource>,
     pub belts: Vec<f64>,
     pub pipes: Vec<f64>,
+    #[serde(default)]
+    pub effects: Vec<Effect>,
 }
 
+fn yes() -> bool {
+    true
+}
 fn one() -> f64 {
     1.0
 }
@@ -79,6 +132,17 @@ fn satisfactory() -> String {
 }
 
 pub const DEFAULT_GAME_DATA: &str = include_str!("../../data/game-data.json");
+pub const DSP_GAME_DATA: &str = include_str!("../../data/dsp.json");
+pub const FACTORIO_GAME_DATA: &str = include_str!("../../data/factorio.json");
+
+/// Embedded data for a game id ("satisfactory", "dsp", "factorio").
+pub fn embedded(game: &str) -> &'static str {
+    match game {
+        "dsp" => DSP_GAME_DATA,
+        "factorio" => FACTORIO_GAME_DATA,
+        _ => DEFAULT_GAME_DATA,
+    }
+}
 
 impl GameData {
     pub fn from_json(s: &str) -> Result<Self, serde_json::Error> {
@@ -103,6 +167,13 @@ impl GameData {
     pub fn resolve_item(&self, key: &str) -> Option<&Item> {
         self.item(key)
             .or_else(|| self.items.iter().find(|i| i.name.eq_ignore_ascii_case(key)))
+            .or_else(|| self.items.iter().find(|i| i.name_zh.as_deref() == Some(key)))
+    }
+    pub fn effect(&self, id: &str) -> Option<&Effect> {
+        self.effects.iter().find(|e| e.id == id)
+    }
+    pub fn for_game(game: &str) -> Self {
+        Self::from_json(embedded(game)).expect("embedded game data is valid")
     }
     pub fn resolve_recipe(&self, key: &str) -> Option<&Recipe> {
         self.recipe(key)

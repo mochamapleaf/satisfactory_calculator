@@ -20,3 +20,16 @@
     SAM 10,200; crude oil 12,600). Nitrogen 12,000 (SatisfactoryTools default); water unlimited.
   - Belts 60/120/270/480/780/1200, pipes 300/600 per minute.
 - Variable-power recipes (Particle Accelerator, Converter, Quantum Encoder) use the average of min/max MW.
+
+## Dyson Sphere Program and Factorio (2026-11-20)
+- Source: FactorioLab (MIT, https://github.com/factoriolab/factoriolab) at commit
+  `a61e43fd`: `public/data/dsp/data.json` (+ `i18n/zh.json` for Chinese names) and
+  `public/data/2.0/data.json`. Raw copies in `data/raw/`.
+- Versions: DSP 0.10.29.21950; Factorio base 2.0.77 (no Space Age yet).
+- Converted by `tools/convert_factoriolab.py dsp|factorio` → `data/dsp.json`, `data/factorio.json`.
+  Mining recipes become raw resources (weight 1; water 0.01, crude oil 0.2); inputs no recipe
+  makes (DSP Dark Fog drops) become raw "drops" with weight 10; technology and burn
+  (generator) recipes are skipped for now.
+- DSP fractionator speed is set to 30 items/s (Mk.III belt, unstacked) since its rate is
+  belt-bound.
+- Game data © Youthcat Studio / Wube Software; only derived numbers are shipped.
