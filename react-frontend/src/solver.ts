@@ -39,6 +39,8 @@ export interface Settings {
   allow_ore_conversion: boolean
   max_clock_percent: number
   somersloops: Record<string, number>
+  auto_somersloops: boolean
+  somersloop_budget: number | null
   integer: boolean
   shard_budget: number | null
   cost: CostWeights
@@ -47,7 +49,7 @@ export interface Settings {
 
 export interface RateLine { item: string; name: string; rate: number }
 export interface PlanRecipe {
-  id: string; name: string; alt: boolean; building: string; machines: number; machines_ceil: number
+  id: string; mode: string; mode_label: string; name: string; alt: boolean; building: string; machines: number; machines_ceil: number
   throughput: number; shards: number; groups: MachineGroup[]
   power: number; inputs: RateLine[]; outputs: RateLine[]; somersloops: number
 }
@@ -58,7 +60,7 @@ export interface Plan {
   status: 'empty' | 'optimal' | 'infeasible' | 'unbounded' | 'error'
   objective: number; targets: RateLine[]; recipes: PlanRecipe[]; raw: RateLine[]; supplied: RateLine[]
   surplus: RateLine[]; production_power: number; extraction_power: number; buildings: number
-  shards: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
+  shards: number; somersloops: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
   item_values: ItemValue[]; flows: Flow[]; warnings: string[]
 }
 
@@ -74,6 +76,8 @@ export const defaultSettings = (): Settings => ({
   allow_ore_conversion: false,
   max_clock_percent: 100,
   somersloops: {},
+  auto_somersloops: false,
+  somersloop_budget: null,
   integer: true,
   shard_budget: null,
   cost: preset('resources'),

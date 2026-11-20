@@ -29,12 +29,13 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
   const setSloops = (rid: string, n: number) =>
     setSettings(x => {
       const somersloops = { ...x.somersloops }
-      if (n > 0) somersloops[rid] = n
+      // n < 0: let the solver choose (auto mode); 0 is a fixed "none" only in auto mode
+      if (n > 0 || (n === 0 && x.auto_somersloops)) somersloops[rid] = n
       else delete somersloops[rid]
       return { ...x, somersloops }
     })
   const exclude = (rid: string) => setSettings(x => ({ ...x, disabled_recipes: [...x.disabled_recipes, rid] }))
-  const totalSloops = Object.values(s.somersloops).reduce((a, b) => a + b, 0)
+  const totalSloops = plan.somersloops
 
   // group buildings by type
   const byBuilding = new Map<string, number>()
@@ -54,7 +55,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
         <div className="card"><div className="big">{fmt(plan.extraction_power, 1)} MW</div><div className="muted">extraction (estimate)</div></div>
         <div className="card"><div className="big">{fmt(plan.production_power + plan.extraction_power, 1)} MW</div><div className="muted">total</div></div>
         {plan.shards > 0 && <div className="card"><div className="big">{fmt(plan.shards, 0)}</div><div className="muted">power shards</div></div>}
-        {totalSloops > 0 && <div className="card"><div className="big">{totalSloops}</div><div className="muted">Somersloops</div></div>}
+        {totalSloops > 0 && <div className="card"><div className="big">{fmt(totalSloops, 0)}</div><div className="muted">Somersloops</div></div>}
         <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}`}>
           <div className="big">{!s.integer ? 'LP' : plan.proven_optimal ? 'optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
           <div className="muted">{s.integer ? 'whole buildings' : 'fractional buildings'} · {fmt(plan.solve_ms, 0)} ms</div>
@@ -73,8 +74,8 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
           </thead>
           <tbody>
             {plan.recipes.map(r => (
-              <tr key={r.id}>
-                <td>{r.name}{r.alt && <span className="tag">alt</span>}</td>
+              <tr key={r.id + '#' + r.mode}>
+                <td>{r.name}{r.alt && <span className="tag">alt</span>}{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
                 <td>{r.building}</td>
                 <td className="num" title={`work = ${fmt(r.throughput, 4)} machines at 100 %`}>
                   {s.integer ? fmt(r.machines) : <>{fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span></>}
@@ -82,7 +83,8 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 <td className="small">{r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}</td>
                 <td>
                   {slots(r.id) > 0
-                    ? <select value={r.somersloops} onChange={e => setSloops(r.id, +e.target.value)}>
+                    ? <select value={r.id in s.somersloops ? r.somersloops : 'auto'} onChange={e => setSloops(r.id, e.target.value === 'auto' ? -1 : +e.target.value)}>
+                        {s.auto_somersloops && <option value="auto">auto ({r.somersloops})</option>}
                         {Array.from({ length: slots(r.id) + 1 }, (_, i) => <option key={i} value={i}>{i}/{slots(r.id)}</option>)}
                       </select>
                     : <span className="muted">—</span>}

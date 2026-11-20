@@ -175,7 +175,17 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
               onChange={e => set({ shard_budget: e.target.value === '' ? null : Math.max(0, Math.round(+e.target.value)) })} />
           </div>
         )}
-        <p className="hint">Above 100 % a building needs one shard per started 50 %. Power ∝ clock<sup>1.32</sup>. Somersloops are set per recipe in the plan table.</p>
+        <p className="hint">Above 100 % a building needs one shard per started 50 %. Power ∝ clock<sup>1.32</sup>.</p>
+        <label className="row">
+          <input type="checkbox" checked={s.auto_somersloops} onChange={e => set({ auto_somersloops: e.target.checked })} />
+          <span>Place Somersloops automatically</span>
+        </label>
+        <div className="row small">
+          <span className="grow">Somersloops available</span>
+          <input type="number" min={0} placeholder="∞" value={s.somersloop_budget ?? ''}
+            onChange={e => set({ somersloop_budget: e.target.value === '' ? null : Math.max(0, Math.round(+e.target.value)) })} />
+        </div>
+        <p className="hint">Each doubles a building's output at 4× its power. Fix a recipe's count in the plan table; the rest are placed within the budget.</p>
       </section>
 
       <section>
