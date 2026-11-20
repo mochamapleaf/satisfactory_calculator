@@ -75,3 +75,9 @@ optimum and a user-defined cost function.
   (dsp-calc, MulanPSL-2) and 混带 tool dspqc (GPL-3) define the DSP-specific calculations.
 - Next: critic pass on the survey; DSP + Factorio data from FactorioLab; DSP proliferator
   and Factorio module/beacon modes; transcribe 笑笑meow videos (needs Bilibili sign-in).
+- Survey critic pass done (review in `docs/research/_过程文件/`); fixes applied to the survey.
+  Design-relevant: Factorio module values per quality must come from data (game rounds
+  down); beacons use the data's `profile` table; GaiusJ/DSPCalculator have no licence (no
+  code reuse); SatisfactoryTools images not reusable. **FactorioLab ships Satisfactory 1.2
+  data — ours is 1.0: check whether 1.2 changed production numbers.**
+- DSP + Factorio data and modes landed (efd043b); UI game switcher in progress.
