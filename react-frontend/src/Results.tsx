@@ -1,4 +1,7 @@
-import { carrier, fmt, type GameData, type Plan, type Settings } from './solver'
+import { carrier, fmt, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
+
+const groupText = (g: MachineGroup) =>
+  `${fmt(g.count)} × ${fmt(g.clock_percent, 2)}%${g.shards ? ` (${g.shards} shard${g.shards > 1 ? 's' : ''})` : ''}`
 
 interface Props {
   data: GameData
@@ -35,7 +38,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
 
   // group buildings by type
   const byBuilding = new Map<string, number>()
-  for (const r of plan.recipes) byBuilding.set(r.building, (byBuilding.get(r.building) ?? 0) + r.machines_ceil)
+  for (const r of plan.recipes) byBuilding.set(r.building, (byBuilding.get(r.building) ?? 0) + (s.integer ? r.machines : r.machines_ceil))
 
   const limit = (item: string) => {
     if (s.ignore_limits) return null
@@ -50,7 +53,12 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
         <div className="card"><div className="big">{fmt(plan.production_power, 1)} MW</div><div className="muted">production power</div></div>
         <div className="card"><div className="big">{fmt(plan.extraction_power, 1)} MW</div><div className="muted">extraction (estimate)</div></div>
         <div className="card"><div className="big">{fmt(plan.production_power + plan.extraction_power, 1)} MW</div><div className="muted">total</div></div>
+        {plan.shards > 0 && <div className="card"><div className="big">{fmt(plan.shards, 0)}</div><div className="muted">power shards</div></div>}
         {totalSloops > 0 && <div className="card"><div className="big">{totalSloops}</div><div className="muted">Somersloops</div></div>}
+        <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}`}>
+          <div className="big">{!s.integer ? 'LP' : plan.proven_optimal ? 'optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
+          <div className="muted">{s.integer ? 'whole buildings' : 'fractional buildings'} · {fmt(plan.solve_ms, 0)} ms</div>
+        </div>
       </div>
       {plan.warnings.map(w => <p className="warn" key={w}>{w}</p>)}
 
@@ -61,16 +69,17 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       <div className="tablewrap">
         <table>
           <thead>
-            <tr><th>Recipe</th><th>Building</th><th className="num">Machines</th><th>Somersloops</th><th className="num">MW</th><th>In (/min)</th><th>Out (/min)</th><th></th></tr>
+            <tr><th>Recipe</th><th>Building</th><th className="num">Buildings</th><th>Clock</th><th>Somersloops</th><th className="num">MW</th><th>In (/min)</th><th>Out (/min)</th><th></th></tr>
           </thead>
           <tbody>
             {plan.recipes.map(r => (
               <tr key={r.id}>
                 <td>{r.name}{r.alt && <span className="tag">alt</span>}</td>
                 <td>{r.building}</td>
-                <td className="num" title={`${fmt(r.machines, 4)} machines at ${s.clock_percent}%`}>
-                  {fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span>
+                <td className="num" title={`work = ${fmt(r.throughput, 4)} machines at 100 %`}>
+                  {s.integer ? fmt(r.machines) : <>{fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span></>}
                 </td>
+                <td className="small">{r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}</td>
                 <td>
                   {slots(r.id) > 0
                     ? <select value={r.somersloops} onChange={e => setSloops(r.id, +e.target.value)}>

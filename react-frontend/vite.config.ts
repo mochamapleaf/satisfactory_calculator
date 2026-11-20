@@ -6,4 +6,5 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   build: { target: 'es2022' },
+  worker: { format: 'es' },
 })

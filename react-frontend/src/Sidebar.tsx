@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { defaultSettings, type GameData, type ItemRate, type Objective, type Settings } from './solver'
+import { defaultSettings, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
   data: GameData
@@ -42,6 +42,61 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
   )
 }
 
+function Num({ value, onChange, placeholder }: { value: number | undefined; onChange: (v: number | undefined) => void; placeholder?: string }) {
+  return <input type="number" min={0} step="any" value={value ?? ''} placeholder={placeholder}
+    onChange={e => onChange(e.target.value === '' ? undefined : Math.max(0, +e.target.value))} />
+}
+
+function CostEditor({ data, cost, onChange }: { data: GameData; cost: CostWeights; onChange: (c: CostWeights) => void }) {
+  const set = (patch: Partial<CostWeights>) => onChange({ ...cost, ...patch })
+  const terms: [keyof CostWeights, string, string][] = [
+    ['resources', 'Raw resources', '× Σ weight · unit/min'],
+    ['buildings', 'Buildings', '× Σ weight · building'],
+    ['power', 'Power', 'per MW'],
+    ['shards', 'Power shards', 'per shard'],
+    ['surplus', 'Byproducts', 'per unit/min dumped'],
+  ]
+  const perMap = (key: 'resource_weights' | 'building_weights', id: string, v: number | undefined) => {
+    const m = { ...cost[key] }
+    if (v === undefined) delete m[id]
+    else m[id] = v
+    set({ [key]: m } as Partial<CostWeights>)
+  }
+  const usedBuildings = data.buildings.filter(b => data.recipes.some(r => r.building === b.id))
+  return (
+    <div className="costedit">
+      {terms.map(([k, label, unit]) => (
+        <div className="row small" key={k}>
+          <span className="grow">{label} <span className="muted">{unit}</span></span>
+          <Num value={cost[k] as number} onChange={v => set({ [k]: v ?? 0 } as Partial<CostWeights>)} />
+        </div>
+      ))}
+      <details>
+        <summary>Weight per raw resource</summary>
+        {data.resources.map(r => (
+          <div className="row small" key={r.item}>
+            <span className="grow">{data.items.find(i => i.id === r.item)?.name ?? r.item}</span>
+            <Num value={cost.resource_weights[r.item]} placeholder={fmt(scarcity(r.limit), 3)}
+              onChange={v => perMap('resource_weights', r.item, v)} />
+          </div>
+        ))}
+        <p className="hint">Blank = scarcity default (92 100 / world maximum).</p>
+      </details>
+      <details>
+        <summary>Weight per building type</summary>
+        {usedBuildings.map(b => (
+          <div className="row small" key={b.id}>
+            <span className="grow">{b.name}</span>
+            <Num value={cost.building_weights[b.id]} placeholder="1" onChange={v => perMap('building_weights', b.id, v)} />
+          </div>
+        ))}
+        <p className="hint">E.g. make Manufacturers cost 4 to prefer simpler buildings.</p>
+      </details>
+      <a href="#" onClick={e => { e.preventDefault(); onChange(preset('resources')) }}>Reset weights</a>
+    </div>
+  )
+}
+
 export default function Sidebar({ data, settings: s, setSettings }: Props) {
   const set = (patch: Partial<Settings>) => setSettings(x => ({ ...x, ...patch }))
   const [altFilter, setAltFilter] = useState('')
@@ -66,31 +121,61 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
       </section>
 
       <section>
-        <h2>Optimise for</h2>
+        <h2>Cost function</h2>
         <div className="seg">
-          {(['resources', 'buildings', 'power'] as Objective[]).map(o => (
-            <button key={o} className={s.objective === o ? 'on' : ''} onClick={() => set({ objective: o })}>
-              {o === 'resources' ? 'Raw resources' : o === 'buildings' ? 'Buildings' : 'Power'}
+          {(['resources', 'buildings', 'power', 'custom'] as Objective[]).map(o => (
+            <button key={o} className={s.objective === o ? 'on' : ''}
+              onClick={() => set(o === 'custom' && s.objective !== 'custom'
+                ? { objective: o, cost: { ...preset(s.objective), resource_weights: s.cost.resource_weights, building_weights: s.cost.building_weights } }
+                : { objective: o })}>
+              {o === 'resources' ? 'Raw' : o === 'buildings' ? 'Buildings' : o === 'power' ? 'Power' : 'Custom'}
             </button>
           ))}
         </div>
         <p className="hint">
-          {s.objective === 'resources' && 'Each raw resource is weighted by 1 / world maximum, so scarce ores cost more.'}
-          {s.objective === 'buildings' && 'Fewest production buildings; raw resources break ties.'}
-          {s.objective === 'power' && 'Least power: production + estimated extraction (Miner Mk.3 / extractors at 100%).'}
+          {s.objective === 'resources' && 'Raw resources weighted by scarcity (Iron Ore = 1, uranium ≈ 44); buildings break ties.'}
+          {s.objective === 'buildings' && 'Fewest whole buildings; raw resources break ties.'}
+          {s.objective === 'power' && 'MW (production + extraction) + 1 per building, so it underclocks where that pays.'}
+          {s.objective === 'custom' && 'Minimise the weighted sum below. Edit any weight; the plan re-solves.'}
         </p>
+        {s.objective === 'custom' && <CostEditor data={data} cost={s.cost} onChange={cost => set({ cost })} />}
       </section>
 
       <section>
-        <h2>Clock speed</h2>
+        <h2>Solver</h2>
+        <label className="row">
+          <input type="checkbox" checked={s.integer} onChange={e => set({ integer: e.target.checked })} />
+          <span>Whole buildings and shards (integer program)</span>
+        </label>
+        {s.integer && (
+          <div className="row small">
+            <span className="grow">Time limit</span>
+            <input type="number" min={0.2} max={120} step={0.5} value={s.time_limit_ms / 1000}
+              onChange={e => set({ time_limit_ms: Math.round(Math.min(120, Math.max(0.2, +e.target.value)) * 1000) })} />
+            <span className="muted">s</span>
+          </div>
+        )}
+        <p className="hint">
+          {s.integer
+            ? 'Branch-and-bound over whole buildings; each building can be underclocked freely. On timeout the best plan found is shown with its gap to the lower bound.'
+            : 'Continuous LP: fractional buildings (the old "solve, then round up" view).'}
+        </p>
         <div className="row">
-          <input type="range" min={1} max={250} value={s.clock_percent} className="grow"
-            onChange={e => set({ clock_percent: +e.target.value })} />
-          <input type="number" min={1} max={250} value={s.clock_percent}
-            onChange={e => set({ clock_percent: Math.min(250, Math.max(1, +e.target.value)) })} />
+          <span className="grow">Max clock</span>
+          <input type="range" min={1} max={250} value={s.max_clock_percent} className="grow"
+            onChange={e => set({ max_clock_percent: +e.target.value })} />
+          <input type="number" min={1} max={250} value={s.max_clock_percent}
+            onChange={e => set({ max_clock_percent: Math.min(250, Math.max(1, +e.target.value)) })} />
           <span className="muted">%</span>
         </div>
-        <p className="hint">Applied to every production building. Power ∝ clock<sup>1.32</sup>. Somersloops are set per recipe in the plan table.</p>
+        {s.max_clock_percent > 100 && (
+          <div className="row small">
+            <span className="grow">Power shards available</span>
+            <input type="number" min={0} placeholder="∞" value={s.shard_budget ?? ''}
+              onChange={e => set({ shard_budget: e.target.value === '' ? null : Math.max(0, Math.round(+e.target.value)) })} />
+          </div>
+        )}
+        <p className="hint">Above 100 % a building needs one shard per started 50 %. Power ∝ clock<sup>1.32</sup>. Somersloops are set per recipe in the plan table.</p>
       </section>
 
       <section>

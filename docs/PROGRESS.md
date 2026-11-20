@@ -43,3 +43,25 @@ memo project: `satisfactory-calculator` (e3ea2a723535). Branch: `refactor`.
   Repo Settings → Pages must be set to "GitHub Actions" for the deploy job.
 - Open follow-ups: shadow prices (needs a solver with duals, e.g. replace minilp or compute via
   sensitivity), power generators as recipes (fuel → MW), per-recipe clock speeds, item icons.
+
+## 2026-11-20 — Integer (MILP) solver and custom cost function
+Feedback: "LP then ceil" is not a real discrete solution; wants an exact whole-building
+optimum and a user-defined cost function.
+- Solver switched to `microlp` 0.8 (pure Rust MILP, branch-and-bound, LP duals, time limits
+  that work in WASM). `src/planner/lp.rs` model per recipe: work x, buildings n (int),
+  shards s (int), power p. Exact clock/shard rules (x ≤ n + 0.5 s, x ≤ c_max n, s ≤ 3n).
+  Power = perspective of a piecewise-linear c^1.32 (linear, exact at breakpoints); reported
+  power is recomputed exactly from the chosen clocks (`machine_groups`).
+- Cost function `CostWeights`: resources (per-item weights, default scarcity Iron Ore = 1),
+  buildings (per-building-type weights), MW, shards, byproducts. Presets raw / buildings /
+  power, or custom. Optional shard budget, max clock (replaces the fixed global clock).
+- LP relaxation first: lower bound, item shadow prices (Item values tab), warm start.
+  Primal heuristic: re-weighted LPs (ceil(n)/n building cost) collect a recipe
+  neighbourhood → restricted MILP → warm-starts the full MILP. Time limit (default 4 s)
+  returns the best plan with its gap.
+- Benchmark (release, 7.3/min): most cases optimal or within 0.01 %; Buildings objective
+  with all alternates on big chains stays 10–25 % from the bound at 4 s (HMF: 21 buildings,
+  best seen 20).
+- UI: solving in a Web Worker; cost-function editor; whole-building table with clock groups
+  and shards; solve status card (optimal / gap, ms); Item values tab.
+- 16 tests pass. Preview: private claude.ai artifact 9EkeeHce4wpgBA3CtXg9QU (v2).

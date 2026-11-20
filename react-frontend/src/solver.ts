@@ -13,7 +13,19 @@ export interface GameData {
   resources: Resource[]; belts: number[]; pipes: number[]
 }
 
-export type Objective = 'resources' | 'buildings' | 'power'
+export type Objective = 'resources' | 'buildings' | 'power' | 'custom'
+export interface CostWeights {
+  resources: number; buildings: number; power: number; shards: number; surplus: number
+  resource_weights: Record<string, number>; building_weights: Record<string, number>
+}
+/** Same numbers as Objective::preset in src/planner/mod.rs. */
+export function preset(o: Objective): CostWeights {
+  const [resources, buildings, power, shards] =
+    o === 'buildings' ? [0.001, 1, 0, 0.01] : o === 'power' ? [0.001, 1, 1, 0.01] : [1, 0.01, 0, 0.01]
+  return { resources, buildings, power, shards, surplus: 0, resource_weights: {}, building_weights: {} }
+}
+/** Default scarcity weight of a raw resource (Iron Ore = 1), as in lp.rs. */
+export const scarcity = (limit: number | null) => (limit && limit > 0 ? 92100 / limit : 0.001)
 export interface ItemRate { item: string; rate: number }
 export interface Settings {
   targets: ItemRate[]
@@ -25,21 +37,29 @@ export interface Settings {
   resource_limits: Record<string, number | null>
   ignore_limits: boolean
   allow_ore_conversion: boolean
-  clock_percent: number
+  max_clock_percent: number
   somersloops: Record<string, number>
+  integer: boolean
+  shard_budget: number | null
+  cost: CostWeights
+  time_limit_ms: number
 }
 
 export interface RateLine { item: string; name: string; rate: number }
 export interface PlanRecipe {
   id: string; name: string; alt: boolean; building: string; machines: number; machines_ceil: number
+  throughput: number; shards: number; groups: MachineGroup[]
   power: number; inputs: RateLine[]; outputs: RateLine[]; somersloops: number
 }
+export interface MachineGroup { count: number; clock_percent: number; shards: number }
+export interface ItemValue { item: string; name: string; value: number }
 export interface Flow { from: string; to: string; item: string; name: string; rate: number }
 export interface Plan {
   status: 'empty' | 'optimal' | 'infeasible' | 'unbounded' | 'error'
   objective: number; targets: RateLine[]; recipes: PlanRecipe[]; raw: RateLine[]; supplied: RateLine[]
   surplus: RateLine[]; production_power: number; extraction_power: number; buildings: number
-  flows: Flow[]; warnings: string[]
+  shards: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
+  item_values: ItemValue[]; flows: Flow[]; warnings: string[]
 }
 
 export const defaultSettings = (): Settings => ({
@@ -52,8 +72,12 @@ export const defaultSettings = (): Settings => ({
   resource_limits: {},
   ignore_limits: false,
   allow_ore_conversion: false,
-  clock_percent: 100,
+  max_clock_percent: 100,
   somersloops: {},
+  integer: true,
+  shard_budget: null,
+  cost: preset('resources'),
+  time_limit_ms: 4000,
 })
 
 let ready: Promise<GameData> | null = null
@@ -65,6 +89,27 @@ export function loadSolver(): Promise<GameData> {
 export function solve(s: Settings): Plan {
   return JSON.parse(solve_json(JSON.stringify(s))) as Plan
 }
+
+// Solves in a Web Worker; a newer request supersedes older ones.
+let worker: Worker | null = null
+let seq = 0
+const pending = new Map<number, (p: Plan) => void>()
+export function solveAsync(s: Settings): Promise<Plan> {
+  if (!worker) {
+    worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
+    worker.onmessage = (e: MessageEvent<{ id: number; plan: string }>) => {
+      const done = pending.get(e.data.id)
+      pending.delete(e.data.id)
+      done?.(JSON.parse(e.data.plan) as Plan)
+    }
+  }
+  const id = ++seq
+  return new Promise(resolve => {
+    pending.set(id, resolve)
+    worker!.postMessage({ id, settings: JSON.stringify(s) })
+  })
+}
+export const latestRequest = () => seq
 
 /** Smallest belt / pipe tier that carries `rate`, e.g. "Mk.3" or "2× Mk.6". */
 export function carrier(rate: number, liquid: boolean, data: GameData): string {
