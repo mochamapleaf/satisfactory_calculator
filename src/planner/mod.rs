@@ -4,6 +4,7 @@ pub mod data;
 pub mod flows;
 pub mod lp;
 pub mod matrix;
+pub mod rules;
 #[cfg(test)]
 mod tests;
 
@@ -98,8 +99,12 @@ pub struct PlanSettings {
     /// shard per started 50 %. Machines may always run slower (underclock) for free.
     #[serde(alias = "clock_percent")]
     pub max_clock_percent: f64,
-    /// Somersloops per recipe id (clamped to the building's slots).
+    /// Somersloops per recipe id (clamped to the building's slots); fixes that recipe.
     pub somersloops: HashMap<String, u32>,
+    /// Let the solver place Somersloops on recipes not fixed in `somersloops`.
+    pub auto_somersloops: bool,
+    /// Somersloops available in total (fixed + automatic); `None` = unlimited.
+    pub somersloop_budget: Option<u32>,
     /// Whole buildings and power shards (MILP). `false` = continuous LP relaxation.
     pub integer: bool,
     /// Total power shards available; `None` = unlimited.
@@ -124,6 +129,8 @@ impl Default for PlanSettings {
             allow_ore_conversion: false,
             max_clock_percent: 100.0,
             somersloops: HashMap::new(),
+            auto_somersloops: false,
+            somersloop_budget: None,
             integer: true,
             shard_budget: None,
             cost: CostWeights::default(),
@@ -170,6 +177,9 @@ impl RateLine {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanRecipe {
     pub id: String,
+    /// Mode key ("" = plain) and its label, e.g. "2/4 Somersloop".
+    pub mode: String,
+    pub mode_label: String,
     pub name: String,
     pub alt: bool,
     pub building: String,
@@ -227,6 +237,7 @@ pub struct Plan {
     pub extraction_power: f64,
     pub buildings: f64,
     pub shards: f64,
+    pub somersloops: f64,
     /// Integer solve: proven optimal, or the best plan found before the time limit.
     pub proven_optimal: bool,
     /// Relative gap to the best bound when not proven optimal.

@@ -36,7 +36,14 @@ pub struct Building {
     pub name: String,
     pub power: f64,
     pub power_exp: f64,
+    #[serde(default)]
     pub somersloop_slots: u32,
+    /// Crafting speed (DSP / Factorio machine tiers); 1 for Satisfactory.
+    #[serde(default = "one")]
+    pub speed: f64,
+    /// Recipe category this building serves (recipes name a category or a building id).
+    #[serde(default)]
+    pub category: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +58,9 @@ pub struct Resource {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameData {
+    /// "satisfactory" | "dsp" | "factorio" — selects the rules in `rules.rs`.
+    #[serde(default = "satisfactory")]
+    pub game: String,
     pub version: String,
     pub source: String,
     pub items: Vec<Item>,
@@ -59,6 +69,13 @@ pub struct GameData {
     pub resources: Vec<Resource>,
     pub belts: Vec<f64>,
     pub pipes: Vec<f64>,
+}
+
+fn one() -> f64 {
+    1.0
+}
+fn satisfactory() -> String {
+    "satisfactory".into()
 }
 
 pub const DEFAULT_GAME_DATA: &str = include_str!("../../data/game-data.json");

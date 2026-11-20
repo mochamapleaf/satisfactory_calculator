@@ -22,6 +22,7 @@
 //! Byproducts leave through e_i. One-recipe-per-item chains reduce to the square-matrix
 //! solution of `matrix.rs` (in LP mode).
 use super::data::{GameData, Recipe};
+use super::rules::{self, Mode};
 use super::{
     CostWeights, ItemValue, MachineGroup, Plan, PlanRecipe, PlanSettings, RateLine, Status,
 };
@@ -41,28 +42,6 @@ const MAX_BUILDINGS: i32 = 1_000_000;
 /// Relative gap at which a whole-building plan counts as optimal.
 const MIP_GAP: f64 = 1e-4;
 
-#[derive(Clone, Copy)]
-pub struct RecipeFactors {
-    /// Output multiplier from Somersloops (1 + filled/slots).
-    pub out_mult: f64,
-    /// MW of one machine at 100 % clock, Somersloops included.
-    pub power_base: f64,
-    pub power_exp: f64,
-}
-
-pub fn recipe_factors(data: &GameData, r: &Recipe, s: &PlanSettings) -> RecipeFactors {
-    let b = data.building(&r.building);
-    let slots = b.map(|b| b.somersloop_slots).unwrap_or(0);
-    let filled = s.somersloops.get(&r.id).copied().unwrap_or(0).min(slots);
-    let frac = if slots == 0 { 0.0 } else { filled as f64 / slots as f64 };
-    let base = r.power.unwrap_or_else(|| b.map(|b| b.power).unwrap_or(0.0));
-    RecipeFactors {
-        out_mult: 1.0 + frac,
-        power_base: base * (1.0 + frac).powi(2),
-        power_exp: b.map(|b| b.power_exp).unwrap_or(1.321928),
-    }
-}
-
 /// Recipes allowed by the settings.
 pub fn allowed_recipes<'a>(data: &'a GameData, s: &PlanSettings) -> Vec<&'a Recipe> {
     data.recipes
@@ -79,19 +58,19 @@ pub fn is_ore_conversion(data: &GameData, r: &Recipe) -> bool {
         && r.outputs.iter().any(|(it, _)| data.item(it).map(|i| i.raw).unwrap_or(false))
 }
 
-/// Recipes that can contribute to the targets (upstream closure).
-fn relevant<'a>(recipes: &[&'a Recipe], targets: &[String]) -> Vec<&'a Recipe> {
+/// Units that can contribute to the targets (upstream closure, extra inputs included).
+fn relevant<'a>(units: &[Unit<'a>], targets: &[String]) -> Vec<Unit<'a>> {
     let mut needed: BTreeSet<String> = targets.iter().cloned().collect();
     let mut chosen: BTreeSet<usize> = BTreeSet::new();
     loop {
         let mut grew = false;
-        for (i, r) in recipes.iter().enumerate() {
+        for (i, u) in units.iter().enumerate() {
             if chosen.contains(&i) {
                 continue;
             }
-            if r.outputs.iter().any(|(it, _)| needed.contains(it)) {
+            if u.recipe.outputs.iter().any(|(it, _)| needed.contains(it)) {
                 chosen.insert(i);
-                for (it, _) in &r.inputs {
+                for (it, _) in u.recipe.inputs.iter().chain(&u.mode.extra_inputs) {
                     needed.insert(it.clone());
                 }
                 grew = true;
@@ -101,7 +80,28 @@ fn relevant<'a>(recipes: &[&'a Recipe], targets: &[String]) -> Vec<&'a Recipe> {
             break;
         }
     }
-    chosen.into_iter().map(|i| recipes[i]).collect()
+    chosen.into_iter().map(|i| units[i].clone()).collect()
+}
+
+/// Every item a set of units touches, plus targets and supplies.
+fn items_of(
+    units: &[Unit],
+    targets: &BTreeMap<String, f64>,
+    supplies: &BTreeMap<String, f64>,
+) -> BTreeSet<String> {
+    let mut items: BTreeSet<String> = targets.keys().cloned().collect();
+    items.extend(supplies.keys().cloned());
+    for u in units {
+        for (it, _) in u.recipe.inputs.iter().chain(&u.recipe.outputs).chain(&u.mode.extra_inputs) {
+            items.insert(it.clone());
+        }
+    }
+    items
+}
+
+/// Budgets on boost items held by buildings.
+fn budgets(s: &PlanSettings) -> Vec<(String, f64)> {
+    s.somersloop_budget.map(|b| vec![(rules::SOMERSLOOP.to_string(), b as f64)]).unwrap_or_default()
 }
 
 /// Cost of one unit/min of a raw resource under the weights.
@@ -146,9 +146,16 @@ struct Model {
     segments: Vec<Vec<(f64, f64)>>,
 }
 
+/// One way of running one recipe: a column of the model.
+#[derive(Clone)]
+struct Unit<'a> {
+    recipe: &'a Recipe,
+    mode: Mode,
+    key: String,
+}
+
 struct Inputs<'a> {
-    recipes: Vec<&'a Recipe>,
-    factors: Vec<RecipeFactors>,
+    units: Vec<Unit<'a>>,
     items: BTreeSet<String>,
     targets: BTreeMap<String, f64>,
     supplies: BTreeMap<String, f64>,
@@ -181,24 +188,26 @@ fn build_scaled(
     let mut p = Problem::new(OptimizationDirection::Minimize);
     let mut rv = Vec::new();
     let mut segments = Vec::new();
-    for (r, f) in inp.recipes.iter().zip(&inp.factors) {
+    for u in &inp.units {
+        let f = &u.mode;
         let x = p.add_var(0.0, (0.0, f64::INFINITY));
         let wb = w.buildings
-            * w.building_weights.get(&r.building).copied().unwrap_or(1.0)
-            * scale.get(&r.id).copied().unwrap_or(1.0);
+            * w.building_weights.get(&f.building).copied().unwrap_or(1.0)
+            * scale.get(&u.key).copied().unwrap_or(1.0);
+        let (c_max, k_max) = if f.overclock { (c_max, k_max) } else { (1.0, 0) };
         let n = if integer {
             p.add_integer_var(wb, (0, MAX_BUILDINGS))
         } else {
             p.add_var(wb, (0.0, f64::INFINITY))
         };
-        p.add_constraint(&[(x, 1.0), (n, -c_max)], ComparisonOp::Le, 0.0);
+        p.add_constraint(&[(x, 1.0), (n, -c_max * f.speed)], ComparisonOp::Le, 0.0);
         let sv = if k_max > 0 {
             let sv = if integer {
                 p.add_integer_var(w.shards, (0, MAX_BUILDINGS))
             } else {
                 p.add_var(w.shards, (0.0, f64::INFINITY))
             };
-            p.add_constraint(&[(x, 1.0), (n, -1.0), (sv, -0.5)], ComparisonOp::Le, 0.0);
+            p.add_constraint(&[(x, 1.0), (n, -f.speed), (sv, -0.5 * f.speed)], ComparisonOp::Le, 0.0);
             p.add_constraint(&[(sv, 1.0), (n, -(k_max as f64))], ComparisonOp::Le, 0.0);
             Some(sv)
         } else {
@@ -210,7 +219,7 @@ fn build_scaled(
             for (a, b) in &segs {
                 // p ≥ P·(a·x + b·n)
                 p.add_constraint(
-                    &[(pv, 1.0), (x, -f.power_base * a), (n, -f.power_base * b)],
+                    &[(pv, 1.0), (x, -f.power_base * a / f.speed), (n, -f.power_base * b)],
                     ComparisonOp::Ge,
                     0.0,
                 );
@@ -221,6 +230,18 @@ fn build_scaled(
         };
         segments.push(segs);
         rv.push(RecipeVars { x, n, s: sv, p: pv });
+    }
+    // boost items held per building (Somersloops, modules) against their budgets
+    for (item, budget) in budgets(s) {
+        let row: Vec<(Variable, f64)> = inp
+            .units
+            .iter()
+            .zip(&rv)
+            .filter_map(|(u, v)| u.mode.held.iter().find(|(i, _)| *i == item).map(|(_, q)| (v.n, *q)))
+            .collect();
+        if !row.is_empty() {
+            p.add_constraint(row.as_slice(), ComparisonOp::Le, budget);
+        }
     }
     if let (Some(budget), true) = (s.shard_budget, k_max > 0) {
         let row: Vec<(Variable, f64)> = rv.iter().filter_map(|v| v.s.map(|s| (s, 1.0))).collect();
@@ -253,14 +274,15 @@ fn build_scaled(
     let mut balance = Vec::new();
     for it in &inp.items {
         let mut row: Vec<(Variable, f64)> = Vec::new();
-        for ((r, f), v) in inp.recipes.iter().zip(&inp.factors).zip(&rv) {
+        for (u, v) in inp.units.iter().zip(&rv) {
+            let (r, f) = (u.recipe, &u.mode);
             let mut a = 0.0;
             for (i, q) in &r.outputs {
                 if i == it {
                     a += q * f.out_mult;
                 }
             }
-            for (i, q) in &r.inputs {
+            for (i, q) in r.inputs.iter().chain(&f.extra_inputs) {
                 if i == it {
                     a -= q;
                 }
@@ -294,9 +316,9 @@ struct Point {
 
 fn point_of(m: &Model, inp: &Inputs, sol: &Solution) -> Point {
     let mut pt = Point::default();
-    for (r, v) in inp.recipes.iter().zip(&m.rv) {
+    for (u, v) in inp.units.iter().zip(&m.rv) {
         let sh = v.s.map(|s| sol[s]).unwrap_or(0.0);
-        pt.rec.insert(r.id.clone(), (sol[v.x].max(0.0), sol[v.n].max(0.0), sh.max(0.0)));
+        pt.rec.insert(u.key.clone(), (sol[v.x].max(0.0), sol[v.n].max(0.0), sh.max(0.0)));
     }
     for (k, list) in [(0u8, &m.raw), (1, &m.sup), (2, &m.surplus)] {
         for (it, v) in list {
@@ -310,11 +332,13 @@ fn point_of(m: &Model, inp: &Inputs, sol: &Solution) -> Point {
 /// relaxation (always feasible unless a shard budget binds).
 fn hint_of(m: &Model, inp: &Inputs, pt: &Point, c_max: f64, round_up: bool) -> Vec<(Variable, f64)> {
     let mut hint = Vec::new();
-    for ((r, (v, f)), segs) in inp.recipes.iter().zip(m.rv.iter().zip(&inp.factors)).zip(&m.segments) {
-        let (x, mut n, mut sh) = pt.rec.get(&r.id).copied().unwrap_or((0.0, 0.0, 0.0));
+    for ((u, v), segs) in inp.units.iter().zip(&m.rv).zip(&m.segments) {
+        let f = &u.mode;
+        let c_max = if f.overclock { c_max } else { 1.0 };
+        let (x, mut n, mut sh) = pt.rec.get(&u.key).copied().unwrap_or((0.0, 0.0, 0.0));
         if round_up {
-            n = if x <= 1e-9 { 0.0 } else { (x / c_max - 1e-9).ceil() };
-            let c = if n > 0.0 { x / n } else { 0.0 };
+            n = if x <= 1e-9 { 0.0 } else { (x / (c_max * f.speed) - 1e-9).ceil() };
+            let c = if n > 0.0 { x / (n * f.speed) } else { 0.0 };
             sh = if c > 1.0 { ((c - 1.0) / 0.5 - 1e-9).ceil() * n } else { 0.0 };
         } else {
             n = n.round();
@@ -326,7 +350,7 @@ fn hint_of(m: &Model, inp: &Inputs, pt: &Point, c_max: f64, round_up: bool) -> V
             hint.push((s, sh));
         }
         if let Some(p) = v.p {
-            let pw = segs.iter().map(|(a, b)| f.power_base * (a * x + b * n)).fold(0.0, f64::max);
+            let pw = segs.iter().map(|(a, b)| f.power_base * (a * x / f.speed + b * n)).fold(0.0, f64::max);
             hint.push((p, pw));
         }
     }
@@ -340,25 +364,10 @@ fn hint_of(m: &Model, inp: &Inputs, pt: &Point, c_max: f64, round_up: bool) -> V
 
 /// Inputs restricted to the recipes in `keep`.
 fn restrict<'a>(inp: &Inputs<'a>, keep: &BTreeSet<String>) -> Inputs<'a> {
-    let mut recipes = Vec::new();
-    let mut factors = Vec::new();
-    for (r, f) in inp.recipes.iter().zip(&inp.factors) {
-        if keep.contains(&r.id) {
-            recipes.push(*r);
-            factors.push(*f);
-        }
-    }
-    let mut items: BTreeSet<String> = inp.targets.keys().cloned().collect();
-    items.extend(inp.supplies.keys().cloned());
-    for r in &recipes {
-        for (it, _) in r.inputs.iter().chain(r.outputs.iter()) {
-            items.insert(it.clone());
-        }
-    }
+    let units: Vec<Unit> = inp.units.iter().filter(|u| keep.contains(&u.key)).cloned().collect();
     Inputs {
-        recipes,
-        factors,
-        items,
+        items: items_of(&units, &inp.targets, &inp.supplies),
+        units,
         targets: inp.targets.clone(),
         supplies: inp.supplies.clone(),
         weights: inp.weights.clone(),
@@ -413,7 +422,9 @@ fn finish(
     let name = |id: &str| names.get(id).copied().unwrap_or(id).to_string();
     let clean = |v: f64| if v.abs() < 1e-7 { 0.0 } else { v };
     let c_max = s.max_clock();
-    for ((r, f), v) in inp.recipes.iter().zip(&inp.factors).zip(&m.rv) {
+    for (u, v) in inp.units.iter().zip(&m.rv) {
+        let (r, f) = (u.recipe, &u.mode);
+        let c_max = if f.overclock { c_max } else { 1.0 };
         let x = clean(sol[v.x]);
         if x <= 0.0 {
             continue;
@@ -424,31 +435,38 @@ fn finish(
             n = n.round();
             sh = sh.round();
         }
-        let groups = machine_groups(n, x, sh, c_max, integer);
+        let groups = machine_groups(n, x / f.speed, sh, c_max, integer);
         let power: f64 = groups
             .iter()
             .map(|g| g.count * f.power_base * (g.clock_percent / 100.0).powf(f.power_exp))
             .sum();
         let shards = if integer { sh } else { groups.iter().map(|g| g.count * g.shards as f64).sum() };
-        let b = data.building(&r.building);
+        let b = data.building(&f.building);
         plan.recipes.push(PlanRecipe {
             id: r.id.clone(),
+            mode: f.key.clone(),
+            mode_label: f.label.clone(),
             name: r.name.clone(),
             alt: r.alt,
-            building: b.map(|b| b.name.clone()).unwrap_or_else(|| r.building.clone()),
+            building: b.map(|b| b.name.clone()).unwrap_or_else(|| f.building.clone()),
             machines: n,
             machines_ceil: (n - 1e-6).ceil(),
             throughput: x,
             shards,
             groups,
             power,
-            inputs: r.inputs.iter().map(|(i, q)| RateLine::new(i, &name(i), q * x)).collect(),
+            inputs: r
+                .inputs
+                .iter()
+                .chain(&f.extra_inputs)
+                .map(|(i, q)| RateLine::new(i, &name(i), q * x))
+                .collect(),
             outputs: r
                 .outputs
                 .iter()
                 .map(|(i, q)| RateLine::new(i, &name(i), q * f.out_mult * x))
                 .collect(),
-            somersloops: s.somersloops.get(&r.id).copied().unwrap_or(0),
+            somersloops: f.somersloops,
         });
     }
     plan.recipes.sort_by(|a, b| a.name.cmp(&b.name));
@@ -478,6 +496,7 @@ fn finish(
     plan.production_power = plan.recipes.iter().map(|r| r.power).sum();
     plan.buildings = plan.recipes.iter().map(|r| if integer { r.machines } else { r.machines_ceil }).sum();
     plan.shards = plan.recipes.iter().map(|r| r.shards).sum();
+    plan.somersloops = plan.recipes.iter().map(|r| r.machines * r.somersloops as f64).sum();
     plan.flows = super::flows::allocate(plan);
 }
 
@@ -507,22 +526,25 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
 
     let allowed = allowed_recipes(data, s);
     let target_ids: Vec<String> = targets.keys().cloned().collect();
-    let recipes = relevant(&allowed, &target_ids);
-    let mut items: BTreeSet<String> = targets.keys().cloned().collect();
-    items.extend(supplies.keys().cloned());
-    for r in &recipes {
-        for (it, _) in r.inputs.iter().chain(r.outputs.iter()) {
-            items.insert(it.clone());
-        }
-    }
-    let factors = recipes.iter().map(|r| recipe_factors(data, r, s)).collect();
+    let all_units: Vec<Unit> = allowed
+        .iter()
+        .flat_map(|r| {
+            rules::modes(data, r, s).into_iter().map(move |mode| Unit {
+                recipe: *r,
+                key: format!("{}#{}", r.id, mode.key),
+                mode,
+            })
+        })
+        .collect();
+    let units = relevant(&all_units, &target_ids);
+    let items = items_of(&units, &targets, &supplies);
     let mut weights = s.weights();
     for v in [&mut weights.resources, &mut weights.buildings, &mut weights.power, &mut weights.shards, &mut weights.surplus] {
         if !v.is_finite() || *v < 0.0 {
             *v = 0.0;
         }
     }
-    let inp = Inputs { recipes, factors, items, targets, supplies, weights };
+    let inp = Inputs { units, items, targets, supplies, weights };
 
     // 1. continuous relaxation: lower bound, shadow prices, warm start
     let lp_model = build(data, s, &inp, false);
@@ -601,7 +623,7 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
             }
         }
     }
-    if support.len() < inp.recipes.len() {
+    if support.len() < inp.units.len() {
         let sub_inp = restrict(&inp, &support);
         let sub = build(data, s, &sub_inp, true);
         let sub_hint = hint_of(&sub, &sub_inp, &lp_pt, c_max, true);

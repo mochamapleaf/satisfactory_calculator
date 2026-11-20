@@ -285,3 +285,20 @@ fn flows_conserve_target() {
     let screws: f64 = p.flows.iter().filter(|f| f.item == "Desc_IronScrew_C").map(|f| f.rate).sum();
     assert!(close(screws, 720.0));
 }
+
+#[test]
+fn auto_somersloops_respect_budget() {
+    let d = data();
+    let mut s = settings(&[("Reinforced Iron Plate", 30.0)]);
+    s.auto_somersloops = true;
+    s.somersloop_budget = Some(4);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert!(p.somersloops <= 4.0 + 1e-9 && p.somersloops > 0.0, "{}", p.somersloops);
+    assert_balanced(&p);
+    // free Somersloops cut raw use below the plain plan
+    let plain = plan(&d, &settings(&[("Reinforced Iron Plate", 30.0)]));
+    assert!(lp::raw_map(&p)["Desc_OreIron_C"] < lp::raw_map(&plain)["Desc_OreIron_C"]);
+    s.somersloop_budget = Some(0);
+    assert_eq!(plan(&d, &s).somersloops, 0.0);
+}
