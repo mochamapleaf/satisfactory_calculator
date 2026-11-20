@@ -5,9 +5,10 @@ import Sidebar from './Sidebar'
 import Results from './Results'
 import FlowGraph from './FlowGraph'
 import ItemValues from './ItemValues'
+import ItemFlow from './ItemFlow'
 import { ICON_STYLES, IconProvider, loadIconStyle, saveIconStyle, type IconStyle } from './Icon'
 
-type Tab = 'table' | 'graph' | 'values'
+type Tab = 'table' | 'flow' | 'graph' | 'values'
 
 export default function App() {
   const [data, setData] = useState<GameData | null>(null)
@@ -67,11 +68,13 @@ export default function App() {
         <main>
           <div className="tabs">
             <button className={tab === 'table' ? 'on' : ''} onClick={() => setTab('table')}>Plan</button>
-            <button className={tab === 'graph' ? 'on' : ''} onClick={() => setTab('graph')}>Flow graph</button>
+            <button className={tab === 'flow' ? 'on' : ''} onClick={() => setTab('flow')}>Item flow</button>
+            <button className={tab === 'graph' ? 'on' : ''} onClick={() => setTab('graph')}>Machine graph</button>
             <button className={tab === 'values' ? 'on' : ''} onClick={() => setTab('values')}>Item values</button>
           </div>
           {!plan && <p className="muted">Solving…</p>}
           {plan && tab === 'table' && <Results data={data} plan={plan} settings={settings} setSettings={setSettings} />}
+          {plan && tab === 'flow' && <ItemFlow data={data} plan={plan} />}
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}
           {plan && tab === 'values' && <ItemValues plan={plan} settings={settings} />}
         </main>
