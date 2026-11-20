@@ -21,3 +21,8 @@ Cargo.lock
 .idea/aws.xml
 /_from-mac-2026-10-29/
 **/node_modules/
+data/raw/icons/
+docs/research/_过程文件/xiaoxiao/audio/
+docs/research/_过程文件/xiaoxiao/urls.txt
+docs/research/_过程文件/xiaoxiao/*.log
+docs/research/_过程文件/xiaoxiao/*.err

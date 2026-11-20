@@ -33,3 +33,11 @@
 - DSP fractionator speed is set to 30 items/s (Mk.III belt, unstacked) since its rate is
   belt-bound.
 - Game data © Youthcat Studio / Wube Software; only derived numbers are shipped.
+
+## Icons (2026-11-20)
+- `tools/build_icons.py` builds `react-frontend/public/icons/<game>-{original,flat}.webp` sprite sheets
+  (64 px cells) and `<game>.json` (id → cell). 162 Satisfactory, 176 DSP, 203 Factorio icons (items + buildings).
+- Satisfactory: `greeny/SatisfactoryTools` `www/assets/images/items/<slug>_64.png` @2192bd15.
+  DSP/Factorio: FactorioLab `public/data/{dsp,2.0}/icons.webp` @a61e43fd. The art belongs to the games'
+  developers (Coffee Stain, Youthcat, Wube), as in those fan tools.
+- `flat` is generated from the original (palette reduction + outline), not hand-drawn.

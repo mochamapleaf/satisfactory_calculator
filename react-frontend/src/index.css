@@ -86,3 +86,10 @@ th { font-size: 12px; color: var(--muted); font-weight: 500; }
 @keyframes pulse { from { opacity: 0.4 } to { opacity: 1 } }
 .costedit { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .bar { height: 8px; border-radius: 4px; background: var(--solid, #c77d1a); }
+
+/* item / building icons (sprite sheets in public/icons) */
+.icon { display: inline-block; vertical-align: middle; margin-right: 5px; background-repeat: no-repeat; flex: none; image-rendering: auto; }
+.small .icon { margin-right: 3px; }
+.nodehead { display: flex; align-items: center; gap: 2px; justify-content: center; }
+.iconsel select { margin-left: 4px; }
+.gamesel button { white-space: nowrap; }

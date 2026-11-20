@@ -1,4 +1,5 @@
-import { carrier, fmt, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
+import { Icon } from './Icon'
+import { carrier, dn, fmt, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
 
 const groupText = (g: MachineGroup) =>
   `${fmt(g.count)} × ${fmt(g.clock_percent, 2)}%${g.shards ? ` (${g.shards} shard${g.shards > 1 ? 's' : ''})` : ''}`
@@ -22,6 +23,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
   }
   const liquid = (id: string) => data.items.find(i => i.id === id)?.liquid ?? false
   const recipeById = new Map(data.recipes.map(r => [r.id, r]))
+  const bid = (name: string) => data.buildings.find(b => dn(b, data.game) === name || b.name === name)?.id
   const slots = (rid: string) => {
     const b = recipeById.get(rid)?.building
     return data.buildings.find(x => x.id === b)?.somersloop_slots ?? 0
@@ -75,8 +77,8 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
           <tbody>
             {plan.recipes.map(r => (
               <tr key={r.id + '#' + r.mode}>
-                <td>{r.name}{r.alt && <span className="tag">alt</span>}{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
-                <td>{r.building}</td>
+                <td><Icon id={r.outputs[0]?.item} />{r.name}{r.alt && <span className="tag">alt</span>}{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
+                <td><Icon id={bid(r.building)} />{r.building}</td>
                 <td className="num" title={`work = ${fmt(r.throughput, 4)} machines at 100 %`}>
                   {s.integer ? fmt(r.machines) : <>{fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span></>}
                 </td>
@@ -90,8 +92,8 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                     : <span className="muted">—</span>}
                 </td>
                 <td className="num">{fmt(r.power, 1)}</td>
-                <td className="small">{r.inputs.map(l => <div key={l.item}>{fmt(l.rate)} {l.name}</div>)}</td>
-                <td className="small">{r.outputs.map(l => <div key={l.item}>{fmt(l.rate)} {l.name}</div>)}</td>
+                <td className="small">{r.inputs.map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
+                <td className="small">{r.outputs.map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
                 <td><button className="x" title="Exclude this recipe and re-solve" onClick={() => exclude(r.id)}>×</button></td>
               </tr>
             ))}
@@ -109,7 +111,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 const lim = limit(l.item)
                 return (
                   <tr key={l.item}>
-                    <td>{l.name}</td>
+                    <td><Icon id={l.item} />{l.name}</td>
                     <td className="num">{fmt(l.rate)}</td>
                     <td className="num">{lim ? `${fmt((100 * l.rate) / lim, 1)}%` : '—'}</td>
                     <td className="small">{carrier(l.rate, liquid(l.item), data)}</td>
@@ -117,7 +119,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 )
               })}
               {plan.supplied.map(l => (
-                <tr key={'s' + l.item}><td>{l.name} <span className="tag">input</span></td><td className="num">{fmt(l.rate)}</td><td /><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
+                <tr key={'s' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">input</span></td><td className="num">{fmt(l.rate)}</td><td /><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
             </tbody>
           </table>
@@ -128,10 +130,10 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
             <thead><tr><th>Item</th><th className="num">/min</th><th>Carrier</th></tr></thead>
             <tbody>
               {plan.targets.map(l => (
-                <tr key={l.item}><td>{l.name}</td><td className="num">{fmt(l.rate)}</td><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
+                <tr key={l.item}><td><Icon id={l.item} />{l.name}</td><td className="num">{fmt(l.rate)}</td><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
               {plan.surplus.map(l => (
-                <tr key={'x' + l.item}><td>{l.name} <span className="tag">byproduct</span></td><td className="num">{fmt(l.rate)}</td><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
+                <tr key={'x' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">byproduct</span></td><td className="num">{fmt(l.rate)}</td><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
             </tbody>
           </table>

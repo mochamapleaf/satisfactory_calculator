@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { Background, Controls, MarkerType, MiniMap, ReactFlow, type Edge, type Node, Position } from '@xyflow/react'
 import dagre from '@dagrejs/dagre'
-import { carrier, fmt, type GameData, type Plan } from './solver'
+import { Icon } from './Icon'
+import { carrier, dn, fmt, type GameData, type Plan } from './solver'
 
 const W = 190
 const H = 64
@@ -12,7 +13,8 @@ function nodeKind(id: string) {
 
 export default function FlowGraph({ data, plan }: { data: GameData; plan: Plan }) {
   const { nodes, edges } = useMemo(() => {
-    const itemName = new Map(data.items.map(i => [i.id, i.name]))
+    const itemName = new Map(data.items.map(i => [i.id, dn(i, data.game)]))
+    const bid = (name: string) => data.buildings.find(b => dn(b, data.game) === name || b.name === name)?.id
     const liquid = new Set(data.items.filter(i => i.liquid).map(i => i.id))
     const recipes = new Map(plan.recipes.map(r => [r.id, r]))
     const ids = new Set<string>()
@@ -24,7 +26,7 @@ export default function FlowGraph({ data, plan }: { data: GameData; plan: Plan }
         const r = recipes.get(key)!
         return (
           <div>
-            <b>{fmt(r.machines)}× {r.building}</b>
+            <div className="nodehead"><Icon id={r.outputs[0]?.item} size={24} /><Icon id={bid(r.building)} size={24} /><b>{fmt(r.machines)}× {r.building}</b></div>
             <div>{r.name}{r.alt ? ' (alt)' : ''}</div>
             <div className="muted">{fmt(r.power, 1)} MW{r.somersloops ? ` · ${r.somersloops} sloop` : ''}</div>
           </div>
@@ -35,7 +37,7 @@ export default function FlowGraph({ data, plan }: { data: GameData; plan: Plan }
       const rate = kind === 'raw' ? line(plan.raw) : kind === 'sup' ? line(plan.supplied)
         : kind === 'out' ? line(plan.targets) : line(plan.surplus)
       const what = { raw: 'Raw', sup: 'Input', out: 'Output', extra: 'Byproduct', r: '' }[kind]
-      return <div><b>{name}</b><div>{what} · {fmt(rate)}/min</div></div>
+      return <div><div className="nodehead"><Icon id={key} size={24} /><b>{name}</b></div><div>{what} · {fmt(rate)}/min</div></div>
     }
 
     const g = new dagre.graphlib.Graph()

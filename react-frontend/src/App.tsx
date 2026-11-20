@@ -5,6 +5,7 @@ import Sidebar from './Sidebar'
 import Results from './Results'
 import FlowGraph from './FlowGraph'
 import ItemValues from './ItemValues'
+import { ICON_STYLES, IconProvider, loadIconStyle, saveIconStyle, type IconStyle } from './Icon'
 
 type Tab = 'table' | 'graph' | 'values'
 
@@ -13,6 +14,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [settings, setSettings] = useState<Settings>(loadSettings)
   const [tab, setTab] = useState<Tab>('table')
+  const [iconStyle, setIconStyle] = useState<IconStyle>(loadIconStyle)
+  useEffect(() => saveIconStyle(iconStyle), [iconStyle])
 
   useEffect(() => {
     setData(null)
@@ -42,6 +45,7 @@ export default function App() {
   if (!data) return <div className="loading">Loading solver…</div>
 
   return (
+    <IconProvider game={data.game} style={iconStyle}>
     <div className="app">
       <header>
         <h1>Factory Planner</h1>
@@ -52,6 +56,11 @@ export default function App() {
         </div>
         <span className="muted">MILP solver (Rust → WASM) · game data {data.version}</span>
         {solving && <span className="solving">solving…</span>}
+        <label className="iconsel small">Icons{' '}
+          <select value={iconStyle} onChange={e => setIconStyle(e.target.value as IconStyle)}>
+            {ICON_STYLES.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        </label>
       </header>
       <div className="layout">
         <Sidebar data={data} settings={settings} setSettings={setSettings} />
@@ -68,5 +77,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </IconProvider>
   )
 }

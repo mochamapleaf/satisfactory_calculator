@@ -81,3 +81,10 @@ optimum and a user-defined cost function.
   code reuse); SatisfactoryTools images not reusable. **FactorioLab ships Satisfactory 1.2
   data — ours is 1.0: check whether 1.2 changed production numbers.**
 - DSP + Factorio data and modes landed (efd043b); UI game switcher in progress.
+
+## 2026-11-20 — Icons; 笑笑 transcription
+- Local item/building icons for all three games, transparent background, from the sprite sheets the
+  fan tools ship; a generated "Flat 2D" style; header switch Game / Flat 2D / Off (stored per browser).
+  Shown in the plan table, inputs/outputs, raw/outputs, flow-graph nodes, item values and sidebar.
+- 笑笑meow: DSP 最高难度攻略 (20) + Factorio Space Age 全成就 (54) audio fetched via the signed-in
+  page; transcription queued on the shared GPU (`docs/research/_过程文件/xiaoxiao/batch.py`, resumable).

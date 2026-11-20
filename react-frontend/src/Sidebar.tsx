@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Icon } from './Icon'
 import { defaultSettings, dn, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
@@ -26,7 +27,7 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
     <div>
       {list.map((t, i) => (
         <div className="row" key={t.item}>
-          <span className="grow">{name(t.item)}</span>
+          <span className="grow"><Icon id={t.item} />{name(t.item)}</span>
           <input type="number" min={0} step="any" value={t.rate}
             onChange={e => onChange(list.map((x, j) => j === i ? { ...x, rate: Math.max(0, +e.target.value) } : x))} />
           <span className="muted">/min</span>
@@ -75,7 +76,7 @@ function CostEditor({ data, cost, onChange }: { data: GameData; cost: CostWeight
         <summary>Weight per raw resource</summary>
         {data.resources.map(r => (
           <div className="row small" key={r.item}>
-            <span className="grow">{dn(data.items.find(i => i.id === r.item), data.game, r.item)}</span>
+            <span className="grow"><Icon id={r.item} size={16} />{dn(data.items.find(i => i.id === r.item), data.game, r.item)}</span>
             <Num value={cost.resource_weights[r.item]} placeholder={fmt((r as { weight?: number }).weight ?? scarcity(r.limit), 3)}
               onChange={v => perMap('resource_weights', r.item, v)} />
           </div>
@@ -203,7 +204,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
               <label className="row small" key={b.id}>
                 <input type="checkbox" checked={!s.disabled_buildings.includes(b.id)}
                   onChange={() => set({ disabled_buildings: toggle(s.disabled_buildings, b.id) })} />
-                <span className="grow">{dn(b, data.game)}</span>
+                <span className="grow"><Icon id={b.id} />{dn(b, data.game)}</span>
                 <span className="muted">×{b.speed ?? 1}</span>
               </label>
             ))}
@@ -222,7 +223,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           {data.effects!.map(e => (
             <label className="row small" key={e.id}>
               <input type="checkbox" checked={s.effects.includes(e.id)} onChange={() => set({ effects: toggle(s.effects, e.id) })} />
-              <span className="grow">{dn(e, data.game)}</span>
+              <span className="grow"><Icon id={e.item || e.id} />{dn(e, data.game)}</span>
               <span className="muted">
                 {e.productivity ? `+${fmt(100 * e.productivity)}% out ` : ''}{e.speed ? `${e.speed > 0 ? '+' : ''}${fmt(100 * e.speed)}% speed ` : ''}
               </span>

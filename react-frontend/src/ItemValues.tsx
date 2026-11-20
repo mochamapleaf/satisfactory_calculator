@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import { fmt, type Plan, type Settings } from './solver'
 
 // Shadow prices of the continuous relaxation: d(cost) / d(one more unit/min of the item).
@@ -19,7 +20,7 @@ export default function ItemValues({ plan, settings }: { plan: Plan; settings: S
         <tbody>
           {plan.item_values.map(v => (
             <tr key={v.item}>
-              <td>{v.name}</td>
+              <td><Icon id={v.item} />{v.name}</td>
               <td className="num">{fmt(v.value, 4)}</td>
               <td style={{ width: '40%' }}>
                 <div className="bar" style={{ width: `${(100 * Math.abs(v.value)) / max}%`, opacity: v.value < 0 ? 0.4 : 1 }} />
