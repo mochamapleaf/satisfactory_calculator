@@ -605,6 +605,15 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
     plan.columns = inp.units.len();
     plan.rows = inp.items.len();
     plan.quality = quality_on;
+    if s.max_columns > 0 && plan.columns > s.max_columns {
+        plan.status = Status::TooLarge;
+        plan.warnings.push(format!(
+            "Large model: {} columns × {} items (the limit for automatic solving is {}).",
+            plan.columns, plan.rows, s.max_columns
+        ));
+        plan.solve_ms = started.elapsed().as_secs_f64() * 1e3;
+        return plan;
+    }
     // Quality loops run tiers of a recipe on shared machines that switch recipes, which
     // per-column whole buildings would overcount (report §2.1): solve them continuously.
     let integer = s.integer && !quality_on;

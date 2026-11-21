@@ -218,7 +218,7 @@ function QualitySettings({ data, s, set }: { data: GameData; s: Settings; set: (
       <p className="hint">
         {s.recycling === 'chain' && 'Recyclers may take the targets and the items on their ingredient chain, plus the items listed below.'}
         {s.recycling === 'list' && 'Recyclers only take the items listed below.'}
-        {s.recycling === 'all' && 'Every recycling recipe: finds detours through other items, but the model grows to ~16 000 columns and can take minutes.'}
+        {s.recycling === 'all' && 'Every recycling recipe: finds detours through other items, but the model grows to ~16 000 columns and takes minutes, so the planner asks before solving it (and you can cancel).'}
       </p>
       <AllowList data={data} list={s.recycle_allow} onChange={recycle_allow => set({ recycle_allow })} />
       <p className="hint">Quality mining is not modelled yet: ores come in normal quality. Inputs can carry a quality (set it on the row).</p>

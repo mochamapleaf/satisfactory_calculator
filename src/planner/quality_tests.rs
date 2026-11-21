@@ -437,3 +437,47 @@ fn builtin_productivity_on_all_recipes() {
     }
     assert!(modes.iter().any(|m| m.key == "foundry|q4p0"));
 }
+
+/// `max_columns` stops before the LP and reports the model size (front-end guard for the
+/// "all" recycling scope); the size matches the solved model's.
+#[test]
+fn column_limit_reports_size() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = lp_settings("2x1", "iron-gear-wheel@4", 30.0);
+    let solved = plan(&d, &s);
+    s.max_columns = 10;
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::TooLarge);
+    assert_eq!((p.columns, p.rows), (solved.columns, solved.rows));
+    assert!(p.recipes.is_empty());
+    s.max_columns = solved.columns;
+    assert_eq!(plan(&d, &s).status, Status::Optimal);
+    assert_eq!(serde_json::to_string(&Status::TooLarge).unwrap(), "\"too_large\"");
+}
+
+/// Model sizes for picking the front end's automatic-solve limit:
+/// `cargo test --release -- --ignored --nocapture model_sizes`.
+#[test]
+#[ignore]
+fn model_sizes() {
+    let cases: &[(&str, &str, &str, &str, bool)] = &[
+        ("satisfactory", "", "Desc_SpaceElevatorPart_9_C", "", true),
+        ("satisfactory", "", "Desc_SpaceElevatorPart_12_C", "", true),
+        ("dsp", "", "universe-matrix", "", false),
+        ("factorio", "2x1", "promethium-science-pack", "", false),
+        ("factorio", "2x1", "quantum-processor@4", "chain", false),
+        ("factorio", "2x1", "processing-unit@4", "chain", false),
+        ("factorio", "2x1", "iron-gear-wheel@4", "all", false),
+    ];
+    for (game, ds, target, scope, alts) in cases {
+        let d = GameData::for_set(game, ds);
+        let mut s = lp_settings(ds, target, 10.0);
+        s.game = game.to_string();
+        s.allow_all_alternates = *alts;
+        s.recycling = if scope.is_empty() { "chain".into() } else { scope.to_string() };
+        s.effects = d.effects.iter().map(|e| e.id.clone()).collect();
+        s.max_columns = 1;
+        let p = plan(&d, &s);
+        println!("{game} {ds} {target} {scope}: {} columns, {} rows {:?}", p.columns, p.rows, p.warnings.first());
+    }
+}

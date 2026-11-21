@@ -117,6 +117,8 @@ export interface Settings {
   /** Items whose recycling is allowed in any scope. */
   recycle_allow: string[]
   research_productivity: Record<string, number>
+  /** Solver guard: models with more columns are not solved (0 = no limit). Set per request, not saved. */
+  max_columns?: number
 }
 
 export interface RateLine { item: string; name: string; rate: number }
@@ -136,7 +138,8 @@ export interface MachineGroup { count: number; clock_percent: number; shards: nu
 export interface ItemValue { item: string; name: string; value: number }
 export interface Flow { from: string; to: string; item: string; name: string; rate: number }
 export interface Plan {
-  status: 'empty' | 'optimal' | 'infeasible' | 'unbounded' | 'error'
+  /** too_large: over `max_columns`, not solved (columns / rows set); cancelled: stopped by the user or a newer request. */
+  status: 'empty' | 'optimal' | 'infeasible' | 'unbounded' | 'error' | 'too_large' | 'cancelled'
   objective: number; targets: RateLine[]; recipes: PlanRecipe[]; raw: RateLine[]; supplied: RateLine[]
   surplus: RateLine[]; production_power: number; extraction_power: number; buildings: number
   shards: number; somersloops: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
@@ -145,6 +148,12 @@ export interface Plan {
   /** Model size: solver columns and item rows; quality = item@q expansion was used. */
   columns?: number; rows?: number; quality?: boolean
 }
+
+export const emptyPlan = (): Plan => ({
+  status: 'empty', objective: 0, targets: [], recipes: [], raw: [], supplied: [], surplus: [], production_power: 0,
+  extraction_power: 0, buildings: 0, shards: 0, somersloops: 0, proven_optimal: false, gap: null, lp_bound: 0, solve_ms: 0,
+  item_values: [], flows: [], warnings: [],
+})
 
 const DEFAULT_TARGET: Record<Game, ItemRate> = {
   satisfactory: { item: 'Desc_IronPlateReinforced_C', rate: 10 },
@@ -209,25 +218,43 @@ export function solve(s: Settings): Plan {
   return JSON.parse(solve_json(JSON.stringify(s))) as Plan
 }
 
-// Solves in a Web Worker; a newer request supersedes older ones.
+// Solves in a Web Worker; a newer request supersedes older ones. WASM cannot be interrupted,
+// so a request still running when a newer one (or a cancel) arrives terminates the worker and
+// the next request starts a fresh one; the superseded promise resolves as 'cancelled'.
 let worker: Worker | null = null
 let seq = 0
-const pending = new Map<number, (p: Plan) => void>()
+let running: { id: number; resolve: (p: Plan) => void } | null = null
+const cancelled = (): Plan => ({ ...emptyPlan(), status: 'cancelled' })
+function stopWorker() {
+  worker?.terminate()
+  worker = null
+  const r = running
+  running = null
+  r?.resolve(cancelled())
+}
 export function solveAsync(s: Settings): Promise<Plan> {
+  if (running) stopWorker()
   if (!worker) {
     worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
     worker.onmessage = (e: MessageEvent<{ id: number; plan: string }>) => {
-      const done = pending.get(e.data.id)
-      pending.delete(e.data.id)
-      done?.(JSON.parse(e.data.plan) as Plan)
+      if (running?.id !== e.data.id) return
+      const r = running
+      running = null
+      r.resolve(JSON.parse(e.data.plan) as Plan)
     }
   }
   const id = ++seq
   return new Promise(resolve => {
-    pending.set(id, resolve)
+    running = { id, resolve }
     worker!.postMessage({ id, settings: JSON.stringify(s) })
   })
 }
+/** Stop the running solve (if any); its promise resolves with status 'cancelled'. */
+export function cancelSolve() {
+  if (running) { seq++; stopWorker() }
+}
+/** Models above this many columns are not solved until the user asks (status 'too_large'). */
+export const AUTO_SOLVE_COLUMNS = 6000
 export const latestRequest = () => seq
 
 /** Smallest belt / pipe tier that carries `rate`, e.g. "Mk.3" or "2× Mk.6". */

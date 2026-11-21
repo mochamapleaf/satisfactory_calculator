@@ -268,7 +268,7 @@ fn objectives_on_complex_chains() {
                 s.objective = obj;
                 s.allow_all_alternates = alts;
                 let p = plan(&d, &s);
-                assert_eq!(p.status, Status::Optimal, "{target} {obj:?} alts={alts}");
+                assert_eq!(p.status, Status::Optimal, "{target} {obj:?} alts={alts} {:?}", p.warnings);
                 assert_balanced(&p);
                 assert!(!p.flows.is_empty());
             }

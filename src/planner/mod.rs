@@ -155,6 +155,9 @@ pub struct PlanSettings {
     pub recycle_allow: Vec<String>,
     /// Researched productivity per recipe id (0.1 per level), counted against the +300 % cap.
     pub research_productivity: HashMap<String, f64>,
+    /// Do not solve models with more columns than this (0 = no limit): the plan comes back
+    /// with status `TooLarge` and its size, so the front end can ask before a minutes-long solve.
+    pub max_columns: usize,
 }
 
 impl Default for PlanSettings {
@@ -189,6 +192,7 @@ impl Default for PlanSettings {
             recycling: "chain".into(),
             recycle_allow: vec![],
             research_productivity: HashMap::new(),
+            max_columns: 0,
         }
     }
 }
@@ -215,6 +219,9 @@ pub enum Status {
     Optimal,
     Infeasible,
     Unbounded,
+    /// Model larger than `PlanSettings::max_columns`: not solved (`columns` / `rows` are set).
+    #[serde(rename = "too_large")]
+    TooLarge,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
