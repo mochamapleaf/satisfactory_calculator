@@ -379,3 +379,118 @@ fn every_game_solves_its_items() {
         assert!(bad.is_empty(), "{g}: unsolvable {bad:?}");
     }
 }
+
+fn dsp_compute(targets: &[(&str, f64)]) -> (GameData, PlanSettings) {
+    let (d, mut s) = game("dsp", targets);
+    s.objective = Objective::Compute;
+    s.disabled_buildings = vec!["df-negentropy-smelter".into(), "df-recomposing-assembler".into(), "df-self-evolution-lab".into()];
+    (d, s)
+}
+
+#[test]
+fn compute_model_loads_report_coefficients() {
+    let m = compute::model();
+    assert_eq!(m.buildings["assembling-machine-3"], 1.0);
+    assert_eq!(m.buildings["matrix-lab"], 1.5);
+    assert!(close(m.sorter, 0.12) && close(m.per_machine, 0.13) && close(m.coater, 0.02));
+    assert!(close(m.cost_per_mw("artificial_star"), 0.0056) && close(m.cost_per_mw("wind"), 0.5));
+    assert_eq!(m.us_per_unit, (0.5, 0.2, 1.0));
+    assert_eq!(m.sorter_capacity, 7200.0);
+}
+
+#[test]
+fn compute_objective_hand_computed() {
+    // 120 iron ingots/min: one Plane Smelter (speed 2, 1.44 MW), 1 in + 1 out sorter.
+    let (d, s) = dsp_compute(&[("iron-ingot", 120.0)]);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert_eq!(p.buildings, 1.0);
+    let c = p.compute.as_ref().unwrap();
+    let expect = 1.0 + 0.12 * 2.0 + 0.13 + 0.0056 * 1.44;
+    assert!(close(c.total, expect), "{} vs {expect}", c.total);
+    assert!(close(p.recipes[0].compute, expect));
+    // objective = compute + raw tie-break (0.001 × weight 1 × 120 ore)
+    assert!(close(p.objective, expect + 0.001 * 120.0), "{}", p.objective);
+    assert!(close(c.us_per_tick, 0.5 * expect) && close(c.us_low, 0.2 * expect));
+    // mixed belts: still one input port here; wind power: generation 0.5/MW
+    let mut w = s.clone();
+    w.generator = "wind".into();
+    let pw = plan(&d, &w);
+    assert!(close(pw.compute.unwrap().total, 1.0 + 0.24 + 0.13 + 0.5 * 1.44));
+}
+
+#[test]
+fn compute_prefers_top_tier_and_counts_sorters() {
+    // 600 ingots/min: 5 Plane Smelters (not 10 Arc Smelters), even with wind power
+    for g in ["artificial_star", "wind"] {
+        let (d, mut s) = dsp_compute(&[("iron-ingot", 600.0)]);
+        s.generator = g.into();
+        let p = plan(&d, &s);
+        assert_eq!(p.buildings, 5.0, "{g}");
+        assert!(p.recipes.iter().all(|r| r.building != "电弧熔炉"), "{g}");
+    }
+    // mixed belts merge the inputs into one sorter: a 3-input recipe gets cheaper by 2 × 0.12
+    let (d, mut s) = dsp_compute(&[("processor", 60.0)]);
+    s.integer = false;
+    let sep = plan(&d, &s).compute.unwrap();
+    s.mixed_belts = true;
+    let mix = plan(&d, &s).compute.unwrap();
+    assert!(mix.sorters < sep.sorters - 1e-6 && close(mix.machines, sep.machines));
+}
+
+fn sprayed_modes(p: &Plan) -> HashMap<String, String> {
+    p.recipes.iter().map(|r| (r.id.clone(), r.mode.clone())).collect()
+}
+
+#[test]
+fn compute_picks_proliferator_mode_per_recipe() {
+    // Report §3.2/§4.3: top recipes (universe matrix, processors…) use extra products,
+    // bottom smelting uses speedup; the proliferator line itself is in the plan.
+    let (d, mut s) = dsp_compute(&[("universe-matrix", 60.0)]);
+    s.integer = false;
+    s.effects = vec!["proliferator-3-speed".into(), "proliferator-3-products".into()];
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert_balanced(&p);
+    let modes = sprayed_modes(&p);
+    assert!(modes["universe-matrix"].ends_with("proliferator-3-products"), "{modes:?}");
+    assert!(modes["iron-ingot"].ends_with("proliferator-3-speed"), "{modes:?}");
+    assert!(modes.contains_key("proliferator-3"));
+    // much cheaper than without proliferator; never worse than the Buildings plan
+    let c = p.compute.as_ref().unwrap().total;
+    let mut none = s.clone();
+    none.effects.clear();
+    let c_none = plan(&d, &none).compute.unwrap().total;
+    assert!(c < 0.7 * c_none, "{c} vs {c_none}");
+    let mut b = s.clone();
+    b.objective = Objective::Buildings;
+    let c_b = plan(&d, &b).compute.unwrap().total;
+    assert!(c <= c_b + 1e-6, "{c} vs buildings {c_b}");
+    // wind power makes MW dear: fewer sprayed recipes (report §4.3)
+    let mut wind = s.clone();
+    wind.generator = "wind".into();
+    let pw = plan(&d, &wind);
+    let sprayed = |p: &Plan| p.recipes.iter().filter(|r| r.mode.contains("proliferator")).count();
+    assert!(sprayed(&pw) < sprayed(&p), "{} vs {}", sprayed(&pw), sprayed(&p));
+}
+
+#[test]
+#[ignore]
+fn compute_universe_matrix_report() {
+    // cargo test -q compute_universe -- --ignored --nocapture: 60 universe matrix/min, preset comparison
+    let (d, mut s) = dsp_compute(&[("universe-matrix", 60.0)]);
+    for (gen, fx) in [("artificial_star", true), ("wind", true), ("artificial_star", false)] {
+        s.generator = gen.into();
+        s.effects = if fx { vec!["proliferator-3-speed".into(), "proliferator-3-products".into()] } else { vec![] };
+        for obj in [Objective::Compute, Objective::Buildings] {
+            s.objective = obj;
+            let p = plan(&d, &s);
+            let c = p.compute.as_ref().unwrap();
+            let sprayed = p.recipes.iter().filter(|r| r.mode.contains("proliferator")).count();
+            println!(
+                "{gen:15} prolif {fx:5} {obj:?}: {} buildings, {:.1} MW, compute {:.1} (sorters {:.1}, gen {:.1}) ≈ {:.0} µs, sprayed {sprayed}/{} gap {:?}",
+                p.buildings, p.production_power, c.total, c.sorters, c.generation, c.us_per_tick, p.recipes.len(), p.gap
+            );
+        }
+    }
+}

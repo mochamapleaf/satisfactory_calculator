@@ -21,6 +21,13 @@ pub fn game_data_json(game: &str) -> String {
     planner::data::embedded(game).to_string()
 }
 
+/// DSP Compute (UPS) objective weights for a generator (`artificial_star`, `wind`, …), as a
+/// `CostWeights` JSON; coefficients from docs/research/dsp-ups/model.json.
+#[wasm_bindgen]
+pub fn compute_weights_json(generator: &str) -> String {
+    serde_json::to_string(&planner::compute::model().weights(generator)).unwrap()
+}
+
 /// Solve a plan. `settings_json` is a `PlanSettings` (its `game` picks the data); returns a
 /// `Plan` as JSON.
 #[wasm_bindgen]

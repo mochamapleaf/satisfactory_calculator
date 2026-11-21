@@ -30,6 +30,8 @@ pub struct Mode {
     /// Boost items held by each building of this mode.
     pub held: Vec<(String, f64)>,
     pub somersloops: u32,
+    /// Runs on proliferated inputs (needs spray coaters).
+    pub sprayed: bool,
 }
 
 pub fn modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
@@ -71,6 +73,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
             extra_inputs: vec![],
             held: vec![],
             somersloops: 0,
+            sprayed: false,
         });
         if b.modules == 0 {
             continue;
@@ -102,6 +105,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     extra_inputs: vec![(e.item.clone(), per_work)],
                     held: vec![],
                     somersloops: 0,
+                    sprayed: true,
                 }
             } else {
                 let n = b.modules as f64;
@@ -117,6 +121,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     extra_inputs: vec![],
                     held: vec![(e.item.clone(), n)],
                     somersloops: 0,
+                    sprayed: false,
                 }
             };
             out.push(mode);
@@ -151,6 +156,7 @@ fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode
                 extra_inputs: vec![],
                 held: if k == 0 { vec![] } else { vec![(SOMERSLOOP.into(), k as f64)] },
                 somersloops: k,
+                sprayed: false,
             }
         })
         .collect()

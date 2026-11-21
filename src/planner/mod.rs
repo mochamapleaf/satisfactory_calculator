@@ -1,5 +1,6 @@
 //! Production planner: data model, the original square incidence-matrix solver, and the
 //! LP solver that generalises it (multiple recipes per item, byproducts, limits).
+pub mod compute;
 pub mod data;
 pub mod flows;
 pub mod lp;
@@ -24,6 +25,9 @@ pub enum Objective {
     Buildings,
     /// Minimise power (production + extraction); one building costs as much as 1 MW.
     Power,
+    /// DSP: minimise compute (UPS): per-building tick cost + sorters + logistics +
+    /// generation, coefficients from the dsp-ups research model (`compute.rs`).
+    Compute,
     /// User-defined weights in `cost`.
     Custom,
 }
@@ -32,6 +36,7 @@ pub enum Objective {
 ///
 ///   resources·Σ w_i·raw_i + buildings·Σ w_b·n_r + power·MW + shards·Σ s_r
 ///   + surplus·Σ byproduct_i
+///   + Σ_r n_r·(sorter·k_r + per_machine + coater·[sprayed])      (compute terms)
 ///
 /// Rates are per minute. Per-item and per-building weights default to scarcity / 1.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -46,6 +51,12 @@ pub struct CostWeights {
     pub resource_weights: HashMap<String, f64>,
     /// Per building id, cost per building (default 1).
     pub building_weights: HashMap<String, f64>,
+    /// Per sorter port of each building (k_r ports, see `compute::sorters_per_machine`).
+    pub sorter: f64,
+    /// Per building, flat (belt + logistics-station share).
+    pub per_machine: f64,
+    /// Per building of a proliferator mode (spray-coater share).
+    pub coater: f64,
 }
 
 impl Default for CostWeights {
@@ -60,6 +71,7 @@ impl Objective {
             Objective::Resources | Objective::Custom => (1.0, 0.01, 0.0, 0.01),
             Objective::Buildings => (0.001, 1.0, 0.0, 0.01),
             Objective::Power => (0.001, 1.0, 1.0, 0.01),
+            Objective::Compute => return compute::model().weights(compute::GENERATORS[0]),
         };
         CostWeights {
             resources,
@@ -69,6 +81,9 @@ impl Objective {
             surplus: 0.0,
             resource_weights: HashMap::new(),
             building_weights: HashMap::new(),
+            sorter: 0.0,
+            per_machine: 0.0,
+            coater: 0.0,
         }
     }
 }
@@ -119,6 +134,10 @@ pub struct PlanSettings {
     pub cost: CostWeights,
     /// Branch-and-bound time limit; the best plan found so far is returned on timeout.
     pub time_limit_ms: u64,
+    /// Compute objective: generator powering the plan (`compute::GENERATORS`).
+    pub generator: String,
+    /// Compute objective: all inputs of a machine share one mixed belt (one input sorter).
+    pub mixed_belts: bool,
 }
 
 impl Default for PlanSettings {
@@ -144,6 +163,8 @@ impl Default for PlanSettings {
             shard_budget: None,
             cost: CostWeights::default(),
             time_limit_ms: 4000,
+            generator: compute::GENERATORS[0].into(),
+            mixed_belts: false,
         }
     }
 }
@@ -156,6 +177,7 @@ impl PlanSettings {
     pub fn weights(&self) -> CostWeights {
         match self.objective {
             Objective::Custom => self.cost.clone(),
+            Objective::Compute => compute::model().weights(&self.generator),
             o => o.preset(),
         }
     }
@@ -206,6 +228,9 @@ pub struct PlanRecipe {
     pub inputs: Vec<RateLine>,
     pub outputs: Vec<RateLine>,
     pub somersloops: u32,
+    /// DSP: this recipe's compute cost (units per tick, incl. its power), any objective.
+    #[serde(default)]
+    pub compute: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,6 +255,24 @@ pub struct Flow {
     pub item: String,
     pub name: String,
     pub rate: f64,
+}
+
+/// DSP compute cost: totals in model units (1 = one machine per tick) and CPU time.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ComputeSummary {
+    pub total: f64,
+    /// Buildings (c_bld), sorters, belts + stations, coaters, generation.
+    pub machines: f64,
+    pub sorters: f64,
+    pub logistics: f64,
+    pub coaters: f64,
+    pub generation: f64,
+    pub generator: String,
+    pub cost_per_mw: f64,
+    /// CPU µs per tick summed over threads: estimate and range (report §2.1).
+    pub us_per_tick: f64,
+    pub us_low: f64,
+    pub us_high: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -258,6 +301,8 @@ pub struct Plan {
     pub item_values: Vec<ItemValue>,
     pub flows: Vec<Flow>,
     pub warnings: Vec<String>,
+    /// DSP plans: compute (UPS) cost under the dsp-ups model, whatever the objective.
+    pub compute: Option<ComputeSummary>,
 }
 
 pub fn plan(data: &GameData, settings: &PlanSettings) -> Plan {

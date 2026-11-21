@@ -22,9 +22,11 @@
 //! Byproducts leave through e_i. One-recipe-per-item chains reduce to the square-matrix
 //! solution of `matrix.rs` (in LP mode).
 use super::data::{GameData, Recipe};
+use super::compute;
 use super::rules::{self, Mode};
 use super::{
-    CostWeights, ItemValue, MachineGroup, Plan, PlanRecipe, PlanSettings, RateLine, Status,
+    ComputeSummary, CostWeights, ItemValue, MachineGroup, Plan, PlanRecipe, PlanSettings,
+    RateLine, Status,
 };
 use microlp::{
     ComparisonOp, OptimizationDirection, Problem, Solution, SolutionStatus, SolveOptions,
@@ -194,8 +196,10 @@ fn build_scaled(
     for u in &inp.units {
         let f = &u.mode;
         let x = p.add_var(0.0, (0.0, f64::INFINITY));
+        // building weight plus the per-building compute terms (sorters, logistics, coaters);
+        // added here, not in `scale`, which is a multiplier rebuilt every heuristic round
         let wb = w.buildings
-            * w.building_weights.get(&f.building).copied().unwrap_or(1.0)
+            * compute::machine_cost(w, u.recipe, f, s.mixed_belts)
             * scale.get(&u.key).copied().unwrap_or(1.0);
         let (c_max, k_max) = if f.overclock { (c_max, k_max) } else { (1.0, 0) };
         let n = if integer {
@@ -425,6 +429,9 @@ fn finish(
     let name = |id: &str| names.get(id).copied().unwrap_or(id).to_string();
     let clean = |v: f64| if v.abs() < 1e-7 { 0.0 } else { v };
     let c_max = s.max_clock();
+    let mut summary: Option<ComputeSummary> = None;
+    // DSP: compute cost of every plan (whatever the objective), so presets compare
+    let cw = (data.game == "dsp").then(|| compute::model().weights(&s.generator));
     for (u, v) in inp.units.iter().zip(&m.rv) {
         let (r, f) = (u.recipe, &u.mode);
         let c_max = if f.overclock { c_max } else { 1.0 };
@@ -470,7 +477,27 @@ fn finish(
                 .map(|(i, q)| RateLine::new(i, &name(i), q * f.out_mult * x))
                 .collect(),
             somersloops: f.somersloops,
+            compute: 0.0,
         });
+        if let Some(w) = &cw {
+            let k = compute::sorters_per_machine(r, f, s.mixed_belts, compute::model().sorter_capacity);
+            let bw = w.building_weights.get(&f.building).copied().unwrap_or(1.0);
+            let parts = [
+                n * bw,
+                n * w.sorter * k,
+                n * w.per_machine,
+                if f.sprayed { n * w.coater } else { 0.0 },
+                w.power * power,
+            ];
+            let c = summary.get_or_insert_with(ComputeSummary::default);
+            for (acc, v) in [&mut c.machines, &mut c.sorters, &mut c.logistics, &mut c.coaters, &mut c.generation]
+                .into_iter()
+                .zip(parts)
+            {
+                *acc += v;
+            }
+            plan.recipes.last_mut().unwrap().compute = parts.iter().sum();
+        }
     }
     plan.recipes.sort_by(|a, b| a.name.cmp(&b.name));
     for (it, v) in &m.raw {
@@ -501,6 +528,17 @@ fn finish(
     plan.shards = plan.recipes.iter().map(|r| r.shards).sum();
     plan.somersloops = plan.recipes.iter().map(|r| r.machines * r.somersloops as f64).sum();
     plan.flows = super::flows::allocate(plan);
+    if let Some(w) = &cw {
+        let mut c = summary.unwrap_or_default();
+        let model = compute::model();
+        c.generation += w.power * plan.extraction_power;
+        c.total = c.machines + c.sorters + c.logistics + c.coaters + c.generation;
+        c.generator = s.generator.clone();
+        c.cost_per_mw = w.power;
+        let (us, lo, hi) = model.us_per_unit;
+        (c.us_per_tick, c.us_low, c.us_high) = (c.total * us, c.total * lo, c.total * hi);
+        plan.compute = Some(c);
+    }
 }
 
 pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
