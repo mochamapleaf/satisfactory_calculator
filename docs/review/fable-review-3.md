@@ -293,3 +293,41 @@ Regression against b6c29d5 (20 plans): Satisfactory and DSP plans identical; Fac
 through fuel, heat and beacon power (steel furnaces give way to electric furnaces, steam needs coal or
 reactor heat, F7 beacon power 3.92 → 4.27 MW). `cargo test -q` 56 passed / 4 ignored; wasm, `tsc -b`,
 `vite build` pass.
+
+
+---
+
+## Resolution (geo)
+
+Date 2026-11-21, branch `refactor`. Files: `tools/geo_solve.py`, `tools/geo_solve_test.py`, new `tools/geo_breakeven.py`
+and `tools/geo_experiments.py`, `docs/research/satisfactory-geo/00-最终报告.md` (new §8.5, summary item 8, §11),
+`_过程文件/impl-progress.md` (R1 entries), regenerated sweeps, plots and `exp_*.json` / `breakeven.*`.
+
+- **H1 fixed.** `per_min()` no longer multiplies by 60/time. Test `test_machine_counts_hand_values`: 10 HMF/min ->
+  5 Manufacturers, 25 Modular Frame assemblers (solved), 12 000 plate/min -> 600 Constructors + 600 Smelters; the
+  machine cost part is reassembled from counts x building OE. Default instance now 35 417.31 OE (was 16 710.03).
+- **H2 fixed.** The "rail never beats belts" sentence is replaced in impl-progress and the report (§0 item 8, §8.5)
+  by the break-even statement and real-map results, all with both solves proven optimal:
+  12 000 plate/min at Sm3_0: rail 95 123.6 vs belts 99 386.2 (-4.3 %; hubs Sm1_2 + Sm3_0, 3.5 km, 5 cars,
+  5 760/min by rail); 24 000: -7.9 %; 1 500-9 000: belts only. Closed-form thresholds (`geo_breakeven.py`): rail pays
+  from about 5 000-6 000 items/min (stack >= 200) on 2-3 km+ routes, 6 000-11 000 ore/min at 3-5 km, not under ~2 km.
+  Per-km work weight `work_km` added and swept (250 / 1 000 OE/km: -7.9 % / -15.9 % at 12 000 plate) next to F
+  (p sweep `_plate12k`: p* = 2 at F 0.5x/1x, 0 at 2x). `geo_experiments.py` labels a comparison conclusive only when
+  both solves are optimal or the difference exceeds the gap; `test_rail_free_not_worse` now requires both optimal.
+  Transport-needing instances added: volume series at Sm3_0 and `machines_at` (machines only at the demand site).
+- **M3 fixed.** Supply per node from `node_rate(node, tier, belt_cap, pipe_cap)`: miner Mk.1/2/3 at T0/T4/T8,
+  oil T5, wells T8, 250 % from T3, capped at one belt/pipe of the tier (pure node at T8: 780). `test_tier_supply`.
+- **M4 fixed.** Hand-value tests (machine counts, RtD/platform literals), `test_two_site_closed_form` (synthetic
+  two-site map; 780/min -> one belt 7 583.3 OE, 7 800/min -> rail 62 199 OE with 21 cars; objective asserted),
+  `test_fluid_pipes` (1 500 m3/min oil at S0_m1, pipe capacity). `check()` now also verifies pipe capacity, fluid
+  cars and fluid platforms, and recomputes the objective from physical quantities and the cost table.
+- **M5 addressed.** All departures listed in the `geo_solve.py` docstring and report §8.5 (private track per pair,
+  one belt tier, 2-belt platform feed, no platform cap / power, per-site feed distance, heuristic C-bar). C-bar is now
+  2x the LP-derived need +1 and `check()` reports any direction that reaches it (none did). Shared track is not
+  implemented; the mode conclusion rests on the two-hub 12 000-plate result, the three-hub case is flagged as
+  conservative.
+- **L8 addressed.** W_RAW / OE caveats (flat across purity and tier, water 0 makes alclad belts cheap) stated next
+  to the results in report §8.5.
+- **L9 tested.** Hubs re-picked from belt-only flow (`geo_experiments.py hubs`) drop the Sm1_2-Sm3_0 pair and fall
+  back to belts (99 386.2), so the sites.json rule is kept; hub choice is listed as open in report §11.
+- Tests: `python -I tools/geo_solve_test.py` -> 12 tests pass (303 s; the 120 HMF stress case stops at its 180 s limit with a 3.4 % gap and passes the checker). Commit 0805af3.
