@@ -1,4 +1,4 @@
-import { Icon } from './Icon'
+import { Icon, RemoveMark } from './Icon'
 import { carrier, dn, fmt, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
 
 const groupText = (g: MachineGroup) =>
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function Results({ data, plan, settings: s, setSettings }: Props) {
-  if (plan.status === 'empty') return <p className="muted">Add a target item on the left.</p>
+  if (plan.status === 'empty') return <p className="muted">Add a target item to start a plan.</p>
   if (plan.status !== 'optimal') {
     return (
       <div className="warn">
@@ -53,9 +53,9 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
     <div className="results">
       <div className="cards">
         <div className="card"><div className="big">{fmt(plan.buildings, 0)}</div><div className="muted">production buildings</div></div>
-        <div className="card"><div className="big">{fmt(plan.production_power, 1)} MW</div><div className="muted">production power</div></div>
-        <div className="card"><div className="big">{fmt(plan.extraction_power, 1)} MW</div><div className="muted">extraction (estimate)</div></div>
-        <div className="card"><div className="big">{fmt(plan.production_power + plan.extraction_power, 1)} MW</div><div className="muted">total</div></div>
+        <div className="card"><div className="big">{fmt(plan.production_power, 1)}<span className="unit">MW</span></div><div className="muted">production power</div></div>
+        <div className="card"><div className="big">{fmt(plan.extraction_power, 1)}<span className="unit">MW</span></div><div className="muted">extraction, est.</div></div>
+        <div className="card"><div className="big">{fmt(plan.production_power + plan.extraction_power, 1)}<span className="unit">MW</span></div><div className="muted">total power</div></div>
         {plan.shards > 0 && <div className="card"><div className="big">{fmt(plan.shards, 0)}</div><div className="muted">power shards</div></div>}
         {totalSloops > 0 && <div className="card"><div className="big">{fmt(totalSloops, 0)}</div><div className="muted">Somersloops</div></div>}
         <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}`}>
@@ -66,7 +66,9 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       {plan.warnings.map(w => <p className="warn" key={w}>{w}</p>)}
 
       <h3>Buildings</h3>
-      <p>{[...byBuilding].map(([b, n]) => `${n}× ${b}`).join(' · ')}</p>
+      <ul className="chips">
+        {[...byBuilding].map(([b, n]) => <li key={b}><Icon id={bid(b)} size={18} /><b>{n}×</b> {b}</li>)}
+      </ul>
 
       <h3>Recipes</h3>
       <div className="tablewrap">
@@ -94,7 +96,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 <td className="num">{fmt(r.power, 1)}</td>
                 <td className="small">{r.inputs.map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
                 <td className="small">{r.outputs.map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
-                <td><button className="x" title="Exclude this recipe and re-solve" onClick={() => exclude(r.id)}>×</button></td>
+                <td><button className="x" title="Exclude this recipe and re-solve" aria-label={`Exclude ${r.name}`} onClick={() => exclude(r.id)}><RemoveMark /></button></td>
               </tr>
             ))}
           </tbody>
@@ -104,7 +106,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       <div className="cols">
         <div>
           <h3>Raw resources</h3>
-          <table>
+          <div className="tablewrap"><table>
             <thead><tr><th>Resource</th><th className="num">/min</th><th className="num">of world max</th><th>Carrier</th></tr></thead>
             <tbody>
               {plan.raw.map(l => {
@@ -122,11 +124,11 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 <tr key={'s' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">input</span></td><td className="num">{fmt(l.rate)}</td><td /><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
         <div>
           <h3>Outputs</h3>
-          <table>
+          <div className="tablewrap"><table>
             <thead><tr><th>Item</th><th className="num">/min</th><th>Carrier</th></tr></thead>
             <tbody>
               {plan.targets.map(l => (
@@ -136,7 +138,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 <tr key={'x' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">byproduct</span></td><td className="num">{fmt(l.rate)}</td><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
     </div>

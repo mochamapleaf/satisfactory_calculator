@@ -15,20 +15,20 @@ export default function ItemValues({ plan, settings }: { plan: Plan; settings: S
         at its limit shows how much the plan would gain per extra unit/min; a byproduct with value 0
         is free to dump.
       </p>
-      <table>
-        <thead><tr><th>Item</th><th className="num">Value</th><th></th></tr></thead>
+      <div className="tablewrap"><table>
+        <thead><tr><th>Item</th><th className="num">Value</th><th>Relative</th></tr></thead>
         <tbody>
           {plan.item_values.map(v => (
             <tr key={v.item}>
               <td><Icon id={v.item} />{v.name}</td>
               <td className="num">{fmt(v.value, 4)}</td>
-              <td style={{ width: '40%' }}>
+              <td style={{ width: '40%', verticalAlign: 'middle' }}>
                 <div className="bar" style={{ width: `${(100 * Math.abs(v.value)) / max}%`, opacity: v.value < 0 ? 0.4 : 1 }} />
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       <p className="hint">Continuous lower bound on the cost: {fmt(plan.lp_bound, 3)} · whole-building plan: {fmt(plan.objective, 3)}</p>
     </div>
   )

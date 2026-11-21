@@ -202,16 +202,16 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
   return (
     <div className="results">
       <p className="hint">
-        Band width = items per minute. Each item node's height is its total rate; hover a node to follow it.
-        {backs.length > 0 && <> <b>{backs.length}</b> loop edge(s) (an item feeding back into its own chain) are drawn as thin dashed lines below, labelled with their rate.</>}
-        {' '}↻ on a recipe = amount it makes and immediately reuses itself; only the net is drawn.
+        Band width is items per minute, and each item bar is as tall as its total rate. Hover a bar to follow it.
+        {backs.length > 0 && <> {backs.length === 1 ? 'One loop edge' : `${backs.length} loop edges`} (an item feeding back into its own chain) {backs.length === 1 ? 'is' : 'are'} drawn as thin dashed lines below the chart.</>}
+        {' '}↻ on a recipe marks what it makes and reuses itself; only the net amount is drawn.
       </p>
       <div className="sankeywrap">
         <svg width={g.width} height={H} className="sankey" onMouseLeave={() => setFocus(null)}>
           {g.links.map((l, i) => (
             <path key={i} d={pathOf(l, backs.indexOf(l))} fill="none"
-              stroke={`hsl(${hue(l.item)} 55% 55%)`} strokeWidth={l.w}
-              strokeOpacity={near(l) ? (l.back ? 0.55 : 0.4) : 0.06}
+              strokeWidth={l.w}
+              style={{ stroke: `hsl(${hue(l.item)} var(--sk-sat) var(--sk-link-l))`, strokeOpacity: near(l) ? (l.back ? 'calc(var(--sk-link-op) + 0.2)' : 'var(--sk-link-op)') : 0.06 }}
               strokeDasharray={l.back ? '6 4' : undefined}>
               <title>{`${fmt(l.rate)}/min ${names.get(l.item) ?? l.item}: ${nodeName(l.from)} → ${nodeName(l.to)}${l.back ? ' (loop)' : ''}`}</title>
             </path>
@@ -228,7 +228,7 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
           {g.nodes.map(n => (
             <g key={n.id} onMouseEnter={() => setFocus(n.id)} className={`snode snode-${n.kind}`}>
               <rect x={x(n)} y={n.y} width={NODE_W} height={n.h} rx={2}
-                fill={n.kind === 'item' ? `hsl(${hue(n.icon ?? '')} 55% 45%)` : n.kind === 'recipe' ? 'var(--fg)' : 'var(--muted)'} />
+                style={{ fill: n.kind === 'item' ? `hsl(${hue(n.icon ?? '')} var(--sk-sat) var(--sk-node-l))` : n.kind === 'recipe' ? 'var(--fg)' : 'var(--muted)' }} />
               <foreignObject x={x(n) + NODE_W + 4} y={n.y + n.h / 2 - 11} width={COL - NODE_W - 10} height={34}>
                 <div className={`slabel ${n.kind}`}>
                   {n.kind !== 'src' && n.kind !== 'sink' && <Icon id={n.icon} size={18} />}

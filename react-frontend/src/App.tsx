@@ -9,6 +9,7 @@ import ItemFlow from './ItemFlow'
 import { ICON_STYLES, IconProvider, loadIconStyle, saveIconStyle, type IconStyle } from './Icon'
 
 type Tab = 'table' | 'flow' | 'graph' | 'values'
+const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values']]
 
 export default function App() {
   const [data, setData] = useState<GameData | null>(null)
@@ -42,7 +43,7 @@ export default function App() {
     return () => clearTimeout(t)
   }, [data, settings])
 
-  if (error) return <div className="loading">Failed to load solver: {error}</div>
+  if (error) return <div className="loading">The solver did not load: {error}. Reload the page to try again.</div>
   if (!data) return <div className="loading">Loading solver…</div>
 
   return (
@@ -50,14 +51,14 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Factory Planner</h1>
-        <div className="seg gamesel">
+        <div className="seg gamesel" role="group" aria-label="Game">
           {GAMES.map(g => (
-            <button key={g.id} className={settings.game === g.id ? 'on' : ''} onClick={() => switchGame(g.id)}>{g.name}</button>
+            <button key={g.id} className={settings.game === g.id ? 'on' : ''} aria-pressed={settings.game === g.id} onClick={() => switchGame(g.id)}>{g.name}</button>
           ))}
         </div>
-        <span className="muted">MILP solver (Rust → WASM) · game data {data.version}</span>
-        {solving && <span className="solving">solving…</span>}
-        <label className="iconsel small">Icons{' '}
+        <span className="meta" title="Mixed-integer solver written in Rust, running in your browser as WebAssembly">Game data {data.version}</span>
+        <span className="spacer" />
+        <label className="iconsel">Icons
           <select value={iconStyle} onChange={e => setIconStyle(e.target.value as IconStyle)}>
             {ICON_STYLES.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
@@ -66,13 +67,13 @@ export default function App() {
       <div className="layout">
         <Sidebar data={data} settings={settings} setSettings={setSettings} />
         <main>
-          <div className="tabs">
-            <button className={tab === 'table' ? 'on' : ''} onClick={() => setTab('table')}>Plan</button>
-            <button className={tab === 'flow' ? 'on' : ''} onClick={() => setTab('flow')}>Item flow</button>
-            <button className={tab === 'graph' ? 'on' : ''} onClick={() => setTab('graph')}>Machine graph</button>
-            <button className={tab === 'values' ? 'on' : ''} onClick={() => setTab('values')}>Item values</button>
+          <div className="tabs" role="tablist">
+            {TABS.map(([id, name]) => (
+              <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{name}</button>
+            ))}
+            {solving && <span className="solving" role="status">Solving</span>}
           </div>
-          {!plan && <p className="muted">Solving…</p>}
+          {!plan && <p className="muted">Working out the first plan…</p>}
           {plan && tab === 'table' && <Results data={data} plan={plan} settings={settings} setSettings={setSettings} />}
           {plan && tab === 'flow' && <ItemFlow data={data} plan={plan} />}
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}

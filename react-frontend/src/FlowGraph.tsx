@@ -69,7 +69,7 @@ export default function FlowGraph({ data, plan }: { data: GameData; plan: Plan }
         label: `${fmt(f.rate)} ${f.name}`,
         title: carrier(f.rate, liq, data),
         style: { strokeWidth: 1 + 5 * Math.sqrt(f.rate / maxRate), stroke: liq ? 'var(--liquid)' : 'var(--solid)' },
-        labelStyle: { fontSize: 11 },
+        labelStyle: { fontSize: 11, fontVariantNumeric: 'tabular-nums' },
         labelBgStyle: { fill: 'var(--bg)' },
         markerEnd: { type: MarkerType.ArrowClosed },
       }
@@ -79,14 +79,16 @@ export default function FlowGraph({ data, plan }: { data: GameData; plan: Plan }
 
   if (plan.status !== 'optimal') return <p className="muted">Nothing to draw.</p>
   return (
-    <div className="graph">
-      {/* key: re-mount (and re-fit the view) when the set of nodes changes */}
-      <ReactFlow key={nodes.map(n => n.id).join('|')} nodes={nodes} edges={edges} fitView minZoom={0.1} nodesDraggable proOptions={{ hideAttribution: true }}>
-        <Background />
-        <Controls />
-        <MiniMap pannable zoomable />
-      </ReactFlow>
-      <p className="hint">Edges split each producer's output across consumers in proportion to demand. Blue = pipes. Drag nodes to tidy up.</p>
-    </div>
+    <>
+      <p className="hint">Each producer's output is split across its consumers in proportion to demand. Grey edges are belts, blue edges are pipes. Drag nodes to tidy up; scroll to zoom.</p>
+      <div className="graph">
+        {/* key: re-mount (and re-fit the view) when the set of nodes changes */}
+        <ReactFlow key={nodes.map(n => n.id).join('|')} nodes={nodes} edges={edges} fitView minZoom={0.1} nodesDraggable colorMode="system" proOptions={{ hideAttribution: true }}>
+          <Background />
+          <Controls />
+          <MiniMap pannable zoomable />
+        </ReactFlow>
+      </div>
+    </>
   )
 }

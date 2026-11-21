@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Icon } from './Icon'
+import { Icon, RemoveMark } from './Icon'
 import { defaultSettings, dn, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
@@ -31,10 +31,10 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
           <input type="number" min={0} step="any" value={t.rate}
             onChange={e => onChange(list.map((x, j) => j === i ? { ...x, rate: Math.max(0, +e.target.value) } : x))} />
           <span className="muted">/min</span>
-          <button className="x" title="remove" onClick={() => onChange(list.filter((_, j) => j !== i))}>×</button>
+          <button className="x" title={`Remove ${name(t.item)}`} aria-label={`Remove ${name(t.item)}`} onClick={() => onChange(list.filter((_, j) => j !== i))}><RemoveMark /></button>
         </div>
       ))}
-      <input className="wide" list={producibleOnly ? 'items-prod' : 'items-all'} placeholder="+ add item…"
+      <input className="wide" list={producibleOnly ? 'items-prod' : 'items-all'} placeholder="Add an item…"
         value={text} onChange={e => add(e.target.value)} />
       <datalist id={producibleOnly ? 'items-prod' : 'items-all'}>
         {options.map(i => <option key={i.id} value={dn(i, data.game)} />)}
@@ -126,7 +126,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
       </section>
 
       <section>
-        <h2>Cost function</h2>
+        <h2>Optimise for</h2>
         <div className="seg">
           {(['resources', 'buildings', 'power', 'custom'] as Objective[]).map(o => (
             <button key={o} className={s.objective === o ? 'on' : ''}
@@ -167,8 +167,8 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         </p>
         {sf && <>
         <div className="row">
-          <span className="grow">Max clock</span>
-          <input type="range" min={1} max={250} value={s.max_clock_percent} className="grow"
+          <span>Max clock</span>
+          <input type="range" min={1} max={250} value={s.max_clock_percent} className="grow" aria-label="Max clock"
             onChange={e => set({ max_clock_percent: +e.target.value })} />
           <input type="number" min={1} max={250} value={s.max_clock_percent}
             onChange={e => set({ max_clock_percent: Math.min(250, Math.max(1, +e.target.value)) })} />
@@ -197,7 +197,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
 
       {!sf && (
         <section>
-          <h2>{data.game === 'dsp' ? 'Machines' : 'Machines'}</h2>
+          <h2>Machines</h2>
           <p className="hint">Tiers the solver may use; it picks per recipe by the cost function.</p>
           <div className="scroll">
             {tiers.map(b => (
@@ -245,7 +245,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         </label>}
         <details>
           <summary>Choose individually ({s.allow_all_alternates ? 'all' : s.enabled_alternates.length} on)</summary>
-          <input className="wide" placeholder="filter…" value={altFilter} onChange={e => setAltFilter(e.target.value)} />
+          <input className="wide" placeholder="Filter by name" value={altFilter} onChange={e => setAltFilter(e.target.value)} />
           <div className="scroll">
             {alts.map(r => (
               <label className="row small" key={r.id}>
@@ -292,8 +292,8 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
       </section>}
 
       <section>
-        <button className="wide" onClick={() => setSettings(() => defaultSettings(s.game))}>Reset everything</button>
-        <p className="hint">The URL holds the whole plan; copy it to share.</p>
+        <button className="wide" onClick={() => setSettings(() => defaultSettings(s.game))}>Reset all settings for this game</button>
+        <p className="hint">The page address holds the whole plan. Copy it to share or bookmark this plan.</p>
       </section>
     </aside>
   )

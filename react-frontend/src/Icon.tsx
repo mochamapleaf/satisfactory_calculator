@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Game } from './solver'
 
 // Local item/building icons: one sprite sheet per game and style, built by tools/build_icons.py.
-export type IconStyle = 'original' | 'flat' | 'off'
+export type IconStyle = 'original' | 'flat' | 'mono' | 'off'
 export const ICON_STYLES: { id: IconStyle; name: string }[] = [
   { id: 'original', name: 'Game' },
   { id: 'flat', name: 'Flat 2D' },
+  { id: 'mono', name: 'Minimal' },
   { id: 'off', name: 'Off' },
 ]
 const STYLE_KEY = 'factory-planner:icon-style'
@@ -25,7 +26,7 @@ function loadMeta(game: Game) {
 export function loadIconStyle(): IconStyle {
   try {
     const s = localStorage.getItem(STYLE_KEY)
-    if (s === 'original' || s === 'flat' || s === 'off') return s
+    if (s === 'original' || s === 'flat' || s === 'mono' || s === 'off') return s
   } catch { /* storage unavailable */ }
   return 'original'
 }
@@ -64,5 +65,14 @@ export function Icon({ id, size = 20, title }: { id: string | undefined; size?: 
         backgroundPosition: `-${x}px -${y}px`,
       }}
     />
+  )
+}
+
+/** Small drawn "remove" mark for icon buttons (instead of a × glyph). */
+export function RemoveMark() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="M3 3l6 6M9 3l-6 6" />
+    </svg>
   )
 }
