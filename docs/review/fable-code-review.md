@@ -204,3 +204,28 @@ Counts: High 2, Medium 7, Low 8.
 
 Not in scope but noticed: the app reads the URL hash only at startup, so pasting a different plan link into an open
 tab does nothing and the next settings change overwrites it (`urlState.ts:29-33`, no `hashchange` listener).
+
+---
+
+## Resolution (2026-11-21, branch `refactor`, commits 0fe1e32, ae96f96, 3285ad4)
+
+| Finding | Outcome |
+|---|---|
+| H1 loop edge chosen by DFS order | Fixed. Each cycle is broken at its smallest-rate edge (repeat until acyclic; ties go to the closing edge). Aluminium 60/min: the loop is now 30/min Water, Aluminum Scrap -> Water. |
+| H2 Minimal sheets uncommitted | Already fixed in 478a685 (skipped). |
+| M1 focus invisible on checkbox/range | Fixed. The blanket `input:focus { outline: none }` now applies only to text-like inputs (they show focus by border); checkboxes and sliders keep the 2 px ring. |
+| M2 loop tag disagrees with chart | Changed. The tag is derived from the chart: items carried by a dashed back edge, or recycled inside one recipe (the ↻ note). The tag tooltip says which. U-238 keeps its tag in the Kovarex plan because Kovarex does recycle it internally (↻ 19.59). |
+| M3 swap to an existing item drops the row | Fixed. Items already in the list are disabled in the picker ("already in the list"); a swap never removes a row. |
+| M4 two pickers open | Fixed. Only opener buttons inside the same list are exempt from outside-click. |
+| M5 long bands through nodes | Fixed. Dummy nodes per skipped column take part in ordering; sinks sit one column right of their item; each node reserves room for its label. |
+| M6 Satisfactory Fluids tab | Fixed. Group from the recipe whose main product is the item (Unpackage skipped, byproducts only as fallback); new "Refined" group for solid Refinery/Blender products. data/game-data.json changes only in `group`. |
+| M7 contrast | Fixed. Placeholders use `--muted`; light `--faint` L 0.66 -> 0.62; new `--control` border token for inputs/selects (light 3.3:1, dark 3.4:1). Buttons, segmented controls and rules keep the light `--rule-strong` for the minimal look (their text identifies them). |
+| L1 recycle note truncated | Fixed. Own third line on the recipe label (`.loopnote`), full text in the tooltip. |
+| L2 tooltip/hint wording | Fixed. Recipes are named "Recipe (Building)"; singular hint; hint now says bar height is the flow passing through. |
+| L3 table/chart netting differ | Fixed. One `recipeFlows` helper keyed by recipe id; recipe icon is its first listed product. |
+| L4 picker a11y | Fixed: focus returns to the opener after pick/Esc; tabpanel + arrow/Home/End keys with roving tabindex; ">120 results" note; Enter target outlined and named; `isComposing` guard. |
+| L5 dark-theme icon contrast | Fixed in CSS: a soft light drop-shadow halo on flat/minimal icons in the dark theme (no tile). |
+| L6 Google Fonts | Fixed. Barlow 400/500/600 latin woff2 self-hosted in `public/fonts` with `OFL.txt`; no third-party request. |
+| L7 flat2d robustness | Fixed all five points; the hue-preserving chroma fit changes output, so the flat and minimal sheets were regenerated. |
+| L8 build_icons leftovers | Fixed (dead `flat()` and imports removed, atomic writes). |
+| Not in scope: hashchange | Fixed. App reloads settings on `hashchange`. |
