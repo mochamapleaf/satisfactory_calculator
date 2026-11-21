@@ -1,0 +1,22 @@
+
+## Fable adversarial review of 4 research reports (started 2026-11-21)
+Output per report: docs/research/<topic>/_过程文件/00-最终报告.fable-review.md (reports themselves not edited).
+- [ ] dsp-ups  - [ ] dsp-seed  - [ ] satisfactory-geo  - [ ] factorio-quality
+Dispatched one fork per report in parallel; each appends its own entries below.
+
+## dsp-ups fable review (fork) 01:05
+- started: reading report, model.json, prior review. Output: docs/research/dsp-ups/_过程文件/00-最终报告.fable-review.md
+
+## 2026-11-21 01:05 satisfactory-geo fable-review (fork)
+- started: read report + earlier critic review + progress.md. Next: verify sources, re-derive numbers, write _过程文件/00-最终报告.fable-review.md
+
+## factorio-quality (fable fork) 01:05
+- read report, old review, quality_lp.py. next: run script, own derivation, web verification.
+- [dsp-seed fable] 01:05 start: read report + prior review; next: recompute S(L), check code/data, web verification
+- [dsp-ups] evidence pass done: cloned Weaver master (55fcd2c, 2026-10-18) and re-read cited lines; refetched GPUOpen/devtrackers devlogs, eprison patch, DSPOptimizations README, SAHS, Blackbox (TTenYX opus = captcha, unverified); re-ran 10k-matrix tree on data/dsp.json; read src/planner/lp.rs + rules.rs. Key findings so far: (1) speed-vs-extra proliferator headline wrong under the report's own model (all-extra 7240 machines < all-speed 9493; best mix 6096); (2) ep18 16:52/19:18 says sorters(+belts) are the biggest panel item, contradicts sorter=0.12; (3) vanilla has a second sorter path InternalUpdate_Bidirectional (Weaver OptimizedBiInserter.cs) not covered; (4) ms calibration: 14900K 170 ms datapoint omitted, CPU-time view reconciles the 6.8M datapoints and makes the 80 ms one the outlier; (5) flow terms ≈0.2–1 % of objective. Next: write 00-最终报告.fable-review.md.
+- [dsp-seed fable] 01:13 verified: 7 repos (GitHub API), 3 Thunderstore URLs 200, BWIKI x4, dsp-wiki cost formula (curl), S(L) table recomputed OK, seed_planets.py rerun = sample (identical), DoubleUTH code read (planet.rs 651-660, oil 1 node/sqrt coef, hive settings), transcript 25:11-25:43 checked. Key new findings: oil is a depleting stock omitted from threshold; K_r not scaled by 0.94^L; star.rs line cite wrong; quota wording. next: write docs/research/dsp-seed/_过程文件/00-最终报告.fable-review.md
+- 01:14 factorio-quality: ran quality_lp.py (all quoted numbers reproduce), own chk.py in scratchpad/fq, opened wiki/FFF-375/FFF-442/scottmsul/FactorioLab data (spa, 2x1, 2q1) + lp.rs/rules.rs. Key finds: LDS prerequisite wrong; FactorioLab 2x1 (2.1.25 Space Age) exists; mining=resources in converter; catalysts unhandled; pruning test contradicts 47.93 detour. next: write fable-review.md
+- [dsp-ups] DONE. Wrote docs/research/dsp-ups/_过程文件/00-最终报告.fable-review.md (严重 4, 重要 7, 次要 8 + verification table + 未能核实 list). Report and model.json not edited. Unverified: TTenYX table (captcha), vanilla method bodies / bidirectional + careNeeds conditions, "non-critical frame time" definition. Next (for whoever applies fixes): S1 proliferator headline, S2 sorter range, S3 bidirectional path, S4 ms calibration in CPU-time.
+- [dsp-seed fable] 01:14 DONE: wrote docs/research/dsp-seed/_过程文件/00-最终报告.fable-review.md (严重2 重要6 次要9). Report not edited. Top fix: crude oil is a depleting stock (≈10.1M pts in sample seed) and must enter a·S(L)≤B; 'L=6 feasible / avoid rares' conclusion fails (A needs L19, E L40).
+- 01:17 factorio-quality: DONE. wrote docs/research/factorio-quality/_过程文件/00-最终报告.fable-review.md (严重2 重要6 次要9). report and quality_lp.py untouched. scratch scripts in session scratchpad fq/ (chk.py, spa.py).
+- satisfactory-geo fable-review: wiki pages re-opened (train throughput, platform, car, drone, drone port, truck, truck station, game modes, resource node, loco, railway, station, world), repo/npm/crates metadata re-checked, cluster.py + geo_toy.py re-run, extra experiments done (12 candidate hubs; microlp 0.8 native timing harness in scratchpad). Key findings so far: §7.2 platform constraint contradicts §2.2 table; objective is 69 % constant machine cost so reported gaps are diluted; machines-continuous layer NOT solved on hard instance (22 % gap @60 s) unless hub candidates are limited to ~12 (then HiGHS optimal in 15-27 s; microlp within ~1 % in 60 s, no proof). Next: write _过程文件/00-最终报告.fable-review.md.

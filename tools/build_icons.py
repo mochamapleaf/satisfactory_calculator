@@ -10,8 +10,9 @@ Sources (icons are the games' own art, as used by these MIT fan tools):
 
 Styles:
 - original: the game icon, transparent background, 64 px.
-- flat: a simplified 2D redraw made from the original: hard alpha edge, light smoothing,
-  a 6-colour cel palette per icon with speckle cleanup, slightly raised saturation, and a dark outline.
+- flat: a minimal 2D redraw (tools/flat2d.py): smooth silhouette, 3-4 flat colour regions with the
+  shading removed, thin outline and region lines.
+- mono: the same drawing in one flat tint per icon; detail only as lines.
 """
 import io
 import json
@@ -21,6 +22,9 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from flat2d import redraw  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "data/raw/icons"
@@ -111,10 +115,12 @@ def write(game, icons):
     ids = sorted(icons)
     cols = 16
     rows = (len(ids) + cols - 1) // cols
-    for style, fn in (("original", lambda im: im), ("flat", flat)):
+    for style, fn in (("original", lambda im: im), ("flat", redraw), ("mono", lambda im: redraw(im, mono=True))):
         sheet = Image.new("RGBA", (cols * SIZE, rows * SIZE), (0, 0, 0, 0))
         for n, i in enumerate(ids):
             sheet.paste(fn(icons[i]), ((n % cols) * SIZE, (n // cols) * SIZE))
+            if n % 40 == 0:
+                print(f"  {game} {style} {n}/{len(ids)}", flush=True)
         sheet.save(OUT / f"{game}-{style}.webp", "WEBP", quality=90, method=6)
     (OUT / f"{game}.json").write_text(
         json.dumps({"size": SIZE, "cols": cols, "rows": rows, "index": {i: n for n, i in enumerate(ids)}}),
