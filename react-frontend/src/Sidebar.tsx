@@ -259,16 +259,20 @@ function ModuleCosts({ data, s, set, hasQuality }: { data: GameData; s: Settings
             }} />
         </div>
       ))}
-      {on && <p className="hint">Each module a machine holds (beacon modules included) adds this to the cost function, in its units (Raw: 1 = one ore per minute), so loadouts are not free. Defaults are a rough guess; quality plans price modules at the module quality.</p>}
+      {on && <p className="hint">Each module a machine holds (beacon modules included) adds this to the cost function, in its units (Raw: 1 = one ore per minute), so loadouts are not free. A module is bought once while the plan is per minute: a cost c spreads a module worth c × T ore over T minutes. Defaults are a rough guess; quality plans price modules at the module quality.</p>}
     </>
   )
 }
+
+/** Beacon counts offered to the solver (rules::MAX_BEACON_COUNTS). */
+const MAX_BEACON_COUNTS = 4
 
 /** Factorio beacons: module, counts per machine (each count is a solver option), sharing, quality. */
 function BeaconSettings({ data, s, set, hasQuality }: { data: GameData; s: Settings; set: (p: Partial<Settings>) => void; hasQuality: boolean }) {
   const b = data.beacons![0]
   const mods = (data.effects ?? []).filter(e => e.kind === 'module' && e.productivity <= 0 && (e.quality ?? 0) <= 0)
-  const counts = (t: string) => [...new Set(t.split(/[ ,;]+/).map(x => Math.round(+x)).filter(n => n > 0 && n <= 64))].sort((a, c) => a - c)
+  // at most 4 counts: each one multiplies the solver's columns (quality plans: tiers × loadouts × counts)
+  const counts = (t: string) => [...new Set(t.split(/[ ,;]+/).map(x => Math.round(+x)).filter(n => n > 0 && n <= 64))].sort((a, c) => a - c).slice(0, MAX_BEACON_COUNTS)
   return (
     <>
       <div className="row small">
@@ -297,7 +301,7 @@ function BeaconSettings({ data, s, set, hasQuality }: { data: GameData; s: Setti
         </div>}
       </>}
       <p className="hint">{s.beacon_module
-        ? `Each count is an option per recipe (none is always one). n beacons give n × ${fmt(b.effectivity)} × 1/√n (FactorioLab profile) × their modules' effect, speed modules' quality penalty included; each costs ${fmt(1000 * b.power)} kW and one building, divided by the sharing.`
+        ? `Each count is an option per recipe (none is always one). n beacons give n × ${fmt(b.effectivity)} × 1/√n (FactorioLab profile) × their modules' effect, speed modules' quality penalty included; each costs ${fmt(1000 * b.power)} kW and one building, divided by the sharing. Up to ${MAX_BEACON_COUNTS} counts; geometry is not checked: usual layouts reach 8 beacons per machine in rows and 12 around a 3×3 machine.`
         : 'Beacons: pick a speed or efficiency module to let the solver add beacons around machines.'}</p>
     </>
   )
@@ -337,6 +341,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             </select>
           </div>
           {!hasQuality && <p className="hint">Quality (legendary items, recyclers) needs a 2.1.25 or Space Age data set.</p>}
+          <p className="hint">Burner machines burn their default fuel as an input (boilers, stone / steel furnaces, heating towers: coal; reactors: uranium cells; biochambers: nutrients); heat exchangers use reactor heat (MJ). Generators and electricity production are not modelled.</p>
           {(data.locations?.length ?? 0) > 1 && <>
             <div className="row small"><span className="grow">Planets</span></div>
             <div className="chips" role="group" aria-label="Planets">

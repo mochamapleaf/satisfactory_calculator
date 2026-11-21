@@ -792,3 +792,43 @@ fn planet_filter_machines_and_hint() {
     assert!(w.contains("Tungsten ore") && w.contains("Calcite"), "{w}");
     assert!(!w.contains("Scrap") && !w.contains("chunk") && !w.contains("Jellynut") && !w.contains("Yumako"), "{w}");
 }
+
+/// Review 3 L3: beacons draw full power whatever the clock of the machines they serve; review 3
+/// L5: DSP / Factorio modes are plain first, then the boosts in `effects` order (b34e62c order).
+#[test]
+fn beacon_power_and_mode_order() {
+    let (d, mut s) = factorio_set("2.0", &[("iron-gear-wheel", 1000.0)], &[]);
+    s.supplies = vec![ItemRate { item: "iron-plate".into(), rate: 1e9 }];
+    s.disabled_buildings = vec!["assembling-machine-1".into(), "assembling-machine-2".into()];
+    s.objective = Objective::Buildings;
+    s.cost = Objective::Buildings.preset();
+    s.beacon_module = "speed-module-3".into();
+    s.beacon_counts = vec![8];
+    s.beacon_share = 8.0;
+    s.integer = true;
+    let p = plan(&d, &s);
+    let r = p.recipes.iter().find(|r| r.id == "iron-gear-wheel").unwrap();
+    assert!(r.mode.ends_with("|b8"), "{}", r.mode);
+    let m = rules::modes(&d, d.recipe("iron-gear-wheel").unwrap(), &s).into_iter().find(|m| m.key == r.mode).unwrap();
+    // 1 000 gears/min need 1000 / (120 × 6.5525) = 1.272 machine-loads on 2 whole machines
+    let load: f64 = r.groups.iter().map(|g| g.count * g.clock_percent / 100.0).sum();
+    assert!(close(r.machines, 2.0) && load < 1.99, "{} {load}", r.machines);
+    assert!(close(m.beacon_power, 0.48), "{}", m.beacon_power);
+    assert!(close(r.power, m.power_base * load + m.beacon_power * r.machines), "{} vs {}", r.power, m.power_base * load + m.beacon_power * r.machines);
+
+    // review 3 L4: at most 4 beacon counts (smallest kept)
+    s.beacon_counts = vec![12, 1, 2, 4, 8, 6];
+    let opts = rules::beacon_options(&d, &s);
+    assert_eq!(opts.iter().map(|o| o.count).collect::<Vec<_>>(), vec![0, 1, 2, 4, 6]);
+
+    let d = GameData::for_game("dsp");
+    let mut s = settings(&[]);
+    s.game = "dsp".into();
+    s.effects = vec!["proliferator-3-speed".into(), "proliferator-3-products".into()];
+    let r = d.recipe("circuit-board").unwrap();
+    let keys: Vec<String> = rules::modes(&d, r, &s).into_iter().map(|m| m.key).collect();
+    let b = &r.producers[0];
+    assert_eq!(keys[0], *b);
+    assert_eq!(keys[1], format!("{b}|proliferator-3-speed"));
+    assert_eq!(keys[2], format!("{b}|proliferator-3-products"));
+}

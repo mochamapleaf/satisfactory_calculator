@@ -22,3 +22,7 @@
   planet_filter_machines_and_hint. quality_paths test: asteroid reprocessing now needs space-platform.
 - L3 done: Mode.beacon_power kept out of the clock factor (LP row, hint, report). L5 done: tiered modes back in
   b34e62c order (plain, then effects in order; Fill struct).
+- L4 done: rules::MAX_BEACON_COUNTS = 4 (smallest kept, UI too) + geometry note in hint. L7: kept the defaults,
+  hint explains the one-time vs per-minute units (deriving costs needs a payback time the player must choose).
+  Test beacon_power_and_mode_order (L3 integer plan power = base x load + beacons x n; L4 cap; L5 DSP order).
+  UI hint on burner fuel in Game data.

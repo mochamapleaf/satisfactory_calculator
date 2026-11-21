@@ -89,6 +89,9 @@ impl BeaconOption {
     }
 }
 
+/// Most beacon counts offered per plan (the smallest ones are kept).
+pub const MAX_BEACON_COUNTS: usize = 4;
+
 /// Beacon options from the settings: always "none", plus one per count in `beacon_counts` when a
 /// beacon module is chosen. Transmitted effect per machine (Factorio 2.0):
 ///   n x effectivity(beacon quality) x profile[n-1] x slots x module effect (at `module_quality`),
@@ -106,6 +109,7 @@ pub fn beacon_options(data: &GameData, s: &PlanSettings) -> Vec<BeaconOption> {
     let mut counts: Vec<u32> = s.beacon_counts.iter().copied().filter(|&n| n > 0 && n <= 64).collect();
     counts.sort_unstable();
     counts.dedup();
+    counts.truncate(MAX_BEACON_COUNTS); // each count multiplies the columns
     for n in counts {
         let k = n as f64 * bt.effectivity * b.profile_at(n) * b.modules as f64;
         out.push(BeaconOption {
