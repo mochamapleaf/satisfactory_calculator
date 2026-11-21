@@ -494,9 +494,10 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
       {(data.research?.length ?? 0) > 0 && (
         <section>
           <h2>Research productivity</h2>
-          <p className="hint">Levels of the infinite productivity technologies (+10 % each), counted with modules and built-in productivity against the +300 % cap. Recipes that refuse productivity modules get none.</p>
+          <p className="hint">Levels of the infinite productivity technologies (+10 % each), counted with modules and built-in productivity against the +300 % cap. Research changes the recipe itself, so it also applies where productivity modules are refused (scrap recycling in the recycler).</p>
           {data.research!.map(f => {
-            const level = Math.round((s.research_productivity[f.recipes[0]] ?? 0) / f.step)
+            // the family's recipes are set together; show the highest if a link set them apart
+            const level = Math.round(Math.max(0, ...f.recipes.map(r => s.research_productivity[r] ?? 0)) / f.step)
             const setLevel = (n: number) => {
               const rp = { ...s.research_productivity }
               for (const r of f.recipes) { if (n > 0) rp[r] = +(n * f.step).toFixed(6); else delete rp[r] }
@@ -506,7 +507,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
               <div className="row small" key={f.id} title={f.recipes.map(id => dn(data.recipes.find(r => r.id === id), data.game, id)).join(', ')}>
                 <span className="grow">{f.name.replace(/ productivity$/, '')}</span>
                 <input type="number" min={0} max={300} step={1} value={level} aria-label={`${f.name} level`}
-                  onChange={e => setLevel(Math.max(0, Math.round(+e.target.value || 0)))} />
+                  onChange={e => setLevel(Math.min(300, Math.max(0, Math.round(+e.target.value || 0))))} />
                 <span className="muted">+{fmt(100 * level * f.step, 0)}%</span>
               </div>
             )

@@ -25,16 +25,19 @@ export interface Effect {
 }
 
 /** Factorio data sets (data::FACTORIO_DATASETS). */
-export const DATASETS: { id: string; name: string; quality: boolean }[] = [
-  { id: '2.0', name: '2.0.77 base', quality: false },
-  { id: '2x1', name: '2.1.25 Space Age', quality: true },
-  { id: '2q1', name: '2.1.25 base + quality', quality: true },
-  { id: 'spa', name: '2.0.77 Space Age', quality: true },
+export const DATASETS: { id: string; name: string; quality: boolean; research: boolean }[] = [
+  { id: '2.0', name: '2.0.77 base', quality: false, research: false },
+  { id: '2x1', name: '2.1.25 Space Age', quality: true, research: true },
+  { id: '2q1', name: '2.1.25 base + quality', quality: true, research: false },
+  { id: 'spa', name: '2.0.77 Space Age', quality: true, research: true },
 ]
 /** Settings for Factorio data set `id`: a set without quality turns quality targets and
- *  supplies back to normal (rows of the same item merge). */
+ *  supplies back to normal (rows of the same item merge); a set without research technologies
+ *  drops research levels (the solver also ignores recipes the set's research does not name). */
 export function withDataset(s: Settings, id: string): Settings {
-  if (DATASETS.find(d => d.id === id)?.quality) return { ...s, dataset: id }
+  const ds = DATASETS.find(d => d.id === id)
+  if (!ds?.research && Object.keys(s.research_productivity ?? {}).length) s = { ...s, research_productivity: {} }
+  if (ds?.quality) return { ...s, dataset: id }
   const plain = (l: ItemRate[]) => {
     const out: ItemRate[] = []
     for (const t of l) {

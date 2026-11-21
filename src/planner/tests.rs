@@ -620,4 +620,53 @@ fn research_productivity_families() {
         s.research_productivity.insert(r.clone(), 40.0 * fam.step);
     }
     assert!(close(plates(&plan(&d, &s)), 75.0));
+
+    // review 3 L2: negative / non-finite values count as 0
+    for r in &fam.recipes {
+        s.research_productivity.insert(r.clone(), -2.0);
+    }
+    assert!(close(plates(&plan(&d, &s)), 300.0));
+    for r in &fam.recipes {
+        s.research_productivity.insert(r.clone(), f64::NAN);
+    }
+    assert!(close(plates(&plan(&d, &s)), 300.0));
+
+    // review 3 M1: a value left over from a Space Age set does nothing in a set without the
+    // technology (2.1 base + quality has no research)
+    let q = GameData::for_set("factorio", "2q1");
+    assert!(q.research.is_empty());
+    s.dataset = "2q1".into();
+    s.planets = vec![];
+    for r in &fam.recipes {
+        s.research_productivity.insert(r.clone(), 1.0);
+    }
+    assert!(close(plates(&plan(&q, &s)), 300.0), "{}", plates(&plan(&q, &s)));
+}
+
+/// Review 3 H3: scrap recycling productivity research applies although the recycler (and the
+/// recipe) refuse productivity modules. Fulgora, 60 holmium ore/min: 6 000 scrap/min (holmium ore is
+/// 1 % of scrap recycling output, 0.2 per 4 scrap per 0.2 s run) and 40 recyclers; +50 % → 4 000 and 26.7.
+#[test]
+fn scrap_recycling_research() {
+    for set in ["spa", "2x1"] {
+        let d = GameData::for_set("factorio", set);
+        let mut s = settings(&[("holmium-ore", 60.0)]);
+        s.game = "factorio".into();
+        s.dataset = set.into();
+        s.integer = false;
+        s.planets = vec!["fulgora".into()];
+        let rid = &d.research.iter().find(|f| f.id == "scrap-recycling-productivity").unwrap().recipes[0];
+        assert!(!d.recipe(rid).unwrap().productivity_allowed);
+        let scrap = |p: &Plan| p.raw.iter().find(|l| l.item == "scrap").map(|l| l.rate).unwrap_or(0.0);
+        let rec = |p: &Plan| p.recipes.iter().find(|r| r.id == *rid).map(|r| r.machines).unwrap_or(0.0);
+        let p = plan(&d, &s);
+        assert_eq!(p.status, Status::Optimal, "{set} {:?}", p.warnings);
+        assert!(close(scrap(&p), 6000.0), "{set}: {}", scrap(&p));
+        assert!(close(rec(&p), 40.0), "{set}: {}", rec(&p));
+        s.research_productivity.insert(rid.clone(), 0.5);
+        let p = plan(&d, &s);
+        assert!(close(scrap(&p), 4000.0), "{set}: {}", scrap(&p));
+        assert!(close(rec(&p), 80.0 / 3.0), "{set}: {}", rec(&p));
+        assert_balanced(&p);
+    }
 }

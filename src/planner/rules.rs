@@ -143,13 +143,29 @@ pub fn modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
 /// Factorio productivity cap (+300 %, recipe `maximum_productivity` default).
 pub const MAX_PRODUCTIVITY: f64 = 3.0;
 
+/// Researched productivity of recipe `r`. The technology changes the recipe itself, so it applies
+/// whatever modules the machine or recipe accepts (scrap recycling in the recycler; FactorioLab
+/// `adjustment.ts` does the same). Only recipes a technology of this data set names count: a value
+/// left over from another data set (or a link) is ignored. Clamped to 0 … +300 %, non-finite = 0.
+pub fn research_bonus(data: &GameData, s: &PlanSettings, r: &Recipe) -> f64 {
+    if !data.research.iter().any(|f| f.recipes.iter().any(|x| *x == r.id)) {
+        return 0.0;
+    }
+    let v = s.research_productivity.get(&r.id).copied().unwrap_or(0.0);
+    if v.is_finite() {
+        v.clamp(0.0, MAX_PRODUCTIVITY)
+    } else {
+        0.0
+    }
+}
+
 /// DSP / Factorio: every allowed machine tier, plain or with one enabled boost.
 /// DSP proliferator: one spray per input item, `sprays` items per proliferator; speed,
 /// extra products and power multipliers per the game. Factorio: all slots filled with one
 /// module type at `module_quality` (quality plans use mixed loadouts, `quality.rs`), plus the
 /// machine's built-in and researched productivity, capped at +300 %.
 fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
-    let research = s.research_productivity.get(&r.id).copied().unwrap_or(0.0);
+    let research = research_bonus(data, s, r);
     let producers: Vec<&str> = if r.producers.is_empty() {
         vec![r.building.as_str()]
     } else {
@@ -163,9 +179,10 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
         }
         let Some(b) = data.building(pid) else { continue };
         let tier_label = if r.producers.len() > 1 { data.pick(&b.name, &b.name_zh).to_string() } else { String::new() };
-        // Built-in machine productivity (foundry / EM plant / biochamber +50 %; 0 for DSP) applies to
-        // every recipe the machine runs; the recipe flag only forbids productivity modules and research.
-        let base_p = b.base_productivity + if r.productivity_allowed { research } else { 0.0 };
+        // Built-in machine productivity (foundry / EM plant / biochamber +50 %; 0 for DSP) and
+        // researched productivity apply to every recipe the machine runs; the recipe flag only
+        // forbids productivity modules.
+        let base_p = b.base_productivity + research;
         // module fills: (key, label, speed, productivity, consumption sums, held modules); plain first
         let mut fills: Vec<(String, String, f64, f64, f64, Vec<(String, f64)>)> =
             vec![(b.id.clone(), String::new(), 0.0, 0.0, 0.0, vec![])];

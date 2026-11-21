@@ -195,7 +195,7 @@ fn loadout_modes(
 ) -> Vec<Mode> {
     let producers: Vec<&str> =
         if r.producers.is_empty() { vec![r.building.as_str()] } else { r.producers.iter().map(|p| p.as_str()).collect() };
-    let research = s.research_productivity.get(&r.id).copied().unwrap_or(0.0);
+    let research = super::rules::research_bonus(data, s, r);
     let solid_out = r.outputs.iter().any(|(o, _)| solid(o));
     let mut out = Vec::new();
     for pid in producers {
@@ -234,10 +234,9 @@ fn loadout_modes(
             let pv = pm.as_ref().map(|x| x.v).unwrap_or(zero);
             // speed beacons transmit their modules' quality penalty
             let qchance = (kq * qv.quality + km * pv.quality + bo.quality).max(0.0);
-            // built-in machine productivity applies to every recipe; research and productivity
+            // built-in machine and researched productivity apply to every recipe; productivity
             // modules only where the recipe allows them (km is 0 otherwise)
-            let research_p = if r.productivity_allowed { research } else { 0.0 };
-            let p = (b.base_productivity + research_p + km * pv.productivity).min(MAX_PRODUCTIVITY);
+            let p = (b.base_productivity + research + km * pv.productivity).min(MAX_PRODUCTIVITY);
             let speed = b.speed * (1.0 + kq * qv.speed + km * pv.speed + bo.speed).max(0.2);
             let power = b.power * (1.0 + kq * qv.consumption + km * pv.consumption + bo.consumption).max(0.2) + bo.power;
             let row = qrow(qchance, i);
