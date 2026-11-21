@@ -14,17 +14,17 @@ Styles:
   shading removed, thin outline and region lines.
 - mono: the same drawing in one flat tint per icon; detail only as lines.
 """
-import io
 import json
+import os
 import sys
 import urllib.request
 from pathlib import Path
 
-import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
-
+# flat2d first: it sets the BLAS/OpenMP thread limits, which only apply before numpy is imported
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from flat2d import redraw  # noqa: E402
+
+from PIL import Image  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "data/raw/icons"
@@ -85,31 +85,6 @@ def factoriolab(game_file, folder):
     return icons
 
 
-def flat(img):
-    """Simplified 2D version of one icon (cel-shaded look)."""
-    a = np.array(img)
-    mask = a[..., 3] > 110
-    if mask.sum() < 20:
-        return img
-    rgb = Image.fromarray(a[..., :3]).filter(ImageFilter.MedianFilter(3))
-    rgb = ImageEnhance.Color(rgb).enhance(1.3)
-    rgb = ImageEnhance.Contrast(rgb).enhance(1.1)
-    px = np.array(rgb)[mask].reshape(-1, 1, 3)
-    pal = Image.fromarray(px.astype(np.uint8)).quantize(6, method=Image.Quantize.MEDIANCUT)
-    idx = rgb.quantize(palette=pal, dither=Image.Dither.NONE).filter(ImageFilter.ModeFilter(3))
-    q = np.array(idx.convert("RGB"))
-    m = Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.ModeFilter(3))
-    mask = np.array(m) > 0
-    out = np.zeros_like(a)
-    out[..., :3] = q
-    out[..., 3] = np.where(mask, 255, 0)
-    ring = (np.array(m.filter(ImageFilter.MaxFilter(3))) > 0) & ~mask
-    edge = (q[mask].mean(axis=0) * 0.3).astype(np.uint8)
-    out[ring, :3] = edge
-    out[ring, 3] = 255
-    return Image.fromarray(out)
-
-
 def write(game, icons):
     OUT.mkdir(parents=True, exist_ok=True)
     ids = sorted(icons)
@@ -121,10 +96,15 @@ def write(game, icons):
             sheet.paste(fn(icons[i]), ((n % cols) * SIZE, (n // cols) * SIZE))
             if n % 40 == 0:
                 print(f"  {game} {style} {n}/{len(ids)}", flush=True)
-        sheet.save(OUT / f"{game}-{style}.webp", "WEBP", quality=90, method=6)
-    (OUT / f"{game}.json").write_text(
+        # write to a temp name and swap it in, so a reader (dev server) never sees a half-written sheet
+        tmp = OUT / f"{game}-{style}.tmp.webp"
+        sheet.save(tmp, "WEBP", quality=90, method=6)
+        os.replace(tmp, OUT / f"{game}-{style}.webp")
+    tmp = OUT / f"{game}.tmp.json"
+    tmp.write_text(
         json.dumps({"size": SIZE, "cols": cols, "rows": rows, "index": {i: n for n, i in enumerate(ids)}}),
         encoding="utf-8")
+    os.replace(tmp, OUT / f"{game}.json")
     print(f"{game}: {len(ids)} icons")
 
 

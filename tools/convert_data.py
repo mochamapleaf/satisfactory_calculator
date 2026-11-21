@@ -55,7 +55,7 @@ DEFAULT_EXTRACTOR = ("Miner Mk.3", 240, 45)
 SF_GROUP = {
     "Desc_SmelterMk1_C": "ingots", "Desc_FoundryMk1_C": "ingots",
     "Desc_ConstructorMk1_C": "basic", "Desc_AssemblerMk1_C": "intermediate",
-    "Desc_ManufacturerMk1_C": "advanced", "Desc_OilRefinery_C": "fluids", "Desc_Blender_C": "fluids",
+    "Desc_ManufacturerMk1_C": "advanced", "Desc_OilRefinery_C": "refined", "Desc_Blender_C": "refined",
     "Desc_Packager_C": "fluids", "Desc_HadronCollider_C": "exotic", "Desc_QuantumEncoder_C": "exotic",
     "Desc_Converter_C": "exotic",
 }
@@ -66,8 +66,10 @@ def sf_group(k, v, is_raw, building):
         return "raw"
     if "SpaceElevatorPart" in k:
         return "project"
-    if v.get("liquid") and building != "Desc_Packager_C":
+    if v.get("liquid"):
         return "fluids"
+    # solid Refinery/Blender products (plastic, rubber, silica, ...) are "refined"; Packager output
+    # (packaged fluids) stays with the fluids
     return SF_GROUP.get(building, "other")
 
 
@@ -104,12 +106,19 @@ def main(src, dst):
         recipes.append(rec)
 
     raw = set(d["resources"].keys())
-    # item picker groups: by the building of the item's first standard recipe
+    # item picker groups: by the building of the item's own recipe, i.e. the first standard recipe that
+    # has it as its main (first) product. Byproducts (Silica from Alumina Solution) and "Unpackage ..."
+    # recipes (Empty Canister) only count when nothing else makes the item.
     made_in = {}
-    for r in sorted(d["recipes"].values(), key=lambda r: r.get("alternate", False)):
-        bs = [b for b in r.get("producedIn", []) if b in SF_GROUP]
-        for p in r.get("products", []) if bs else []:
-            made_in.setdefault(p["item"], bs[0])
+    ordered = sorted(d["recipes"].values(), key=lambda r: r.get("alternate", False))
+    for main_only in (True, False):
+        for r in ordered:
+            if r.get("name", "").startswith("Unpackage") and main_only:
+                continue
+            bs = [b for b in r.get("producedIn", []) if b in SF_GROUP]
+            prods = r.get("products", []) if bs else []
+            for p in prods[:1] if main_only else prods:
+                made_in.setdefault(p["item"], bs[0])
     items = []
     for k, v in d["items"].items():
         if k in items_used:

@@ -25,3 +25,16 @@
 - hashchange: App reloads settings when the hash changes (verified by setting location.hash without reload).
 - Tests: tsc + vite build pass.
 - Next: M6 (convert_data.py group logic), L7/L8 (flat2d/build_icons).
+
+## 3. Data groups (M6) and icon tools (L7, L8) - done
+- Files: tools/convert_data.py, data/game-data.json (group field only; verified identical otherwise), wasm rebuilt
+  (gitignored), tools/flat2d.py, tools/build_icons.py, react-frontend/public/icons/*-{flat,mono}.webp regenerated.
+- M6: group from the first standard recipe whose main product is the item, Unpackage skipped; Refinery/Blender solids
+  -> "refined" (11 items), fluids now 24 (liquids + packaged). 15 items moved. Picker label "Refined" added.
+- L7: convert("RGBA"), max(1, iterations), translucent icons judged by their peak alpha, chroma fitted into sRGB at
+  constant hue instead of per-channel clip, BLAS thread vars set before numpy import. Output changed (10/42 sample
+  renders) so flat+mono sheets regenerated (original sheets and index json unchanged).
+- L8: dead flat() and unused imports removed; sheets and json written to a temp name and os.replace'd.
+- Tests: cargo test 22 passed; tsc + vite build pass. Visual: DSP universe matrix 60, SF aluminium light/dark at
+  375 px (no horizontal overflow, Barlow loaded from /fonts), dark picker icons with halo.
+- Next: Resolution section in fable-code-review.md, final commit.
