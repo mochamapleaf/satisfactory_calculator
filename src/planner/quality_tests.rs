@@ -588,3 +588,121 @@ fn quality_paths_catalyst_flags_module_tier() {
     assert!(m.label.contains("★legendary"), "{}", m.label);
     assert_eq!(m.held[0].0, "productivity-module-3@4");
 }
+
+// ---------- beacons (report §5 step 8) ----------
+
+fn circuit_settings(dataset: &str) -> PlanSettings {
+    let mut s = PlanSettings {
+        game: "factorio".into(),
+        dataset: dataset.into(),
+        targets: vec![ItemRate { item: "electronic-circuit".into(), rate: 974.82 }],
+        integer: false,
+        effects: vec!["productivity-module-3".into()],
+        disabled_buildings: vec!["assembling-machine-1".into(), "assembling-machine-2".into()],
+        beacon_module: "speed-module-3".into(),
+        beacon_counts: vec![8],
+        ..Default::default()
+    };
+    s.planets = vec!["nauvis".into()];
+    s
+}
+
+#[test]
+fn beacon_mode_values_by_hand() {
+    // AM3 (speed 1.25, 375 kW, 4 slots), 4x productivity 3 (+10 %, -15 % speed, +80 % power each),
+    // 8 beacons x 2 speed 3 (+50 %, +70 % power), effectivity 1.5, profile(8) = 0.3535:
+    //   transmitted k = 8 x 1.5 x 0.3535 x 2 = 8.484 -> speed +4.242, power +5.9388
+    //   speed = 1.25 x (1 - 0.6 + 4.242) = 5.8025; out x1.4 -> 120/min x 5.8025 x 1.4 = 974.82 /min
+    //   power = 0.375 x (1 + 3.2 + 5.9388) + 8 x 0.48 = 3.80205 + 3.84 = 7.64205 MW
+    let d = GameData::for_set("factorio", "");
+    let s = circuit_settings("");
+    let r = d.recipe("electronic-circuit").unwrap();
+    let modes = rules::modes(&d, r, &s);
+    assert_eq!(modes.len(), 4, "plain, plain+8B, prod, prod+8B");
+    let m = modes.iter().find(|m| m.key == "assembling-machine-3|productivity-module-3|b8").unwrap();
+    assert!(close(m.speed, 5.8025, 1e-9), "{}", m.speed);
+    assert!(close(m.out_mult, 1.4, 1e-12));
+    assert!(close(m.power_base, 7.64205, 1e-9), "{}", m.power_base);
+    assert_eq!(m.beacons, 8.0);
+    assert!(m.label.contains("8 beacons"));
+    assert!(m.held.iter().any(|(i, q)| i == "speed-module-3" && *q == 16.0));
+    let per_machine = r.outputs[0].1 * m.speed * m.out_mult;
+    assert!(close(per_machine, 974.82, 1e-9), "{per_machine}");
+
+    // the plan: Raw objective takes productivity, the building tie-break then prefers 1 machine +
+    // 8 beacons (9 buildings) over 11.6 machines without beacons
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert_balanced(&p);
+    let c = p.recipes.iter().find(|r| r.id == "electronic-circuit").unwrap();
+    assert!(c.mode.ends_with("|b8"), "{}", c.mode);
+    assert!(close(c.machines, 1.0, 1e-6), "{}", c.machines);
+    assert!(close(c.beacons, 8.0, 1e-6));
+    assert!(close(c.power, 7.64205, 1e-6), "{}", c.power);
+    assert!(p.building_counts.iter().any(|b| b.building == "Beacon" && b.count >= 8.0));
+
+    // sharing: 2 machines per beacon halves the charged beacons, their power and held modules
+    let mut s2 = s.clone();
+    s2.beacon_share = 2.0;
+    let m2 = rules::modes(&d, r, &s2).into_iter().find(|m| m.key.ends_with("productivity-module-3|b8")).unwrap();
+    assert!(close(m2.power_base, 3.80205 + 1.92, 1e-9) && m2.beacons == 4.0);
+    // no beacon module: no beacon modes
+    let mut s3 = s.clone();
+    s3.beacon_module.clear();
+    assert_eq!(rules::modes(&d, r, &s3).len(), 2);
+    // productivity modules cannot go into beacons
+    s3.beacon_module = "productivity-module-3".into();
+    assert_eq!(rules::modes(&d, r, &s3).len(), 2);
+}
+
+#[test]
+fn beacon_profile_and_quality() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = circuit_settings("2x1");
+    s.beacon_counts = vec![1, 12];
+    let o = rules::beacon_options(&d, &s);
+    assert_eq!(o.len(), 3);
+    // 12 beacons: profile 0.2886 -> 12 x 1.5 x 0.2886 x 2 x 0.5 = 5.1948 speed
+    assert!(close(o[2].speed, 5.1948, 1e-9), "{}", o[2].speed);
+    assert!(close(o[1].speed, 1.5, 1e-12));
+    // legendary beacon (2.5, 80 kW) with legendary speed 3 (+125 %): 1 beacon = 2.5 x 2 x 1.25
+    s.beacon_quality = 4;
+    s.module_quality = 4;
+    let o = rules::beacon_options(&d, &s);
+    assert!(close(o[1].speed, 6.25, 1e-12) && close(o[1].power, 0.08, 1e-12));
+    assert_eq!(o[1].module, "speed-module-3@4");
+    // quality penalty: 1 normal beacon with 2 speed 3 = -0.025 x 2 x 1.5 = -0.075
+    s.beacon_quality = 0;
+    s.module_quality = 0;
+    assert!(close(rules::beacon_options(&d, &s)[1].quality, -0.075, 1e-12));
+}
+
+#[test]
+fn beacon_quality_penalty_in_loadouts() {
+    // 2q1, gear at normal input, AM3 4x legendary quality 3 (4 x 6.25 % = 25 %) + 1 speed beacon
+    // (-7.5 %): q = 17.5 %, so 0.9 x 17.5 % of the gears come out uncommon
+    let d = GameData::for_set("factorio", "2q1");
+    let mut s = lp_settings("2q1", "iron-gear-wheel@4", 10.0);
+    s.beacon_module = "speed-module-3".into();
+    s.beacon_counts = vec![1];
+    s.module_quality = 4;
+    s.disabled_buildings = vec!["assembling-machine-1".into(), "assembling-machine-2".into()];
+    let allowed = lp::allowed_recipes(&d, &s);
+    let ex = quality::expand(&d, &s, &allowed, &["iron-gear-wheel@4".into()]);
+    let (_, modes) = ex.iter().find(|(r, _)| r.id == "iron-gear-wheel").unwrap();
+    let m = modes.iter().find(|m| m.key == "assembling-machine-3|q4p0b1").unwrap();
+    let outs = m.outputs.as_ref().unwrap();
+    let total: f64 = outs.iter().map(|o| o.1).sum();
+    let up = outs.iter().find(|o| o.0 == "iron-gear-wheel@1").unwrap().1;
+    assert!(close(up / total, 0.9 * 0.175, 1e-9), "{}", up / total);
+    // speed: legendary speed 3 in the beacon (+125 %): 1.25 x (1 + 4 x q3 speed + 1.5 x 2 x 1.25)
+    let qv = d.effect("quality-module-3").unwrap().tier(4);
+    assert!(close(m.speed, 1.25 * (1.0 + 4.0 * qv.speed + 3.75), 1e-9), "{}", m.speed);
+    assert!(m.held.iter().any(|(i, q)| i == "quality-module-3@4" && *q == 4.0));
+    assert!(m.held.iter().any(|(i, q)| i == "speed-module-3@4" && *q == 2.0));
+    // the plan still solves and balances
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert_balanced(&p);
+}
+

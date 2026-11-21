@@ -144,6 +144,12 @@ export interface Settings {
   research_productivity: Record<string, number>
   /** Space Age: planets whose recipes and resources may be used (default Nauvis). */
   planets: string[]
+  /** Factorio beacons: module in each beacon ('' = none), counts per machine offered to the
+   *  solver, beacon quality, machines sharing one beacon. */
+  beacon_module: string
+  beacon_counts: number[]
+  beacon_quality: number
+  beacon_share: number
   /** Solver guard: models with more columns are not solved (0 = no limit). Set per request, not saved. */
   max_columns?: number
 }
@@ -155,6 +161,8 @@ export interface PlanRecipe {
   power: number; inputs: RateLine[]; outputs: RateLine[]; somersloops: number
   /** DSP: compute units per tick of this recipe (incl. its power). */
   compute: number
+  /** Factorio: beacons charged to this recipe. */
+  beacons?: number
 }
 /** DSP compute (UPS) cost of a plan; 1 unit = one machine updated once per logic tick. */
 export interface ComputeSummary {
@@ -221,6 +229,10 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   recycle_allow: [],
   research_productivity: {},
   planets: ['nauvis'],
+  beacon_module: '',
+  beacon_counts: [8],
+  beacon_quality: 0,
+  beacon_share: 1,
 })
 
 let wasm: Promise<unknown> | null = null

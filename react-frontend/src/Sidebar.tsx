@@ -237,6 +237,45 @@ function QualitySettings({ data, s, set }: { data: GameData; s: Settings; set: (
   )
 }
 
+/** Factorio beacons: module, counts per machine (each count is a solver option), sharing, quality. */
+function BeaconSettings({ data, s, set, hasQuality }: { data: GameData; s: Settings; set: (p: Partial<Settings>) => void; hasQuality: boolean }) {
+  const b = data.beacons![0]
+  const mods = (data.effects ?? []).filter(e => e.kind === 'module' && e.productivity <= 0 && (e.quality ?? 0) <= 0)
+  const counts = (t: string) => [...new Set(t.split(/[ ,;]+/).map(x => Math.round(+x)).filter(n => n > 0 && n <= 64))].sort((a, c) => a - c)
+  return (
+    <>
+      <div className="row small">
+        <span className="grow"><Icon id={b.id} />{b.name} module</span>
+        <select value={s.beacon_module} aria-label="Beacon module" onChange={e => set({ beacon_module: e.target.value })}>
+          <option value="">no beacons</option>
+          {mods.map(e => <option key={e.id} value={e.id}>{dn(e, data.game)} ×{b.modules}</option>)}
+        </select>
+      </div>
+      {s.beacon_module && <>
+        <div className="row small">
+          <span className="grow">Beacons per machine</span>
+          <input type="text" inputMode="numeric" key={s.beacon_counts.join(',')} defaultValue={s.beacon_counts.join(', ')}
+            aria-label="Beacons per machine (list)" style={{ width: '7em' }}
+            onBlur={e => { const c = counts(e.target.value); set({ beacon_counts: c.length ? c : [8] }) }}
+            onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} />
+        </div>
+        <div className="row small">
+          <span className="grow">Machines sharing a beacon</span>
+          <input type="number" min={1} max={8} step="any" value={s.beacon_share} aria-label="Machines sharing a beacon"
+            onChange={e => set({ beacon_share: Math.max(1, +e.target.value || 1) })} />
+        </div>
+        {hasQuality && <div className="row small">
+          <span className="grow">Beacon quality</span>
+          <QualitySelect data={data} value={s.beacon_quality} label="Beacon quality" onChange={beacon_quality => set({ beacon_quality })} />
+        </div>}
+      </>}
+      <p className="hint">{s.beacon_module
+        ? `Each count is an option per recipe (none is always one). n beacons give n × ${fmt(b.effectivity)} × 1/√n (FactorioLab profile) × their modules' effect, speed modules' quality penalty included; each costs ${fmt(1000 * b.power)} kW and one building, divided by the sharing.`
+        : 'Beacons: pick a speed or efficiency module to let the solver add beacons around machines.'}</p>
+    </>
+  )
+}
+
 export default function Sidebar({ data, settings: s, setSettings }: Props) {
   const set = (patch: Partial<Settings>) => setSettings(x => ({ ...x, ...patch }))
   const [altFilter, setAltFilter] = useState('')
@@ -409,7 +448,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           <p className="hint">
             {data.game === 'dsp'
               ? 'Enabled modes become options per recipe; spray use (one per input item) is added as an input, so the proliferator chain is planned too. Add it under Available inputs to treat it as free.'
-              : `Each enabled module fills all slots of a machine${hasQuality ? ' (at the module quality set under Quality; quality plans mix quality and productivity modules per machine instead)' : ''}. The foundry / EM plant / biochamber built-in +50 % applies to every recipe they run; productivity modules and research only where the recipe allows them; the total is capped at +300 %. Beacons: later.`}
+              : `Each enabled module fills all slots of a machine${hasQuality ? ' (at the module quality set under Quality; quality plans mix quality and productivity modules per machine instead)' : ''}. The foundry / EM plant / biochamber built-in +50 % applies to every recipe they run; productivity modules and research only where the recipe allows them; the total is capped at +300 %.`}
           </p>
           {data.effects!.map(e => (
             <label className="row small" key={e.id}>
@@ -420,6 +459,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
               </span>
             </label>
           ))}
+          {(data.beacons?.length ?? 0) > 0 && <BeaconSettings data={data} s={s} set={set} hasQuality={hasQuality} />}
         </section>
       )}
 

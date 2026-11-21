@@ -486,6 +486,7 @@ fn finish(
                 .collect(),
             somersloops: f.somersloops,
             compute: 0.0,
+            beacons: n * f.beacons,
         });
         if let Some(w) = &cw {
             let k = compute::sorters_per_machine(r, f, s.mixed_belts, compute::model().sorter_capacity);
@@ -547,6 +548,12 @@ fn finish(
     let mut counts: BTreeMap<String, f64> = BTreeMap::new();
     for (_, (b, n)) in groups {
         *counts.entry(b).or_insert(0.0) += if integer { n } else { (n - 1e-6).ceil() };
+    }
+    // Factorio beacons (whole beacons in total; per machine they may be shared)
+    let beacons: f64 = plan.recipes.iter().map(|r| r.beacons).sum();
+    if beacons > 1e-9 {
+        let name = data.beacons.first().map(|b| b.name.clone()).unwrap_or_else(|| "Beacon".into());
+        counts.insert(name, (beacons - 1e-6).ceil());
     }
     plan.building_counts = counts.into_iter().map(|(building, count)| BuildingCount { building, count }).collect();
     plan.buildings = plan.building_counts.iter().map(|b| b.count).sum();

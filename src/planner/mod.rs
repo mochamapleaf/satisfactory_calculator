@@ -162,6 +162,13 @@ pub struct PlanSettings {
     /// Default Nauvis only, so Gleba plants and Vulcanus calcite are not free; items from other
     /// planets can still be given as supplies. Ignored on data without locations.
     pub planets: Vec<String>,
+    /// Factorio beacons: module in every beacon ("" = no beacons), beacon counts per machine
+    /// offered as modes, beacon quality tier, and machines sharing one beacon (cost / power / held
+    /// modules per machine are divided by it; 1 = each machine pays for all its beacons).
+    pub beacon_module: String,
+    pub beacon_counts: Vec<u32>,
+    pub beacon_quality: u8,
+    pub beacon_share: f64,
 }
 
 impl Default for PlanSettings {
@@ -198,6 +205,10 @@ impl Default for PlanSettings {
             research_productivity: HashMap::new(),
             max_columns: 0,
             planets: vec!["nauvis".into()],
+            beacon_module: String::new(),
+            beacon_counts: vec![8],
+            beacon_quality: 0,
+            beacon_share: 1.0,
         }
     }
 }
@@ -267,6 +278,9 @@ pub struct PlanRecipe {
     /// DSP: this recipe's compute cost (units per tick, incl. its power), any objective.
     #[serde(default)]
     pub compute: f64,
+    /// Factorio: beacons charged to this recipe (machines x beacons per machine / sharing).
+    #[serde(default)]
+    pub beacons: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

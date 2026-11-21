@@ -145,5 +145,9 @@ pub fn machine_cost(w: &CostWeights, r: &Recipe, f: &Mode, mixed_belts: bool) ->
     if f.sprayed {
         aux += w.coater;
     }
+    if f.beacons > 0.0 {
+        // Factorio: the mode's beacons are buildings too
+        aux += f.beacons * w.building_weights.get("beacon").copied().unwrap_or(1.0);
+    }
     bw + aux
 }

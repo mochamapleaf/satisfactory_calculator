@@ -81,7 +81,8 @@ fn module(data: &GameData, id: &str, tier: u8) -> Option<Module> {
     if id.is_empty() {
         return None;
     }
-    data.effect(id).filter(|e| e.kind == "module").map(|e| Module { item: e.item.clone(), v: e.tier(tier) })
+    // held at its tier (`module@q`), so module costs can price it by quality
+    data.effect(id).filter(|e| e.kind == "module").map(|e| Module { item: qid(&e.item, tier.min(LEGENDARY)), v: e.tier(tier) })
 }
 
 /// Upstream closure (base ids) over `recipes`: items needed for `targets` and the recipes making them.
@@ -222,18 +223,23 @@ fn loadout_modes(
             }
         }
         let tier_label = if r.producers.len() > 1 { data.pick(&b.name, &b.name_zh).to_string() } else { String::new() };
-        for (k, m) in loadouts {
+        let beacons = super::rules::beacon_options(data, s);
+        for ((k, m), bo) in loadouts.iter().flat_map(|l| beacons.iter().map(move |b| (*l, b))) {
+            if bo.count > 0 && n == 0 {
+                continue;
+            }
             let (kq, km) = (k as f64, m as f64);
             let zero = EffectTier::default();
             let qv = qm.as_ref().map(|x| x.v).unwrap_or(zero);
             let pv = pm.as_ref().map(|x| x.v).unwrap_or(zero);
-            let qchance = (kq * qv.quality + km * pv.quality).max(0.0);
+            // speed beacons transmit their modules' quality penalty
+            let qchance = (kq * qv.quality + km * pv.quality + bo.quality).max(0.0);
             // built-in machine productivity applies to every recipe; research and productivity
             // modules only where the recipe allows them (km is 0 otherwise)
             let research_p = if r.productivity_allowed { research } else { 0.0 };
             let p = (b.base_productivity + research_p + km * pv.productivity).min(MAX_PRODUCTIVITY);
-            let speed = b.speed * (1.0 + kq * qv.speed + km * pv.speed).max(0.2);
-            let power = b.power * (1.0 + kq * qv.consumption + km * pv.consumption).max(0.2);
+            let speed = b.speed * (1.0 + kq * qv.speed + km * pv.speed + bo.speed).max(0.2);
+            let power = b.power * (1.0 + kq * qv.consumption + km * pv.consumption + bo.consumption).max(0.2) + bo.power;
             let row = qrow(qchance, i);
             let mut outs: Vec<(String, f64)> = Vec::new();
             // Open question (report §1.1, §7): whether the catalyst part rolls quality in game.
@@ -259,7 +265,8 @@ fn loadout_modes(
                 (0, m) => format!("{m}P"),
                 (k, m) => format!("{k}Q {m}P"),
             };
-            let label = [tier_label.as_str(), load.as_str()].iter().filter(|x| !x.is_empty()).cloned().collect::<Vec<_>>().join(" · ");
+            let bl = bo.label();
+            let label = [tier_label.as_str(), load.as_str(), bl.as_str()].iter().filter(|x| !x.is_empty()).cloned().collect::<Vec<_>>().join(" · ");
             let mut held = Vec::new();
             if let (Some(q), true) = (qm, k > 0) {
                 held.push((q.item.clone(), kq));
@@ -267,8 +274,11 @@ fn loadout_modes(
             if let (Some(pp), true) = (pm, m > 0) {
                 held.push((pp.item.clone(), km));
             }
+            if bo.count > 0 {
+                held.push((bo.module.clone(), bo.modules_per_machine));
+            }
             out.push(Mode {
-                key: format!("{}|q{k}p{m}", b.id),
+                key: if bo.count == 0 { format!("{}|q{k}p{m}", b.id) } else { format!("{}|q{k}p{m}b{}", b.id, bo.count) },
                 label,
                 building: b.id.clone(),
                 speed,
@@ -281,6 +291,7 @@ fn loadout_modes(
                 somersloops: 0,
                 sprayed: false,
                 outputs: Some(outs),
+                beacons: bo.per_machine,
             });
         }
     }

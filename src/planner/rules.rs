@@ -35,6 +35,68 @@ pub struct Mode {
     /// Products per unit of work when they are not `recipe.outputs × out_mult` (Factorio
     /// quality modes: products split over quality tiers).
     pub outputs: Option<Vec<(String, f64)>>,
+    /// Factorio beacons charged to each building of this mode (count / sharing; 0 = none).
+    pub beacons: f64,
+}
+
+/// Beacon option for Factorio modes: `count` beacons around each machine, each holding the
+/// beacon module; speed / consumption / quality are the summed transmitted effect.
+#[derive(Clone, Debug, Default)]
+pub struct BeaconOption {
+    pub count: u32,
+    pub speed: f64,
+    pub consumption: f64,
+    pub quality: f64,
+    /// Beacons and beacon modules charged per machine (count / `beacon_share`), MW per machine.
+    pub per_machine: f64,
+    pub modules_per_machine: f64,
+    pub power: f64,
+    /// Held beacon module id (at `module_quality`).
+    pub module: String,
+}
+
+impl BeaconOption {
+    /// "8 beacons" (empty without beacons).
+    pub fn label(&self) -> String {
+        if self.count == 0 {
+            String::new()
+        } else {
+            format!("{} beacon{}", self.count, if self.count == 1 { "" } else { "s" })
+        }
+    }
+}
+
+/// Beacon options from the settings: always "none", plus one per count in `beacon_counts` when a
+/// beacon module is chosen. Transmitted effect per machine (Factorio 2.0):
+///   n x effectivity(beacon quality) x profile[n-1] x slots x module effect (at `module_quality`),
+/// the speed modules' quality penalty included. Beacons only reach machines with module slots.
+pub fn beacon_options(data: &GameData, s: &PlanSettings) -> Vec<BeaconOption> {
+    let mut out = vec![BeaconOption::default()];
+    let (Some(b), Some(e)) = (data.beacons.first(), data.effect(&s.beacon_module)) else { return out };
+    let v = e.tier(s.module_quality);
+    if e.kind != "module" || v.productivity > 0.0 || v.quality > 0.0 {
+        return out; // beacons take speed / efficiency modules only
+    }
+    let bt = b.tier(s.beacon_quality.min(4));
+    let share = if s.beacon_share.is_finite() && s.beacon_share >= 1.0 { s.beacon_share } else { 1.0 };
+    let mq = if data.qualities.is_empty() { 0 } else { s.module_quality.min(4) };
+    let mut counts: Vec<u32> = s.beacon_counts.iter().copied().filter(|&n| n > 0 && n <= 64).collect();
+    counts.sort_unstable();
+    counts.dedup();
+    for n in counts {
+        let k = n as f64 * bt.effectivity * b.profile_at(n) * b.modules as f64;
+        out.push(BeaconOption {
+            count: n,
+            speed: k * v.speed,
+            consumption: k * v.consumption,
+            quality: k * v.quality,
+            per_machine: n as f64 / share,
+            modules_per_machine: n as f64 * b.modules as f64 / share,
+            power: n as f64 * bt.power / share,
+            module: super::quality::qid(&e.item, mq),
+        });
+    }
+    out
 }
 
 /// Products per unit of work of `r` run in mode `m`. Productivity (`out_mult`) only
@@ -74,6 +136,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
     } else {
         r.producers.iter().map(|p| p.as_str()).collect()
     };
+    let beacons = beacon_options(data, s);
     let mut out = Vec::new();
     for pid in producers {
         if s.disabled_buildings.iter().any(|d| d == pid) {
@@ -84,81 +147,90 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
         // Built-in machine productivity (foundry / EM plant / biochamber +50 %; 0 for DSP) applies to
         // every recipe the machine runs; the recipe flag only forbids productivity modules and research.
         let base_p = b.base_productivity + if r.productivity_allowed { research } else { 0.0 };
-        out.push(Mode {
-            key: b.id.clone(),
-            label: String::new(),
-            building: b.id.clone(),
-            speed: b.speed,
-            out_mult: 1.0 + base_p.min(MAX_PRODUCTIVITY),
-            power_base: b.power,
-            power_exp: 1.0,
-            overclock: false,
-            extra_inputs: vec![],
-            held: vec![],
-            somersloops: 0,
-            sprayed: false,
-            outputs: None,
-        });
-        if b.modules == 0 {
-            continue;
-        }
-        for eid in &s.effects {
-            let Some(e) = data.effect(eid) else { continue };
-            let v = e.tier(if e.kind == "module" { s.module_quality } else { 0 });
-            if e.productivity > 0.0
-                && (!r.productivity_allowed || b.disallowed_effects.iter().any(|x| x == "productivity"))
-            {
-                continue;
-            }
-            if e.products_only && !r.productivity_allowed {
-                continue;
-            }
-            let en = data.pick(&e.name, &e.name_zh);
-            let label = if tier_label.is_empty() { en.to_string() } else { format!("{tier_label} · {en}") };
-            let mode = if e.kind == "proliferator" {
-                let sprays = e.sprays.unwrap_or(1.0).max(1e-9);
-                let per_work: f64 = r.inputs.iter().map(|(_, q)| q).sum::<f64>() / sprays;
-                Mode {
-                    key: format!("{}|{}", b.id, e.id),
-                    label,
-                    building: b.id.clone(),
-                    speed: b.speed * (1.0 + e.speed),
-                    out_mult: 1.0 + e.productivity + base_p,
-                    power_base: b.power * (1.0 + e.consumption),
-                    power_exp: 1.0,
-                    overclock: false,
-                    extra_inputs: vec![(e.item.clone(), per_work)],
-                    held: vec![],
-                    somersloops: 0,
-                    sprayed: true,
-                    outputs: None,
+        // module fills: (key, label, speed, productivity, consumption sums, held modules); plain first
+        let mut fills: Vec<(String, String, f64, f64, f64, Vec<(String, f64)>)> =
+            vec![(b.id.clone(), String::new(), 0.0, 0.0, 0.0, vec![])];
+        if b.modules > 0 {
+            for eid in &s.effects {
+                let Some(e) = data.effect(eid) else { continue };
+                let v = e.tier(if e.kind == "module" { s.module_quality } else { 0 });
+                if e.productivity > 0.0
+                    && (!r.productivity_allowed || b.disallowed_effects.iter().any(|x| x == "productivity"))
+                {
+                    continue;
                 }
-            } else {
+                if e.products_only && !r.productivity_allowed {
+                    continue;
+                }
+                let en = data.pick(&e.name, &e.name_zh);
+                let label = if tier_label.is_empty() { en.to_string() } else { format!("{tier_label} · {en}") };
+                if e.kind == "proliferator" {
+                    let sprays = e.sprays.unwrap_or(1.0).max(1e-9);
+                    let per_work: f64 = r.inputs.iter().map(|(_, q)| q).sum::<f64>() / sprays;
+                    out.push(Mode {
+                        key: format!("{}|{}", b.id, e.id),
+                        label,
+                        building: b.id.clone(),
+                        speed: b.speed * (1.0 + e.speed),
+                        out_mult: 1.0 + e.productivity + base_p,
+                        power_base: b.power * (1.0 + e.consumption),
+                        power_exp: 1.0,
+                        overclock: false,
+                        extra_inputs: vec![(e.item.clone(), per_work)],
+                        held: vec![],
+                        somersloops: 0,
+                        sprayed: true,
+                        outputs: None,
+                        beacons: 0.0,
+                    });
+                    continue;
+                }
                 let n = b.modules as f64;
                 // module quality (data sets with quality): shown on the label, held at that tier
                 let mq = if data.qualities.is_empty() { 0 } else { s.module_quality.min(4) };
                 let qname = if mq > 0 {
-                    format!(" ★{}", data.qualities.get(mq as usize).map(|q| q.to_lowercase()).unwrap_or_default())
+                    format!(" \u{2605}{}", data.qualities.get(mq as usize).map(|q| q.to_lowercase()).unwrap_or_default())
                 } else {
                     String::new()
                 };
-                Mode {
-                    key: format!("{}|{}", b.id, e.id),
-                    label: format!("{label}{qname} ×{}", b.modules),
+                fills.push((
+                    format!("{}|{}", b.id, e.id),
+                    format!("{label}{qname} \u{d7}{}", b.modules),
+                    n * v.speed,
+                    n * v.productivity,
+                    n * v.consumption,
+                    vec![(super::quality::qid(&e.item, mq), n)],
+                ));
+            }
+        }
+        for (key, label, sp, pr, co, held) in fills {
+            for bo in &beacons {
+                if bo.count > 0 && b.modules == 0 {
+                    continue;
+                }
+                let mut held = held.clone();
+                if bo.count > 0 {
+                    held.push((bo.module.clone(), bo.modules_per_machine));
+                }
+                let bl = bo.label();
+                let label = [label.as_str(), bl.as_str()].iter().filter(|x| !x.is_empty()).cloned().collect::<Vec<_>>().join(" \u{b7} ");
+                out.push(Mode {
+                    key: if bo.count == 0 { key.clone() } else { format!("{key}|b{}", bo.count) },
+                    label,
                     building: b.id.clone(),
-                    speed: b.speed * (1.0 + n * v.speed).max(0.2),
-                    out_mult: 1.0 + (base_p + n * v.productivity).min(MAX_PRODUCTIVITY),
-                    power_base: b.power * (1.0 + n * v.consumption).max(0.2),
+                    speed: b.speed * (1.0 + sp + bo.speed).max(0.2),
+                    out_mult: 1.0 + (base_p + pr).min(MAX_PRODUCTIVITY),
+                    power_base: b.power * (1.0 + co + bo.consumption).max(0.2) + bo.power,
                     power_exp: 1.0,
                     overclock: false,
                     extra_inputs: vec![],
-                    held: vec![(super::quality::qid(&e.item, mq), n)],
+                    held,
                     somersloops: 0,
                     sprayed: false,
                     outputs: None,
-                }
-            };
-            out.push(mode);
+                    beacons: bo.per_machine,
+                });
+            }
         }
     }
     out
@@ -192,6 +264,7 @@ fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode
                 somersloops: k,
                 sprayed: false,
                 outputs: None,
+                beacons: 0.0,
             }
         })
         .collect()

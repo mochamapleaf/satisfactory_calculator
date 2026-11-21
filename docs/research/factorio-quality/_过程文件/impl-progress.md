@@ -84,3 +84,30 @@ Spec: `../00-最终报告.md` §5. Branch `refactor`, not pushed.
 - Test `research_productivity_families`: 60 steel/min furnace-only = 300 plates; level 5 → 200; level 40 is
   capped (+300 %) → 75. Browser (2x1 steel 60/min, casting off): level 5 → 200 iron ore (was 300).
 - Next: beacons.
+
+## Step 6 — beacons (report §5 step 8, done)
+- Data: `beacons` (effectivity 1.5, 2 slots, 480 kW, profile 1/√n table, per-quality effectivity/kW).
+- Rust `rules.rs::beacon_options`: none + one option per count in `beacon_counts` when `beacon_module` is a
+  speed/efficiency module: transmitted effect = n × effectivity(beacon_quality) × profile[n−1] × slots ×
+  module effect (module_quality), speed modules' quality penalty included. Every Factorio mode (plain or
+  module fill, and every quality loadout in `quality.rs`) × beacon option is a mode; only machines with
+  module slots. Beacon MW and beacon buildings per machine (÷ `beacon_share`) go into the mode
+  (`Mode.beacons`, power_base) and the building cost (`compute::machine_cost`, weight `beacon`); held beacon
+  modules at their tier. Plan: `PlanRecipe.beacons`, "Beacon" row in building_counts (ceil of the total).
+  Quality loadouts now hold `module@q` (tiered ids).
+- Tests: `beacon_mode_values_by_hand` (2.0 circuit, AM3 4×P3 + 8 beacons×2 S3: speed 5.8025, ×1.4,
+  974.82/min per machine, 7.64205 MW; plan = 1 machine + 8 beacons; sharing 2 halves beacon MW/count; no
+  module / prod module → no beacon modes), `beacon_profile_and_quality` (12 beacons 5.1948; legendary beacon
+  2.5 / 80 kW with legendary S3 = +625 %; penalty −7.5 % per normal beacon), `beacon_quality_penalty_in_loadouts`
+  (2q1 gear 4×legendary Q3 + 1 beacon: q = 17.5 %, uncommon share 0.9 q; plan balances).
+- UI: Modules section → beacon module select, beacons per machine (list, e.g. "4, 8, 12"), machines sharing
+  a beacon, beacon quality. Browser (planner-dist, 2.0, circuit 974.82/min, P3 + 8×S3 beacons, LP): circuit
+  1 machine 7.6 MW, cable 1.07 machines (2088.9/min = 240 × 5.8025 × 1.4 per machine), 17 beacons; furnaces
+  stay without beacons (not worth it under Raw + building tie-break).
+- Regression vs b34e62c (native release, 10 plans, `examples/regress.rs` kept in scratchpad): identical
+  except (a) Satisfactory HMF Buildings MILP at a 3 s limit (same 30 buildings, other tie-break; time-limited
+  under full CPU load from other jobs) and (b) 2x1 legendary gear on the new default Nauvis-only planets
+  (no calcite → no foundry casting: 3095 ore vs 653). With all planets 2x1 processing unit@4 is identical.
+- Note: the machine was at 100 % CPU from other sessions' jobs; vite builds took minutes, the hidden
+  browser pane looked hung while the page was only slow.
+- Next: module cost.
