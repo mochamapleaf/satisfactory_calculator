@@ -39,6 +39,25 @@ pub struct Mode {
     pub beacons: f64,
 }
 
+/// Objective cost per building of mode `m` for the modules it holds (`PlanSettings::module_costs`,
+/// by the held item's quality tier; Somersloops and other boosts are not modules).
+pub fn module_cost(data: &GameData, s: &PlanSettings, m: &Mode) -> f64 {
+    if s.module_costs.is_empty() || data.game != "factorio" {
+        return 0.0;
+    }
+    m.held
+        .iter()
+        .map(|(id, n)| {
+            let (base, q) = super::quality::split(id);
+            if !data.effects.iter().any(|e| e.kind == "module" && e.item == base) {
+                return 0.0;
+            }
+            let c = s.module_costs.get(q as usize).or(s.module_costs.last()).copied().unwrap_or(0.0);
+            n * if c.is_finite() && c > 0.0 { c } else { 0.0 }
+        })
+        .sum()
+}
+
 /// Beacon option for Factorio modes: `count` beacons around each machine, each holding the
 /// beacon module; speed / consumption / quality are the summed transmitted effect.
 #[derive(Clone, Debug, Default)]

@@ -706,3 +706,63 @@ fn beacon_quality_penalty_in_loadouts() {
     assert_balanced(&p);
 }
 
+// ---------- module cost in the objective (report §5 step 6) ----------
+
+#[test]
+fn module_cost_break_even() {
+    // 60 gears/min from plates (weight 1), AM3 only, optional 4x productivity 3:
+    //   plain: 120 plates.  prod: speed 1.25 x 0.4 = 0.5 -> 84 gears/min per machine, 60/84 machines
+    //   x 4 = 2.857 modules, 120/1.4 = 85.714 plates.  Break-even 34.286 / 2.857 = 12 per module.
+    let mut d = GameData::for_set("factorio", "");
+    keep(&mut d, &["iron-gear-wheel"]);
+    add_resource(&mut d, "iron-plate", 1.0);
+    let mut s = lp_settings("", "iron-gear-wheel", 60.0);
+    s.module_quality = 0;
+    s.effects = vec!["productivity-module-3".into()];
+    s.disabled_buildings = vec!["assembling-machine-1".into(), "assembling-machine-2".into()];
+    let p = plan(&d, &s);
+    assert!(close(raw(&p, "iron-plate"), 120.0 / 1.4, 1e-9));
+    assert!(close(p.objective, 120.0 / 1.4, 1e-9));
+    s.module_costs = vec![10.0];
+    let p = plan(&d, &s);
+    assert!(close(raw(&p, "iron-plate"), 120.0 / 1.4, 1e-9), "below break-even: still productivity");
+    assert!(close(p.objective, 120.0 / 1.4 + 10.0 * 4.0 * 60.0 / 84.0, 1e-9), "{}", p.objective);
+    s.module_costs = vec![15.0];
+    let p = plan(&d, &s);
+    assert!(close(raw(&p, "iron-plate"), 120.0, 1e-9), "above break-even: no modules");
+    assert!(p.recipes.iter().all(|r| r.mode == "assembling-machine-3"));
+}
+
+#[test]
+fn module_cost_by_quality_tier() {
+    // legendary gear (2.0 values, oracle setting): free legendary modules give 79.8786 plates per
+    // gear; pricing legendary modules makes the loop dearer, and the plan never cheaper in plates
+    let mut d = GameData::for_set("factorio", "spa");
+    keep(&mut d, &["iron-gear-wheel", "iron-gear-wheel-recycling"]);
+    add_resource(&mut d, "iron-plate", 1.0);
+    let mut s = lp_settings("spa", "iron-gear-wheel@4", 1.0);
+    s.disabled_buildings = vec!["assembling-machine-1".into(), "assembling-machine-2".into()];
+    let free = plan(&d, &s);
+    assert!(close(raw(&free, "iron-plate") / 2.0, 79.8786, 1e-5), "{}", raw(&free, "iron-plate"));
+    // normal modules cost 0, legendary 1000: only a tier the plan does not use is free, so
+    // the objective rises by the held legendary modules x 1000
+    s.module_costs = vec![0.0, 0.0, 0.0, 0.0, 1000.0];
+    let dear = plan(&d, &s);
+    assert_eq!(dear.status, Status::Optimal);
+    let held: f64 = dear
+        .recipes
+        .iter()
+        .map(|r| {
+            let m = r.mode.split('|').nth(1).unwrap_or("");
+            let digits = |c: char| m.split(c).nth(1).and_then(|x| x.chars().next()).and_then(|x| x.to_digit(10)).unwrap_or(0);
+            r.machines * (digits('q') + digits('p')) as f64
+        })
+        .sum();
+    assert!(close(dear.objective, raw(&dear, "iron-plate") + 1000.0 * held, 1e-6), "{} {}", dear.objective, held);
+    assert!(raw(&dear, "iron-plate") / 2.0 >= 79.8786 * (1.0 - 1e-6));
+    // with normal modules instead the same price applies to tier 0 only
+    s.module_quality = 0;
+    s.module_costs = vec![1000.0, 0.0];
+    let normal = plan(&d, &s);
+    assert!(normal.objective > raw(&normal, "iron-plate"));
+}

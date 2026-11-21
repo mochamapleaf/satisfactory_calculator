@@ -150,6 +150,8 @@ export interface Settings {
   beacon_counts: number[]
   beacon_quality: number
   beacon_share: number
+  /** Factorio: objective cost per module held, by module quality (normal … legendary); [] = free. */
+  module_costs: number[]
   /** Solver guard: models with more columns are not solved (0 = no limit). Set per request, not saved. */
   max_columns?: number
 }
@@ -233,6 +235,7 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   beacon_counts: [8],
   beacon_quality: 0,
   beacon_share: 1,
+  module_costs: [],
 })
 
 let wasm: Promise<unknown> | null = null

@@ -169,6 +169,10 @@ pub struct PlanSettings {
     pub beacon_counts: Vec<u32>,
     pub beacon_quality: u8,
     pub beacon_share: f64,
+    /// Factorio: objective cost of one module held by a machine (or its beacons), per module
+    /// quality tier (normal … legendary; a shorter list repeats its last value). Empty = modules are
+    /// free. Added to the cost function under every objective, in its units (Raw: 1 = one ore/min).
+    pub module_costs: Vec<f64>,
 }
 
 impl Default for PlanSettings {
@@ -209,6 +213,7 @@ impl Default for PlanSettings {
             beacon_counts: vec![8],
             beacon_quality: 0,
             beacon_share: 1.0,
+            module_costs: vec![],
         }
     }
 }

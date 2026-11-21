@@ -218,7 +218,8 @@ fn build_scaled(
         // added here, not in `scale`, which is a multiplier rebuilt every heuristic round
         let wb = w.buildings
             * compute::machine_cost(w, u.recipe, f, s.mixed_belts)
-            * scale.get(&u.key).copied().unwrap_or(1.0);
+            * scale.get(&u.key).copied().unwrap_or(1.0)
+            + rules::module_cost(data, s, f);
         let (c_max, k_max) = if f.overclock { (c_max, k_max) } else { (1.0, 0) };
         let n = if integer {
             p.add_integer_var(wb, (0, MAX_BUILDINGS))

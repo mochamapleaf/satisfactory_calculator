@@ -111,3 +111,39 @@ Spec: `../00-最终报告.md` §5. Branch `refactor`, not pushed.
 - Note: the machine was at 100 % CPU from other sessions' jobs; vite builds took minutes, the hidden
   browser pane looked hung while the page was only slow.
 - Next: module cost.
+
+## Step 7 — module cost in the objective (report §5 step 6 part, done)
+- `PlanSettings.module_costs` (per held module, by quality tier normal…legendary; shorter list repeats the
+  last value; empty = free); `rules::module_cost` adds Σ held modules × cost (machine slots and beacon
+  modules, Factorio module items only) to each building's objective coefficient under every objective.
+- Tests: `module_cost_break_even` (60 gears/min from plates: prod saves 34.286 plates for 2.857 modules →
+  break-even 12/module; cost 10 keeps P3 with objective 85.714 + 28.571, cost 15 drops modules → 120 plates),
+  `module_cost_by_quality_tier` (gear@4 oracle 79.8786 with free modules; legendary-only price: objective =
+  plates + 1000 × held modules, plates never below the oracle). Suite 52 pass, 4 ignored.
+- UI: Modules section → "Charge for modules" (defaults 1/3/10/30/100 per tier, a rough guess, editable).
+  Browser (2x1 Nauvis+Vulcanus, legendary gear 10/min, legendary modules): free → 20 buildings (10 AM3,
+  8 foundries, 2 recyclers, as in review 2 M2); charged → 14 buildings, plain gear assembler, foundry gear
+  casting with 4Q.
+
+## Step 8 — integer machines shared across quality tiers (report §5 step 6): design only, not built
+Why not built now: the change touches every per-column part of the MILP path in `lp.rs` (variables, warm
+start `hint_of`, `restrict`, the re-weighting heuristic `scale`, `finish` rounding), and its speed could not
+be measured reliably today (machine at 100 % CPU from other sessions; a 4 s MILP limit is already the binding
+case for Satisfactory chains). Quality plans stay LP; `building_counts` already rounds up per shared group.
+Design:
+1. Group key g = (base recipe `split(r.id).0`, mode key). All columns of a group run on the same machine type
+   and loadout (same `speed`, `power_base`), i.e. the same physical machines switching recipes (r@0 … r@3).
+2. In `build_scaled`, when `quality_on && integer`: per column keep x_c continuous and drop its own n_c
+   (or keep n_c continuous with cost 0 and x_c ≤ speed·n_c); add one integer N_g with the building weight
+   (machine_cost + beacons + module cost) and the row Σ_{c∈g} x_c / speed ≤ N_g. Power stays per column
+   (exponent 1, no overclock), so p_c ≥ P·x_c/speed is unchanged.
+3. Warm start: N_g = ceil(Σ x_c/speed) from the LP (always feasible). Restricted MILP: keep groups whose
+   columns the LP uses. `scale` re-weighting per group (ceil(N)/N).
+4. `finish`: report per column the fractional share n_c = x_c/speed, and building_counts = Σ_g N_g (the
+   current per-group ceil already gives this for LP plans; with the MILP it becomes the optimum, not a
+   rounding).
+5. Size: gear@4 chain 416 columns → ~100 groups (≈ 4× fewer integers than per-column); processing unit@4
+   2 857 columns → ~700 groups. Expect gear in < 1 s; processing unit likely hits the time limit (return the
+   best plan + gap as today). Gate: auto-enable only below ~300 groups, otherwise LP + rounding with a note.
+6. Test (report): legendary gear, 4-slot all-quality loadout fixed, integer → "k normal machines + 1 shared"
+   (normal tier vs. uncommon…epic sharing one machine), building count ≤ LP per-group ceil, balance holds.

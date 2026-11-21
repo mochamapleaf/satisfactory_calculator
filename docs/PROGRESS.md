@@ -145,3 +145,20 @@ Plan: `docs/research/satisfactory-geo/00-最终报告.md` §11; step log `docs/r
 - `data/satisfactory-geo/sites.json` (`tools/geo_sites.py`): 39 one-km grid sites, 119 belt arcs, 12 candidate hubs
   (base, top-output proxy, farthest-point sampling); plot in `docs/research/satisfactory-geo/_过程文件/sites.png`.
 - Not done: Rust loaders and the location layer (G4 onward); hub choice by a belt-only solve instead of the output proxy.
+
+## 2026-11-21 — Factorio: planets, research productivity, beacons, module cost
+Step log: `docs/research/factorio-quality/_过程文件/impl-progress.md` (steps 4–8).
+- Planet filter (Space Age sets): `PlanSettings.planets`, default Nauvis only; recipes and resources tagged
+  with FactorioLab `locations` elsewhere are off (Gleba plants, Vulcanus calcite / tungsten, asteroid chunks on
+  the space platform); supplies still work as imports; infeasible plans name the off-planet resources.
+  UI: Game data → Planets.
+- Research productivity: per technology family from the data (steel, LDS, plastic, rocket fuel, processing
+  unit, scrap recycling, rocket part, asteroid crushing), level inputs in the sidebar.
+- Beacons: discrete modes per beacon count (list), FactorioLab profile (1/√n), beacon quality, speed-module
+  quality penalty, beacon MW and building cost per machine (optional sharing). Checked by hand: AM3 4×P3 +
+  8 beacons × 2 S3 → 974.82 circuits/min per machine, 7.642 MW.
+- Module cost: optional cost per held module by quality tier (`module_costs`), under any objective.
+- Default 2x1 plans change with the Nauvis default (no calcite → no foundry casting); with all planets they
+  are as before. Satisfactory / DSP / base Factorio plans unchanged (10-plan regression vs b34e62c).
+- Open: integer machines shared across quality tiers (design in impl-progress step 8), machine quality,
+  quality mining.

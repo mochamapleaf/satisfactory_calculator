@@ -237,6 +237,33 @@ function QualitySettings({ data, s, set }: { data: GameData; s: Settings; set: (
   )
 }
 
+/** Factorio: optional objective cost per held module (machine slots and beacons), by quality. */
+function ModuleCosts({ data, s, set, hasQuality }: { data: GameData; s: Settings; set: (p: Partial<Settings>) => void; hasQuality: boolean }) {
+  const on = s.module_costs.length > 0
+  const tiers = hasQuality ? (data.qualities ?? []) : ['Module']
+  return (
+    <>
+      <label className="row small">
+        <input type="checkbox" checked={on} onChange={e => set({ module_costs: e.target.checked ? (hasQuality ? [1, 3, 10, 30, 100] : [1]) : [] })} />
+        <span>Charge for modules</span>
+      </label>
+      {on && tiers.map((n, q) => (
+        <div className="row small" key={n}>
+          <span className="grow">{hasQuality && <QualityPip q={q} />}{hasQuality ? n : 'Per module'}</span>
+          <input type="number" min={0} step="any" value={s.module_costs[q] ?? s.module_costs[s.module_costs.length - 1] ?? 0}
+            aria-label={`Cost of one ${hasQuality ? n.toLowerCase() + ' ' : ''}module`}
+            onChange={e => {
+              const c = tiers.map((_, j) => s.module_costs[j] ?? s.module_costs[s.module_costs.length - 1] ?? 0)
+              c[q] = Math.max(0, +e.target.value || 0)
+              set({ module_costs: c })
+            }} />
+        </div>
+      ))}
+      {on && <p className="hint">Each module a machine holds (beacon modules included) adds this to the cost function, in its units (Raw: 1 = one ore per minute), so loadouts are not free. Defaults are a rough guess; quality plans price modules at the module quality.</p>}
+    </>
+  )
+}
+
 /** Factorio beacons: module, counts per machine (each count is a solver option), sharing, quality. */
 function BeaconSettings({ data, s, set, hasQuality }: { data: GameData; s: Settings; set: (p: Partial<Settings>) => void; hasQuality: boolean }) {
   const b = data.beacons![0]
@@ -460,6 +487,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             </label>
           ))}
           {(data.beacons?.length ?? 0) > 0 && <BeaconSettings data={data} s={s} set={set} hasQuality={hasQuality} />}
+          {data.game === 'factorio' && <ModuleCosts data={data} s={s} set={set} hasQuality={hasQuality} />}
         </section>
       )}
 
