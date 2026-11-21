@@ -25,12 +25,28 @@ export interface Effect {
 }
 
 /** Factorio data sets (data::FACTORIO_DATASETS). */
-export const DATASETS: { id: string; name: string }[] = [
-  { id: '2.0', name: '2.0.77 base' },
-  { id: '2x1', name: '2.1.25 Space Age' },
-  { id: '2q1', name: '2.1.25 base + quality' },
-  { id: 'spa', name: '2.0.77 Space Age' },
+export const DATASETS: { id: string; name: string; quality: boolean }[] = [
+  { id: '2.0', name: '2.0.77 base', quality: false },
+  { id: '2x1', name: '2.1.25 Space Age', quality: true },
+  { id: '2q1', name: '2.1.25 base + quality', quality: true },
+  { id: 'spa', name: '2.0.77 Space Age', quality: true },
 ]
+/** Settings for Factorio data set `id`: a set without quality turns quality targets and
+ *  supplies back to normal (rows of the same item merge). */
+export function withDataset(s: Settings, id: string): Settings {
+  if (DATASETS.find(d => d.id === id)?.quality) return { ...s, dataset: id }
+  const plain = (l: ItemRate[]) => {
+    const out: ItemRate[] = []
+    for (const t of l) {
+      const item = qsplit(t.item)[0]
+      const same = out.find(x => x.item === item)
+      if (same) same.rate += t.rate
+      else out.push({ item, rate: t.rate })
+    }
+    return out
+  }
+  return { ...s, dataset: id, targets: plain(s.targets), supplies: plain(s.supplies) }
+}
 /** Quality tiers: "iron-gear-wheel@4" → ["iron-gear-wheel", 4]; normal keeps the bare id. */
 export function qsplit(id: string): [string, number] {
   const m = /^(.+)@([1-4])$/.exec(id)
@@ -142,6 +158,8 @@ export interface Plan {
   status: 'empty' | 'optimal' | 'infeasible' | 'unbounded' | 'error' | 'too_large' | 'cancelled'
   objective: number; targets: RateLine[]; recipes: PlanRecipe[]; raw: RateLine[]; supplied: RateLine[]
   surplus: RateLine[]; production_power: number; extraction_power: number; buildings: number
+  /** Buildings to place per building name (sums to `buildings`). */
+  building_counts?: { building: string; count: number }[]
   shards: number; somersloops: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
   item_values: ItemValue[]; flows: Flow[]; warnings: string[]
   compute?: ComputeSummary | null

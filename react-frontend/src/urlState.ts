@@ -1,4 +1,4 @@
-import { defaultSettings, type Game, type Settings } from './solver'
+import { DATASETS, defaultSettings, withDataset, type Game, type Settings } from './solver'
 
 // Settings live in the URL hash (shareable links) and localStorage (last session).
 const KEY = 'sf-planner-settings'
@@ -15,6 +15,12 @@ function upgrade(raw: Record<string, unknown>): Settings {
   }
   s.cost = { ...defaultSettings(game).cost, ...(s.cost ?? {}) }
   if (s.objective === 'compute' && game !== 'dsp') s.objective = 'buildings' // DSP-only preset
+  delete s.max_columns // a per-request guard, never taken from a link
+  if (game === 'factorio') {
+    // an unknown data set id (typo, or a set removed later) falls back to base 2.0
+    const id = DATASETS.some(d => d.id === s.dataset) ? s.dataset : '2.0'
+    return withDataset(s, id)
+  }
   return s
 }
 

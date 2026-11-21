@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, QualityPip, RemoveMark } from './Icon'
 import ItemPicker from './ItemPicker'
-import { DATASETS, defaultSettings, dn, fmt, GENERATORS, itemName as qItemName, preset, qsplit, scarcity, withQ, type CostWeights, type Generator, type GameData, type ItemRate, type Objective, type Settings } from './solver'
+import { DATASETS, defaultSettings, withDataset, dn, fmt, GENERATORS, itemName as qItemName, preset, qsplit, scarcity, withQ, type CostWeights, type Generator, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
   data: GameData
@@ -38,16 +38,21 @@ function ItemRates({ data, list, onChange, producibleOnly, quality }: {
     scope.current?.querySelector<HTMLElement>(`[data-opener="${refocus.current}"]`)?.focus()
     refocus.current = null
   })
-  // picker ids are base items; a row keeps its quality when its item changes
-  const taken = useMemo(() => new Set(list.map(t => qsplit(t.item)[0])), [list])
-  const name = (id: string) => qItemName(data, id)
+  // Picker ids are base items; a row keeps its quality when its item changes. An item is taken
+  // at the quality the pick would use (new rows are normal), so with quality the same item can
+  // be listed at several qualities (normal + legendary gears).
   const liquid = (id: string) => data.items.find(i => i.id === qsplit(id)[0])?.liquid ?? false
+  const atQ = (id: string, q: number) => (liquid(id) ? qsplit(id)[0] : withQ(id, q))
+  const pickQ = open === null || open === 'add' ? 0 : qsplit(list[open]?.item ?? '')[1]
+  const listed = new Set(list.map(t => t.item))
+  const taken = new Set(list.map(t => qsplit(t.item)[0]).filter(b => listed.has(atQ(b, pickQ))))
+  const name = (id: string) => qItemName(data, id)
   const pick = (id: string) => {
     // items already in the list are disabled in the picker, so a pick never duplicates or drops a row
     if (open === 'add') {
       if (!taken.has(id)) onChange([...list, { item: id, rate: 10 }])
     } else if (open !== null && (!taken.has(id) || qsplit(list[open].item)[0] === id)) {
-      onChange(list.map((t, j) => (j === open ? { ...t, item: liquid(id) ? id : withQ(id, qsplit(t.item)[1]) } : t)))
+      onChange(list.map((t, j) => (j === open ? { ...t, item: atQ(id, qsplit(t.item)[1]) } : t)))
     }
     refocus.current = open
     setOpen(null)
@@ -76,7 +81,13 @@ function ItemRates({ data, list, onChange, producibleOnly, quality }: {
             <div className="row small qrow">
               <span className="grow muted">Quality</span>
               <QualitySelect data={data} value={qsplit(t.item)[1]} label={`Quality of ${name(t.item)}`}
-                onChange={q => onChange(list.map((x, j) => j === i ? { ...x, item: withQ(x.item, q) } : x))} />
+                onChange={q => {
+                  // a quality that is already listed merges into that row
+                  const item = withQ(t.item, q)
+                  const k = list.findIndex((x, j) => j !== i && x.item === item)
+                  onChange(k < 0 ? list.map((x, j) => j === i ? { ...x, item } : x)
+                    : list.flatMap((x, j) => j === i ? [] : j === k ? [{ ...x, rate: x.rate + t.rate }] : [x]))
+                }} />
             </div>
           )}
           {open === i && picker(qsplit(t.item)[0])}
@@ -221,7 +232,7 @@ function QualitySettings({ data, s, set }: { data: GameData; s: Settings; set: (
         {s.recycling === 'all' && 'Every recycling recipe: finds detours through other items, but the model grows to ~16 000 columns and takes minutes, so the planner asks before solving it (and you can cancel).'}
       </p>
       <AllowList data={data} list={s.recycle_allow} onChange={recycle_allow => set({ recycle_allow })} />
-      <p className="hint">Quality mining is not modelled yet: ores come in normal quality. Inputs can carry a quality (set it on the row).</p>
+      <p className="hint">Quality mining is not modelled yet: ores come in normal quality. Inputs can carry a quality (set it on the row). Catalyst recipes (Kovarex, pentapod eggs) roll quality on their whole output, catalyst included; not yet checked in game.</p>
     </section>
   )
 }
@@ -255,7 +266,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           <h2>Game data</h2>
           <div className="row small">
             <span className="grow">Factorio version</span>
-            <select value={s.dataset || '2.0'} aria-label="Factorio data set" onChange={e => set({ dataset: e.target.value })}>
+            <select value={s.dataset || '2.0'} aria-label="Factorio data set" onChange={e => { const id = e.target.value; setSettings(x => withDataset(x, id)) }}>
               {DATASETS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
@@ -274,12 +285,12 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         <h2>Optimise for</h2>
         <div className="seg">
           {(['resources', 'buildings', 'power', ...(dsp ? ['compute'] : []), 'custom'] as Objective[]).map(o => (
-            <button key={o} className={s.objective === o ? 'on' : ''} title={o === 'compute' ? 'Minimise compute (UPS)' : undefined}
+            <button key={o} className={s.objective === o ? 'on' : ''} title={o === 'compute' ? '算力 / UPS: minimise compute per logic tick' : undefined}
               onClick={() => set(o === 'custom' && s.objective !== 'custom'
                 ? { objective: o, cost: s.objective === 'compute' ? preset('compute', s.generator)
                     : { ...preset(s.objective), resource_weights: s.cost.resource_weights, building_weights: s.cost.building_weights } }
                 : { objective: o })}>
-              {o === 'resources' ? 'Raw' : o === 'buildings' ? 'Buildings' : o === 'power' ? 'Power' : o === 'compute' ? '算力/UPS' : 'Custom'}
+              {o === 'resources' ? 'Raw' : o === 'buildings' ? 'Buildings' : o === 'power' ? 'Power' : o === 'compute' ? '算力' : 'Custom'}
             </button>
           ))}
         </div>
@@ -290,7 +301,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           {s.objective === 'compute' && 'CPU per logic tick: every building costs the same whether working or idle, plus its sorters, belts, stations, coaters and the generators for its power. The solver picks tier and proliferator mode per recipe.'}
           {s.objective === 'custom' && 'Minimise the weighted sum below. Edit any weight; the plan re-solves.'}
         </p>
-        {s.objective === 'compute' && <>
+        {dsp && <>
           <div className="row small">
             <span className="grow">Power from</span>
             <select value={s.generator} onChange={e => set({ generator: e.target.value as Generator })} aria-label="Generator">
@@ -301,12 +312,15 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             <input type="checkbox" checked={s.mixed_belts} onChange={e => set({ mixed_belts: e.target.checked })} />
             <span>Mixed input belts (one input sorter per building)</span>
           </label>
-          {!s.effects.some(e => e.startsWith('proliferator')) && (
+          {s.objective !== 'compute' && (
+            <p className="hint">Generator and belts set how the compute card counts this plan{s.objective === 'custom' && s.cost.sorter > 0 ? ' and, through the sorter weight, the plan itself' : ''}.</p>
+          )}
+          {s.objective === 'compute' && !s.effects.some(e => e.startsWith('proliferator')) && (
             <p className="hint">No proliferator mode is enabled, so every recipe runs unsprayed.{' '}
               <a href="#" onClick={e => { e.preventDefault(); set({ effects: [...s.effects, 'proliferator-3-speed', 'proliferator-3-products'] }) }}>Enable Mk.III (both modes)</a>
             </p>
           )}
-          <p className="hint">Coefficients: dsp-ups research model (machine = 1, sorter 0.12, belts + station 0.13 per building; estimates, low confidence).</p>
+          {s.objective === 'compute' && <p className="hint">Coefficients: dsp-ups research model (machine = 1, sorter 0.12, belts + station 0.13 per building; estimates, low confidence). Mining machines, orbital collectors and ray receivers are not counted.</p>}
         </>}
         {s.objective === 'custom' && <CostEditor data={data} cost={s.cost} onChange={cost => set({ cost })} />}
       </section>
@@ -383,7 +397,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           <p className="hint">
             {data.game === 'dsp'
               ? 'Enabled modes become options per recipe; spray use (one per input item) is added as an input, so the proliferator chain is planned too. Add it under Available inputs to treat it as free.'
-              : `Each enabled module fills all slots of a machine${hasQuality ? ' (at the module quality set under Quality; quality plans mix quality and productivity modules per machine instead)' : ''}. Productivity, incl. the foundry / EM plant built-in +50 %, is capped at +300 % and only on allowed recipes; beacons: later.`}
+              : `Each enabled module fills all slots of a machine${hasQuality ? ' (at the module quality set under Quality; quality plans mix quality and productivity modules per machine instead)' : ''}. The foundry / EM plant / biochamber built-in +50 % applies to every recipe they run; productivity modules and research only where the recipe allows them; the total is capped at +300 %. Beacons: later.`}
           </p>
           {data.effects!.map(e => (
             <label className="row small" key={e.id}>

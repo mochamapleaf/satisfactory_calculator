@@ -1,5 +1,5 @@
 import { Icon, RemoveMark } from './Icon'
-import { carrier, dn, fmt, isLiquid, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
+import { carrier, dn, fmt, isLiquid, qsplit, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
 
 /** CPU time per tick: µs, or ms from 1000 µs. */
 const fmtUs = (us: number) => (us >= 1000 ? `${fmt(us / 1000, 1)} ms` : `${fmt(us, us < 10 ? 1 : 0)} µs`)
@@ -39,14 +39,20 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       else delete somersloops[rid]
       return { ...x, somersloops }
     })
-  const exclude = (rid: string) => setSettings(x => ({ ...x, disabled_recipes: [...x.disabled_recipes, rid] }))
+  // quality plans: the normal-tier row excludes only that tier ("id@0"); the bare id would drop every tier
+  const exclude = (rid: string) => {
+    const key = plan.quality && qsplit(rid)[1] === 0 ? `${rid}@0` : rid
+    setSettings(x => ({ ...x, disabled_recipes: [...x.disabled_recipes, key] }))
+  }
   const totalSloops = plan.somersloops
   // quality plans are always solved continuously
   const whole = s.integer && !plan.quality
 
   // group buildings by type
+  // (quality plans: tiers of a recipe share machines, so the solver rounds up per base recipe and loadout)
   const byBuilding = new Map<string, number>()
-  for (const r of plan.recipes) byBuilding.set(r.building, (byBuilding.get(r.building) ?? 0) + (whole ? r.machines : r.machines_ceil))
+  if (plan.building_counts?.length) for (const b of plan.building_counts) byBuilding.set(b.building, b.count)
+  else for (const r of plan.recipes) byBuilding.set(r.building, (byBuilding.get(r.building) ?? 0) + (whole ? r.machines : r.machines_ceil))
 
   const limit = (item: string) => {
     if (s.ignore_limits) return null
@@ -64,8 +70,8 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
         {plan.shards > 0 && <div className="card"><div className="big">{fmt(plan.shards, 0)}</div><div className="muted">power shards</div></div>}
         {totalSloops > 0 && <div className="card"><div className="big">{fmt(totalSloops, 0)}</div><div className="muted">Somersloops</div></div>}
         {plan.compute && (
-          <div className="card" title={`machines ${fmt(plan.compute.machines, 1)} · sorters ${fmt(plan.compute.sorters, 1)} · belts + stations ${fmt(plan.compute.logistics, 1)} · coaters ${fmt(plan.compute.coaters, 1)} · generation ${fmt(plan.compute.generation, 1)} (${fmt(plan.compute.cost_per_mw, 4)}/MW)`}>
-            <div className="big">{fmt(plan.compute.total, 0)}</div><div className="muted">compute units / tick</div>
+          <div className="card" title={`Whole buildings, working or idle; mining machines, orbital collectors and ray receivers are not counted. machines ${fmt(plan.compute.machines, 1)} · sorters ${fmt(plan.compute.sorters, 1)} · belts + stations ${fmt(plan.compute.logistics, 1)} · coaters ${fmt(plan.compute.coaters, 1)} · generation ${fmt(plan.compute.generation, 1)} (${fmt(plan.compute.cost_per_mw, 4)}/MW)`}>
+            <div className="big">{fmt(plan.compute.total, plan.compute.total < 100 ? 1 : 0)}</div><div className="muted">compute units / tick <span className="nocase">(excl. mining, collectors)</span></div>
           </div>
         )}
         {plan.compute && (

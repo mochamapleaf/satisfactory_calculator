@@ -183,7 +183,9 @@ button.x svg { display: block; }
 .seg button:hover { color: var(--fg); background: var(--hover); border-color: transparent; }
 .seg button.on { color: var(--fg); font-weight: 600; background: var(--hover); border-color: var(--rule-strong); }
 .seg.gamesel button { padding: 2px 12px; }
-aside .seg button { padding: 2px 6px; } /* five objective presets (DSP) fit the sidebar */
+/* five objective presets (DSP) fit the 1024 px sidebar; anything wider wraps instead of overflowing */
+aside .seg { flex-wrap: wrap; }
+aside .seg button { flex: 1 0 auto; padding: 2px 4px; }
 
 /* tabs */
 .tabs {
