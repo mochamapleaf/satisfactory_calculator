@@ -4,9 +4,12 @@
   "acc_s": 30.0,
   "base": "S0_m1",
   "belt_cap": 780,
-  "belt_oe_km": 1166.6666666666667,
+  "belt_oe_km": 1166.6666666666665,
   "belt_tier": 5,
   "car_oe": 230.0,
+  "cbar_binding": [],
+  "cbar_mult": 2.0,
+  "check_obj": 35417.30982905974,
   "dock_s": 27.08,
   "feed": 1560,
   "fluid_car": 1600,
@@ -44,8 +47,8 @@
    "Recipe_SteelPipe_C": 32.0
   },
   "oe": {
-   "Desc_AluminumCasing_C": 3.0,
-   "Desc_AluminumPlate_C": 2.3333333333333335,
+   "Desc_AluminumCasing_C": 3.0000000000000004,
+   "Desc_AluminumPlate_C": 2.333333333333333,
    "Desc_Cable_C": 1.0,
    "Desc_Cement_C": 3.0,
    "Desc_Computer_C": 72.0,
@@ -89,9 +92,12 @@
    "Desc_ModularFrameHeavy_C": 10.0
   },
   "tier": 8,
-  "track_oe_km": 1826.0
+  "track_oe_km": 1826.0,
+  "v_mps": 33.333,
+  "water_anywhere": true,
+  "work_km": 0.0
  },
- "obj": 16710.032051282018,
+ "obj": 35417.30982905974,
  "p": 0,
  "summary": {
   "belt_count": 1,
@@ -106,6 +112,7 @@
     "n": 1
    }
   ],
+  "cbar_binding": [],
   "cost_parts": {
    "b": 1407.35,
    "c": 0.0,
@@ -114,7 +121,7 @@
    "g": 0.0,
    "h": 0.0,
    "u": 0.0,
-   "x": 8181.055556,
+   "x": 26888.333333,
    "z": 0.0
   },
   "extraction": {
@@ -131,23 +138,37 @@
   "lines": [],
   "machines": {
    "S0_m1": {
-    "Recipe_Concrete_C": 1.333333,
-    "Recipe_EncasedIndustrialBeam_C": 1.388889,
-    "Recipe_IngotIron_C": 1.666667,
-    "Recipe_IngotSteel_C": 1.096296,
-    "Recipe_IronPlateReinforced_C": 3.0,
-    "Recipe_IronPlate_C": 2.25,
-    "Recipe_IronRod_C": 3.666667,
-    "Recipe_ModularFrameHeavy_C": 2.5,
+    "Recipe_Concrete_C": 20.0,
+    "Recipe_EncasedIndustrialBeam_C": 8.333333,
+    "Recipe_IngotIron_C": 50.0,
+    "Recipe_IngotSteel_C": 16.444444,
+    "Recipe_IronPlateReinforced_C": 15.0,
+    "Recipe_IronPlate_C": 22.5,
+    "Recipe_IronRod_C": 55.0,
+    "Recipe_ModularFrameHeavy_C": 5.0,
     "Recipe_ModularFrame_C": 25.0,
-    "Recipe_Screw_C": 5.25,
-    "Recipe_SteelBeam_C": 0.488889,
-    "Recipe_SteelPipe_C": 1.0
+    "Recipe_Screw_C": 52.5,
+    "Recipe_SteelBeam_C": 7.333333,
+    "Recipe_SteelPipe_C": 10.0
    },
    "S1_m1": {
-    "Recipe_IngotSteel_C": 0.237037,
-    "Recipe_SteelBeam_C": 0.177778
+    "Recipe_IngotSteel_C": 3.555556,
+    "Recipe_SteelBeam_C": 2.666667
    }
+  },
+  "machines_total": {
+   "Recipe_Concrete_C": 20.0,
+   "Recipe_EncasedIndustrialBeam_C": 8.333333,
+   "Recipe_IngotIron_C": 50.0,
+   "Recipe_IngotSteel_C": 20.0,
+   "Recipe_IronPlateReinforced_C": 15.0,
+   "Recipe_IronPlate_C": 22.5,
+   "Recipe_IronRod_C": 55.0,
+   "Recipe_ModularFrameHeavy_C": 5.0,
+   "Recipe_ModularFrame_C": 25.0,
+   "Recipe_Screw_C": 52.5,
+   "Recipe_SteelBeam_C": 10.0,
+   "Recipe_SteelPipe_C": 10.0
   },
   "pipes": [],
   "rail_flow_items_per_min": 0.0

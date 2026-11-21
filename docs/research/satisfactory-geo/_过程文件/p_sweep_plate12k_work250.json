@@ -1,0 +1,95 @@
+{
+ "targets": {
+  "Desc_IronPlate_C": 12000.0
+ },
+ "tier": 8,
+ "base": "Sm3_0",
+ "work_km": 250.0,
+ "belt_mult": 1.0,
+ "rows": [
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 0,
+   "obj": 111554.66442307681,
+   "bound": 111544.31706140883,
+   "gap": 9.2755975032483e-05,
+   "status": "Optimal",
+   "time_s": 3.36,
+   "envelope": 111554.66442307681,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 26
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 1,
+   "obj": 111554.66442307654,
+   "bound": 111554.66442307652,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 3.13,
+   "envelope": 111554.66442307654,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 26
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 2,
+   "obj": 102700.97914353565,
+   "bound": 102700.97914353565,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 4.83,
+   "envelope": 102700.97914353565,
+   "hubs": [
+    "Sm1_2",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 6540.0,
+   "belts": 9
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 3,
+   "obj": 102700.97914351971,
+   "bound": 102700.97914351971,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 7.78,
+   "envelope": 102700.97914351971,
+   "hubs": [
+    "Sm1_2",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 6540.0,
+   "belts": 9
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 4,
+   "obj": 102700.97914352317,
+   "bound": 102700.97914352317,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 8.99,
+   "envelope": 102700.97914351971,
+   "hubs": [
+    "Sm1_2",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 6540.0,
+   "belts": 9
+  }
+ ]
+}

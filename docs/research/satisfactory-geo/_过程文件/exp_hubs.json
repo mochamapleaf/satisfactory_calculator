@@ -1,0 +1,77 @@
+{
+ "group": "hubs",
+ "time_limit_s": 300.0,
+ "rows": [
+  {
+   "name": "12000 plate at Sm3_0, belt-flow hubs",
+   "rail": {
+    "label": "12000 plate at Sm3_0, belt-flow hubs, rail",
+    "obj": 99386.19423076898,
+    "bound": 99386.19423076898,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 6.8,
+    "transport": 46902.57,
+    "cost_parts": {
+     "b": 46902.566667,
+     "c": 0.0,
+     "e": 27883.627564,
+     "f": 0.0,
+     "g": 0.0,
+     "h": -0.0,
+     "u": 0.0,
+     "x": 24600.0,
+     "z": -0.0
+    },
+    "hubs": [],
+    "belts": 26,
+    "rail_flow": 0.0,
+    "cars": 0,
+    "lines": [],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_IngotIron_C": 600.0,
+     "Recipe_IronPlate_C": 600.0
+    }
+   }
+  }
+ ],
+ "hubs_sites_json": [
+  "S0_m1",
+  "S1_2",
+  "S1_m1",
+  "S2_1",
+  "S2_m4",
+  "S3_m2",
+  "Sm1_0",
+  "Sm1_2",
+  "Sm1_m3",
+  "Sm2_m1",
+  "Sm3_0",
+  "Sm3_m2"
+ ],
+ "hubs_from_belt_solve": [
+  "S0_m1",
+  "S1_m3",
+  "S2_1",
+  "S2_m1",
+  "S4_m3",
+  "Sm1_1",
+  "Sm1_3",
+  "Sm1_m3",
+  "Sm2_1",
+  "Sm2_m1",
+  "Sm3_0",
+  "Sm3_m1"
+ ],
+ "belt_outflow": {
+  "Sm3_m2": 2340.0,
+  "Sm3_m1": 4480.0,
+  "Sm2_m2": 1280.0,
+  "Sm2_m1": 3120.0,
+  "Sm2_1": 4680.0,
+  "Sm1_1": 2340.0,
+  "Sm1_2": 780.0,
+  "Sm1_3": 780.0
+ }
+}

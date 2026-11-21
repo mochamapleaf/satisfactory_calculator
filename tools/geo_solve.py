@@ -23,8 +23,20 @@ material from a min-raw LP over the 1.0 base recipes in game-data.json:
   site's mean feed distance + belts len_km * 500 * OE(belt material) (wiki: about 0.5 per metre) + pipes likewise
   + track len_km * 2 (double track) * 83 * (OE(steel pipe) + OE(steel beam)) + locomotive per running direction
   + car + 2 freight platforms per car + hub fixed cost F = 2 stations + W_WORK_HUB (assumption) per open hub.
-Not modelled (report section 7.2 lists them): shared track segments and candidate paths, block headway, pump head,
-belt sorting losses, power balance, drones and trucks.
+Optional player-work weight work_km (OE per km of each belt/pipe and of each of the two tracks; default 0) and
+`machines_at` (sites where recipes may run). Supply per node depends on the tier (node_rate: miner Mk.1/2/3,
+250 % clock from tier 3, capped at one belt / pipe of the tier).
+Departures from the report's model (00-最终报告.md sections 7.1-7.2), all of which make rail look worse or equal:
+  * one private double track per hub pair, no shared track segments or candidate paths: a three-hub network pays
+    three full tracks; mode conclusions are drawn only from two-hub solutions or flagged as conservative
+  * one belt tier for the whole map, chosen by OE per capacity (tier 8: Mk.5, 780/min), not Mk.6 1200/min
+  * platform feed = two belts of that tier (1560/min at Mk.5), not 2400/min
+  * no platform-count cap per hub (P-bar h), no power balance, no generators
+  * extraction per site with the site's mean feed distance, not per node with its own distance
+  * car bound C-bar = cbar_mult (2) x the cars the location-free LP's flows need, +1; heuristic (not valid when
+    recipes compete), so check() reports any direction whose car count reaches it (summary 'cbar_binding')
+  * machines continuous and production sites carry no fixed cost, so processing disperses to the ore for free
+Not modelled (report section 7.2 lists them): block headway, pump head, belt sorting losses, drones and trucks.
 
 Usage:
   python -I tools/geo_solve.py                         # default target 10 HMF/min, p free, F 1x
@@ -104,9 +116,11 @@ def tv(node):
 
 
 class Data:
-    def __init__(self):
+    def __init__(self, sites_doc=None, nodes=None):
+        """sites_doc / nodes override the files (tests build small synthetic maps this way)."""
         self.game = load(GAME)
-        self.sites_doc = load(os.path.join(GEO, 'sites.json'))
+        self.sites_doc = sites_doc or load(os.path.join(GEO, 'sites.json'))
+        self.nodes = {n['id']: n for n in (nodes or load(os.path.join(GEO, 'nodes.json'))['nodes'])}
         self.tr = load(os.path.join(GEO, 'transport.json'))
         self.items = {i['id']: i for i in self.game['items']}
         self.raw = {r['item'] for r in self.game['resources']}
@@ -128,15 +142,49 @@ class Data:
     def stack(self, k):
         return STACK_TABLE.get(k, 100)
 
+    def supply(self, s, tier, belt_cap, pipe_cap):
+        """Raw supply of site s at `tier` (M3): sum of node_rate over its nodes."""
+        out = collections.defaultdict(float)
+        for nid in self.site[s]['nodes']:
+            n = self.nodes[nid]
+            r = node_rate(n, tier, belt_cap, pipe_cap)
+            if r > 0:
+                out[n['item']] += r
+        return dict(out)
+
 
 def per_min(r):
-    m = 60.0 / r['time']
+    """Net items/min of one machine at 100 % clock. game-data.json already stores `in` / `out` per minute
+    (Iron Plate: 30 ingot -> 20 plate, time 6), so no 60 / time factor."""
     a = collections.defaultdict(float)
     for k, q in r['in']:
-        a[k] -= q * m
+        a[k] -= q
     for k, q in r['out']:
-        a[k] += q * m
+        a[k] += q
     return dict(a)
+
+
+# Node output by tier (M3): Miner Mk.1 T0 / Mk.2 T4 / Mk.3 T8 (x1 / x2 / x4 of Mk.1), oil extractor T5, well
+# pressurizer T8 (data1.0.json schematics @2192bd15); power shards (MAM, tier 3) allow 250 % clock. One miner or
+# extractor has one output port, so a node delivers at most one belt (solids) or one pipe (fluids) of the tier.
+MK1_BASE = {'impure': 30, 'normal': 60, 'pure': 120}
+OIL_BASE = {'impure': 60, 'normal': 120, 'pure': 240}
+WELL_BASE = {'impure': 30, 'normal': 60, 'pure': 120}
+MINER_TIERS = ((8, 4.0), (4, 2.0), (0, 1.0))
+OIL_UNLOCK, WELL_UNLOCK, SHARD_TIER = 5, 8, 3
+
+
+def node_rate(n, tier, belt_cap, pipe_cap):
+    """items (m3) per minute one node can deliver at `tier`, capped by the output belt / pipe."""
+    clock = 2.5 if tier >= SHARD_TIER else 1.0
+    if n['type'] == 'node' and n['item'] == 'Desc_LiquidOil_C':
+        return min(OIL_BASE[n['purity']] * clock, pipe_cap) if tier >= OIL_UNLOCK else 0.0
+    if n['type'] == 'node':
+        mk = next(f for t, f in MINER_TIERS if tier >= t)
+        return min(MK1_BASE[n['purity']] * mk * clock, belt_cap)
+    if n['type'] == 'well':
+        return min(WELL_BASE[n['purity']] * clock, pipe_cap) if tier >= WELL_UNLOCK else 0.0
+    return 0.0
 
 
 def rtd_min(L_m, v_mps, dock_s, acc_s):
@@ -260,7 +308,11 @@ class Model:
 
 
 def build(d, targets, tier=8, rail=True, p=None, fmult=1.0, base=None, acc_s=30.0, water_anywhere=True,
-          belt_tier=None, oe=None, belt_mult=1.0):
+          belt_tier=None, oe=None, belt_mult=1.0, work_km=0.0, machines_at=None, cbar_mult=2.0):
+    """work_km: player-work weight in OE per km of one belt or pipe and per km of each of the two rail tracks
+    (assumption, swept next to F). machines_at: if given, the only sites where recipes may run.
+    cbar_mult: car upper bound = cbar_mult x the cars the location-free LP's flows would need (+1); the bound is a
+    heuristic (not valid when recipes compete), so check() reports any car count that reaches it."""
     base = base or d.base
     recs = recipe_closure(d, targets)
     A = {r['id']: per_min(r) for r in recs}
@@ -278,16 +330,16 @@ def build(d, targets, tier=8, rail=True, p=None, fmult=1.0, base=None, acc_s=30.
         cand = [i for i in range(5) if belt_unlock[i] <= tier]
         belt_tier = min(cand, key=lambda i: (UNITS_PER_KM * oe[BELT_MATERIAL[i]] / belt_caps[i], -i))
     cap = belt_caps[belt_tier]
-    belt_oe_km = belt_mult * UNITS_PER_KM * oe[BELT_MATERIAL[belt_tier]]  # belt_mult: test / sensitivity knob
+    belt_oe_km = belt_mult * UNITS_PER_KM * oe[BELT_MATERIAL[belt_tier]] + work_km  # belt_mult: sensitivity knob
     pipe_ix = 1 if tv(tr['pipes']['unlock_tier'])[1] <= tier else 0
     pipe_cap = tv(tr['pipes']['tiers'])[pipe_ix]
     rail = rail and tv(tr['train']['unlock_tier']) <= tier
     km83 = tv(tr['rail']['track_cost_per_km'])
     track_oe_km = tv(tr['rail']['double_track_factor']) * (km83['steel_pipe'] * oe['Desc_SteelPipe_C']
-                                                          + km83['steel_beam'] * oe['Desc_SteelPlate_C'])
+                                                          + km83['steel_beam'] * oe['Desc_SteelPlate_C'] + work_km)
     cost_of = lambda bom: sum(q * oe[k] for k, q in bom.items())
     loco_oe, car_oe, plat_oe, station_oe = cost_of(LOCO), cost_of(CAR), cost_of(PLATFORM), cost_of(STATION)
-    pipe_oe_km = UNITS_PER_KM * cost_of(PIPE_BOM[pipe_ix])
+    pipe_oe_km = UNITS_PER_KM * cost_of(PIPE_BOM[pipe_ix]) + work_km
     mach_oe = {r['id']: cost_of(BUILDING_COST[r['building']]) if r['building'] in BUILDING_COST else W_MACH
                for r in recs}
     F = fmult * (2 * station_oe + W_WORK_HUB)
@@ -300,16 +352,20 @@ def build(d, targets, tier=8, rail=True, p=None, fmult=1.0, base=None, acc_s=30.
     meta = {'base': base, 'targets': targets, 'tier': tier, 'belt_tier': belt_tier + 1, 'belt_cap': cap,
             'belt_oe_km': belt_oe_km, 'pipe_cap': pipe_cap, 'pipe_oe_km': pipe_oe_km, 'mach_oe': mach_oe, 'track_oe_km': track_oe_km, 'loco_oe': loco_oe,
             'car_oe': car_oe, 'platform_oe': plat_oe, 'station_oe': station_oe, 'F': F, 'fmult': fmult,
-            'rail': rail, 'p': p, 'acc_s': acc_s, 'recipes': [r['id'] for r in recs], 'items': items,
+            'rail': rail, 'p': p, 'acc_s': acc_s, 'work_km': work_km, 'cbar_mult': cbar_mult, 'recipes': [r['id'] for r in recs], 'items': items,
             'oe': dict(sorted(oe.items()))}  # unrounded: the sweep reuses it as cost input
-    x = {(r['id'], s): m.var(f'x|{r["id"]}|{s}', mach_oe[r['id']]) for s in d.sid for r in recs}
+    x = {(r['id'], s): m.var(f'x|{r["id"]}|{s}', mach_oe[r['id']], 0,
+                             math.inf if machines_at is None or s in machines_at else 0.0)
+         for s in d.sid for r in recs}
     e = {}
+    supply = {}
     for s in d.sid:
         st = d.site[s]
+        site_sup = d.supply(s, tier, cap, pipe_cap)
         for k in items:
             if k not in d.raw:
                 continue
-            sup = st['supply'].get(k, 0)
+            sup = site_sup.get(k, 0)
             if k == 'Desc_Water_C' and water_anywhere:
                 sup = math.inf
             if sup <= 0:
@@ -317,6 +373,7 @@ def build(d, targets, tier=8, rail=True, p=None, fmult=1.0, base=None, acc_s=30.
             fd_km = st['feed_dist_mean_m'] / 1000.0
             feedc = fd_km * (pipe_oe_km / pipe_cap if d.liquid(k) else belt_oe_km / cap)
             e[(k, s)] = m.var(f'e|{k}|{s}', W_RAW + feedc, 0, sup)
+            supply[(k, s)] = sup
     f, b, bp = {}, {}, {}
     for (sa, sb, L) in d.arcs:
         km = L / 1000.0
@@ -332,6 +389,7 @@ def build(d, targets, tier=8, rail=True, p=None, fmult=1.0, base=None, acc_s=30.
         gross = aggregate_gross(d, recs, A, targets, items)
         stacks_ub = sum(q / d.stack(k) for k, q in gross.items() if not d.liquid(k))
         fluid_ub = sum(q for k, q in gross.items() if d.liquid(k))
+        items_ub = sum(q for k, q in gross.items() if not d.liquid(k))
         for s in d.hubs:
             hvar[s] = m.var(f'h|{s}', F, 0, 1, True)
         for i, sa in enumerate(d.hubs):
@@ -339,8 +397,8 @@ def build(d, targets, tier=8, rail=True, p=None, fmult=1.0, base=None, acc_s=30.
                 A_, B_ = d.site[sa], d.site[sb]
                 L = math.hypot(A_['x'] - B_['x'], A_['y'] - B_['y']) * d.detour
                 rtd = rtd_min(L, v, dock, acc_s)
-                cbar = math.ceil(stacks_ub * rtd / slots) + 1
-                cbar_f = math.ceil(fluid_ub * rtd / fluid_car) + 1 if fluids else 0
+                cbar = math.ceil(cbar_mult * max(stacks_ub * rtd / slots, items_ub / platform_cap(feed, rtd, dock))) + 1
+                cbar_f = math.ceil(cbar_mult * fluid_ub * rtd / fluid_car) + 1 if fluids else 0
                 l = (sa, sb)
                 lines.append({'a': sa, 'b': sb, 'length_m': round(L, 1), 'rtd_min': round(rtd, 4),
                               'cbar': cbar, 'cbar_fluid': cbar_f})
@@ -401,7 +459,8 @@ def build(d, targets, tier=8, rail=True, p=None, fmult=1.0, base=None, acc_s=30.
                 continue
             m.row(f'bal|{k}|{s}', dict(co), lo=dem)
     meta['lines'] = lines
-    meta.update({'slots': slots, 'feed': feed, 'dock_s': dock, 'fluid_car': fluid_car})
+    meta['water_anywhere'] = water_anywhere
+    meta.update({'slots': slots, 'feed': feed, 'dock_s': dock, 'fluid_car': fluid_car, 'supply': supply, 'v_mps': v})
     idx = {'x': x, 'e': e, 'f': f, 'b': b, 'bp': bp, 'h': hvar, 'u': u, 'z': z, 'c': cs, 'cf': cfl, 'g': g,
            'A': A, 'solids': solids, 'fluids': fluids}
     return m, idx, meta
@@ -454,12 +513,33 @@ def check(d, m, idx, meta, xs, p=None, tol=1e-5):
     for k, q in targets.items():
         assert net[(k, base)] >= q - 1e-6, ('demand', k)
     for (k, s), j in idx['e'].items():
-        sup = d.site[s]['supply'].get(k, math.inf if k == 'Desc_Water_C' else 0)
-        assert x(j) <= sup + tol, ('supply', k, s)
+        n_sup = d.supply(s, meta['tier'], meta['belt_cap'], meta['pipe_cap']).get(k, 0)
+        sup = math.inf if k == 'Desc_Water_C' and meta['water_anywhere'] else n_sup
+        assert x(j) <= sup + tol, ('supply', k, s, x(j), sup)
     cap = meta['belt_cap']
     for (sa, sb), j in idx['b'].items():
         tot = sum(x(idx['f'][(k, sa, sb)]) for k in idx['solids'])
         assert tot <= cap * round(x(j)) + 1e-4, ('belt cap', sa, sb, tot, x(j))
+    for (sa, sb), j in idx['bp'].items():
+        tot = sum(x(idx['f'][(k, sa, sb)]) for k in idx['fluids'])
+        assert tot <= meta['pipe_cap'] * round(x(j)) + 1e-4, ('pipe cap', sa, sb, tot, x(j))
+    # objective recomputed from the solution's physical quantities and the cost table (not from m.c)
+    obj = 0.0
+    for (r, s), j in idx['x'].items():
+        obj += meta['mach_oe'][r] * x(j)
+    km = {(sa, sb): L / 1000.0 for (sa, sb, L) in d.arcs}
+    for (k, s), j in idx['e'].items():
+        per = meta['pipe_oe_km'] / meta['pipe_cap'] if d.liquid(k) else meta['belt_oe_km'] / cap
+        obj += x(j) * (W_RAW + d.site[s]['feed_dist_mean_m'] / 1000.0 * per)
+    obj += sum(round(x(j)) * km[a] * meta['belt_oe_km'] for a, j in idx['b'].items())
+    obj += sum(round(x(j)) * km[a] * meta['pipe_oe_km'] for a, j in idx['bp'].items())
+    obj += sum(meta['F'] for j in idx['h'].values() if x(j) > 0.5)
+    lens = {(ln['a'], ln['b']): ln['length_m'] for ln in meta['lines']}
+    obj += sum(lens[l] / 1000.0 * meta['track_oe_km'] for l, j in idx['u'].items() if x(j) > 0.5)
+    obj += sum(meta['loco_oe'] for j in idx['z'].values() if x(j) > 0.5)
+    obj += sum(round(x(j)) * (meta['car_oe'] + 2 * meta['platform_oe']) for j in list(idx['c'].values())
+               + list(idx['cf'].values()))
+    meta['check_obj'] = obj
     if idx['h']:
         opened = {s for s, j in idx['h'].items() if x(j) > 0.5}
         if p is not None:
@@ -480,6 +560,16 @@ def check(d, m, idx, meta, xs, p=None, tol=1e-5):
             c = round(x(j))
             assert stk <= meta['slots'] / r * c * (1 + 1e-3) + 1e-6, ('car capacity', o, t, stk, c)
             assert its <= platform_cap(meta['feed'], r, meta['dock_s']) * c * (1 + 1e-3) + 1e-6, ('platform', o, t)
+        for (o, t), j in idx['cf'].items():
+            r = rtd.get((o, t)) or rtd[(t, o)]
+            vol = sum(x(idx['g'][(k, o, t)]) for k in idx['fluids'])
+            c = round(x(j))
+            assert vol <= meta['fluid_car'] / r * c * (1 + 1e-3) + 1e-6, ('fluid car', o, t, vol, c)
+            assert vol <= platform_cap(1200, r, meta['dock_s']) * c * (1 + 1e-3) + 1e-6, ('fluid platform', o, t)
+        cb = {(ln['a'], ln['b']): ln['cbar'] + ln['cbar_fluid'] for ln in meta['lines']}
+        meta['cbar_binding'] = sorted(f'{o}->{t}' for (o, t) in idx['z']
+                                      if sum(round(x(idx[key][(o, t)])) for key in ('c', 'cf') if (o, t) in idx[key])
+                                      >= cb.get((o, t), cb.get((t, o))))
 
 
 def summarize(d, m, idx, meta, xs):
@@ -515,6 +605,11 @@ def summarize(d, m, idx, meta, xs):
         if x(j) > 1e-6:
             site_rec[s][r] = r6(x(j))
     out['machines'] = dict(sorted(site_rec.items()))
+    tot = collections.defaultdict(float)
+    for recs_ in site_rec.values():
+        for r, n in recs_.items():
+            tot[r] += n
+    out['machines_total'] = {r: r6(n) for r, n in sorted(tot.items())}
     ext = collections.defaultdict(dict)
     for (k, s), j in sorted(idx['e'].items()):
         if x(j) > 1e-6:
@@ -585,7 +680,10 @@ def run(d, targets, label='solve', time_limit=120.0, gap=1e-4, warm=None, oe=Non
     res['n_rows'] = len(m.rows)
     if res['x'] is not None:
         check(d, m, idx, meta, res['x'], p=kw.get('p'))
+        # integer columns are rounded in check(), the solver's values carry its 1e-6 integrality tolerance
+        assert abs(meta['check_obj'] - res['obj']) <= 1e-5 * abs(res['obj']) + 1.0, (meta['check_obj'], res['obj'])
         res['summary'] = summarize(d, m, idx, meta, res['x'])
+        res['summary']['cbar_binding'] = meta.get('cbar_binding', [])
         res['named'] = {nm: float(v_) for nm, v_ in zip(m.names, res['x']) if abs(v_) > 1e-9}
     print(f'{label}: status={res["status"]} obj={res["obj"]} bound={res["bound"]} gap={res["gap"]:.2e} '
           f'time={res["time"]:.1f}s vars={res["n_vars"]} int={res["n_int"]} rows={res["n_rows"]}', flush=True)
@@ -604,19 +702,20 @@ def digest(obj):
     return hashlib.md5(json.dumps(obj, sort_keys=True).encode()).hexdigest()
 
 
-def sweep(d, targets, tier, time_limit, out_json, fmults=(1.0, 0.5, 2.0), pmax=12, base=None, belt_mult=1.0):
+def sweep(d, targets, tier, time_limit, out_json, fmults=(1.0, 0.5, 2.0), pmax=12, base=None, belt_mult=1.0,
+          work_km=0.0):
     mats_oe = None
     rows = []
     best_sol = None
     t_all = time.time()
-    _, _, meta0 = build(d, targets, tier=tier, rail=False, base=base, belt_mult=belt_mult)
+    _, _, meta0 = build(d, targets, tier=tier, rail=False, base=base, belt_mult=belt_mult, work_km=work_km)
     mats_oe = {k: v_ for k, v_ in meta0['oe'].items()}
     for fm in fmults:
         env, warm = math.inf, None
         for p in range(0, pmax + 1):
             res, m, idx, meta = run(d, targets, label=f'F{fm}x p={p}', time_limit=time_limit, warm=warm,
                                     oe=mats_oe, tier=tier, rail=True, p=p, fmult=fm, base=base,
-                                    belt_mult=belt_mult)
+                                    belt_mult=belt_mult, work_km=work_km)
             obj = res['obj'] if res['obj'] is not None else math.inf
             env = min(env, obj)
             s = res.get('summary', {})
@@ -627,9 +726,11 @@ def sweep(d, targets, tier, time_limit, out_json, fmults=(1.0, 0.5, 2.0), pmax=1
             if res['obj'] is not None and (warm is None or obj <= env + 1e-9):
                 warm = res['named']
             if fm == 1.0 and (best_sol is None or obj < best_sol['obj'] - 1e-6):
-                best_sol = {'obj': obj, 'p': p, 'summary': s, 'meta': {k: v_ for k, v_ in meta.items() if k != 'lines'}}
+                best_sol = {'obj': obj, 'p': p, 'summary': s,
+                            'meta': {k: v_ for k, v_ in meta.items() if k not in ('lines', 'supply')}}
             with open(out_json, 'w', encoding='utf-8') as fh:  # checkpoint after every solve
-                json.dump({'targets': targets, 'tier': tier, 'base': meta['base'], 'rows': rows}, fh, indent=1)
+                json.dump({'targets': targets, 'tier': tier, 'base': meta['base'], 'work_km': work_km,
+                           'belt_mult': belt_mult, 'rows': rows}, fh, indent=1)
     print(f'sweep total {time.time() - t_all:.0f}s', flush=True)
     return rows, best_sol
 
@@ -696,7 +797,7 @@ def plot_map(d, sol, png, title, sol_base=None):
         ax.scatter(*xy[s], s=90, facecolors='none', edgecolors='#b03060' if s in sol['hubs'] else '#bbb', lw=1.5)
     for s, recs in sol['machines'].items():
         n = sum(recs.values())
-        ax.scatter(*xy[s], s=20 + 6 * n, c='#f39c12', edgecolors='k', lw=0.5, zorder=5)
+        ax.scatter(*xy[s], s=20 + 25 * math.sqrt(n), c='#f39c12', edgecolors='k', lw=0.5, zorder=5)  # area ~ sqrt
         ax.annotate(f'{n:.1f}', xy[s], fontsize=6, xytext=(4, 4), textcoords='offset points')
     ax.scatter(*xy[sol_base], s=200, marker='*', c='gold', edgecolors='k', zorder=6)
     ax.set_aspect('equal')
@@ -724,23 +825,34 @@ def main():
     ap.add_argument('--pmax', type=int, default=12)
     ap.add_argument('--replot', action='store_true', help='redraw p_sweep{tag}.png from p_sweep{tag}.json')
     ap.add_argument('--belt-mult', type=float, default=1.0, help='multiply belt cost (sensitivity / illustration)')
+    ap.add_argument('--work-km', type=float, default=0.0, help='player work, OE per km of belt/pipe and per track')
+    ap.add_argument('--fmults', default='1,0.5,2', help='F multipliers for --sweep')
     a = ap.parse_args()
     d = Data()
     targets = parse_targets(a.target)
     if a.replot:
         doc = load(os.path.join(OUTDIR, f'p_sweep{a.tag}.json'))
         what = ', '.join(f'{q:g}/min {k.replace("Desc_", "").replace("_C", "")}' for k, q in doc['targets'].items())
+        bm, wk = doc.get('belt_mult', a.belt_mult), doc.get('work_km', 0.0)
         plot_sweep(doc['rows'], os.path.join(OUTDIR, f'p_sweep{a.tag}.png'), f'{what} at {doc["base"]}'
-                   + (f', belts x{a.belt_mult:g}' if a.belt_mult != 1 else ''))
+                   + (f', belts x{bm:g}' if bm != 1 else '') + (f', work {wk:g} OE/km' if wk else ''))
+        best_path = os.path.join(OUTDIR, f'solution_best{a.tag}.json')
+        if os.path.exists(best_path):
+            best = load(best_path)
+            plot_map(d, best['summary'], os.path.join(OUTDIR, f'solution_map{a.tag}.png'), sol_base=best['meta']['base'],
+                     title=f'best solution F 1x, p={best["p"]}, cost {best["obj"]:.0f} OE; '
+                           f'{len(best["summary"]["hubs"])} hubs, {len(best["summary"]["lines"])} rail lines')
         return
     if a.sweep:
         tag = a.tag
         out_json = os.path.join(OUTDIR, f'p_sweep{tag}.json')
         rows, best = sweep(d, targets, a.tier, a.time_limit, out_json, base=a.base, pmax=a.pmax,
-                           belt_mult=a.belt_mult)
+                           belt_mult=a.belt_mult, work_km=a.work_km,
+                           fmults=tuple(float(v_) for v_ in a.fmults.split(',')))
         plot_sweep(rows, os.path.join(OUTDIR, f'p_sweep{tag}.png'),
                    ', '.join(f'{q:g}/min {k.replace("Desc_", "").replace("_C", "")}' for k, q in targets.items())
-                   + f' at {best["meta"]["base"]}' + (f', belts x{a.belt_mult:g}' if a.belt_mult != 1 else ''))
+                   + f' at {best["meta"]["base"]}' + (f', belts x{a.belt_mult:g}' if a.belt_mult != 1 else '')
+                   + (f', work {a.work_km:g} OE/km' if a.work_km else ''))
         with open(os.path.join(OUTDIR, f'solution_best{tag}.json'), 'w', encoding='utf-8') as fh:
             json.dump(best, fh, indent=1, sort_keys=True)
         plot_map(d, best['summary'], os.path.join(OUTDIR, f'solution_map{tag}.png'), sol_base=best['meta']['base'],
@@ -751,7 +863,7 @@ def main():
             print(json.dumps({k: r[k] for k in ('fmult', 'p', 'obj', 'envelope', 'gap', 'time_s', 'hubs')}))
         return
     res, m, idx, meta = run(d, targets, time_limit=a.time_limit, tier=a.tier, rail=not a.no_rail, p=a.p,
-                            fmult=a.fmult, base=a.base, belt_mult=a.belt_mult)
+                            fmult=a.fmult, base=a.base, belt_mult=a.belt_mult, work_km=a.work_km)
     if res['x'] is None:
         sys.exit(f'no solution: {res["status"]}')
     s = res['summary']
@@ -762,7 +874,8 @@ def main():
                       'digest': digest(s)}, indent=1))
     if a.out:
         with open(a.out, 'w', encoding='utf-8') as fh:
-            json.dump({'obj': res['obj'], 'summary': s, 'meta': {k: v_ for k, v_ in meta.items()}}, fh, indent=1,
+            json.dump({'obj': res['obj'], 'summary': s, 'meta': {k: v_ for k, v_ in meta.items() if k != 'supply'}},
+                      fh, indent=1,
                       sort_keys=True)
 
 

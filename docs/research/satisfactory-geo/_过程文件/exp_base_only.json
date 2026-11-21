@@ -1,0 +1,185 @@
+{
+ "group": "base_only",
+ "time_limit_s": 300.0,
+ "rows": [
+  {
+   "name": "10 HMF at Sm3_0, machines only there",
+   "targets": {
+    "Desc_ModularFrameHeavy_C": 10.0
+   },
+   "kw": {
+    "base": "Sm3_0",
+    "machines_at": [
+     "Sm3_0"
+    ]
+   },
+   "rail": {
+    "label": "10 HMF at Sm3_0, machines only there rail",
+    "obj": 43565.47435897435,
+    "bound": 43565.47435897435,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 1.4,
+    "transport": 10599.87,
+    "cost_parts": {
+     "b": 10599.866667,
+     "c": 0.0,
+     "e": 6077.274359,
+     "f": 0.0,
+     "g": 0.0,
+     "h": 0.0,
+     "u": 0.0,
+     "x": 26888.333333,
+     "z": 0.0
+    },
+    "hubs": [],
+    "belts": 6,
+    "rail_flow": 0.0,
+    "cars": 0,
+    "lines": [],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_Concrete_C": 20.0,
+     "Recipe_EncasedIndustrialBeam_C": 8.333333,
+     "Recipe_IngotIron_C": 50.0,
+     "Recipe_IngotSteel_C": 20.0,
+     "Recipe_IronPlateReinforced_C": 15.0,
+     "Recipe_IronPlate_C": 22.5,
+     "Recipe_IronRod_C": 55.0,
+     "Recipe_ModularFrameHeavy_C": 5.0,
+     "Recipe_ModularFrame_C": 25.0,
+     "Recipe_Screw_C": 52.5,
+     "Recipe_SteelBeam_C": 10.0,
+     "Recipe_SteelPipe_C": 10.0
+    }
+   },
+   "belt": {
+    "label": "10 HMF at Sm3_0, machines only there belt-only",
+    "obj": 43565.47435897435,
+    "bound": 43565.47435897435,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 0.6,
+    "transport": 10599.87,
+    "cost_parts": {
+     "b": 10599.866667,
+     "e": 6077.274359,
+     "f": 0.0,
+     "x": 26888.333333
+    },
+    "hubs": [],
+    "belts": 6,
+    "rail_flow": 0,
+    "cars": 0,
+    "lines": [],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_Concrete_C": 20.0,
+     "Recipe_EncasedIndustrialBeam_C": 8.333333,
+     "Recipe_IngotIron_C": 50.0,
+     "Recipe_IngotSteel_C": 20.0,
+     "Recipe_IronPlateReinforced_C": 15.0,
+     "Recipe_IronPlate_C": 22.5,
+     "Recipe_IronRod_C": 55.0,
+     "Recipe_ModularFrameHeavy_C": 5.0,
+     "Recipe_ModularFrame_C": 25.0,
+     "Recipe_Screw_C": 52.5,
+     "Recipe_SteelBeam_C": 10.0,
+     "Recipe_SteelPipe_C": 10.0
+    }
+   },
+   "saving": 0.0,
+   "saving_pct": 0.0,
+   "conclusive": true,
+   "verdict": "same (no rail used)"
+  },
+  {
+   "name": "10 HMF at Sm3_0, machines anywhere",
+   "targets": {
+    "Desc_ModularFrameHeavy_C": 10.0
+   },
+   "kw": {
+    "base": "Sm3_0"
+   },
+   "rail": {
+    "label": "10 HMF at Sm3_0, machines anywhere rail",
+    "obj": 36437.77521366781,
+    "bound": 36437.77521366781,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 20.7,
+    "transport": 3566.85,
+    "cost_parts": {
+     "b": 3566.85,
+     "c": 0.0,
+     "e": 5982.59188,
+     "f": 0.0,
+     "g": 0.0,
+     "h": 0.0,
+     "u": 0.0,
+     "x": 26888.333333,
+     "z": 0.0
+    },
+    "hubs": [],
+    "belts": 2,
+    "rail_flow": 0.0,
+    "cars": 0,
+    "lines": [],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_Concrete_C": 20.0,
+     "Recipe_EncasedIndustrialBeam_C": 8.333333,
+     "Recipe_IngotIron_C": 50.0,
+     "Recipe_IngotSteel_C": 20.0,
+     "Recipe_IronPlateReinforced_C": 15.0,
+     "Recipe_IronPlate_C": 22.5,
+     "Recipe_IronRod_C": 55.0,
+     "Recipe_ModularFrameHeavy_C": 5.0,
+     "Recipe_ModularFrame_C": 25.0,
+     "Recipe_Screw_C": 52.5,
+     "Recipe_SteelBeam_C": 10.0,
+     "Recipe_SteelPipe_C": 10.0
+    }
+   },
+   "belt": {
+    "label": "10 HMF at Sm3_0, machines anywhere belt-only",
+    "obj": 36437.77521367491,
+    "bound": 36437.77521367491,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 18.9,
+    "transport": 3566.85,
+    "cost_parts": {
+     "b": 3566.85,
+     "e": 5982.59188,
+     "f": 0.0,
+     "x": 26888.333333
+    },
+    "hubs": [],
+    "belts": 2,
+    "rail_flow": 0,
+    "cars": 0,
+    "lines": [],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_Concrete_C": 20.0,
+     "Recipe_EncasedIndustrialBeam_C": 8.333333,
+     "Recipe_IngotIron_C": 50.0,
+     "Recipe_IngotSteel_C": 20.0,
+     "Recipe_IronPlateReinforced_C": 15.0,
+     "Recipe_IronPlate_C": 22.5,
+     "Recipe_IronRod_C": 55.0,
+     "Recipe_ModularFrameHeavy_C": 5.0,
+     "Recipe_ModularFrame_C": 25.0,
+     "Recipe_Screw_C": 52.5,
+     "Recipe_SteelBeam_C": 10.0,
+     "Recipe_SteelPipe_C": 10.0
+    }
+   },
+   "saving": 0.0,
+   "saving_pct": 0.0,
+   "conclusive": true,
+   "verdict": "same (no rail used)"
+  }
+ ]
+}

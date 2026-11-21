@@ -45,6 +45,7 @@ Next: G5 tools/geo_solve.py.
 - Default instance 10 HMF/min at base S0_m1, tier 8 (Mk.5 belt chosen as cheapest OE per capacity, 1167 OE/km;
   double track 1826 OE/km; F = 2 stations + 2000 = 3490): belt-only 16710.03 optimal 7.3 s; rail p free 16710.03
   optimal 9.1 s, no hub opened. 60 HMF/min belt-only: 120 s limit, gap 4.5 %.
+  [Superseded by R1 below: per_min() scaled machine counts by 60/time; corrected default objective 35 417.31.]
 - Next: tests (tools/geo_solve_test.py), then G7 sweep.
 
 ## 2026-11-21 G5 tests pass (tools/geo_solve_test.py, 238 s total)
@@ -60,10 +61,10 @@ Next: G5 tools/geo_solve.py.
   39 solves (p=0..12 x F 0.5/1/2x = 1745/3490/6980 OE), all Optimal, 6.4-14 s each, 384 s total. cost(p) is flat at
   16710.03 OE: no hub opens for any p or F. Whole chain sits at the base S0_m1 plus one belt from the next cell.
 - Fixed: sweep reused OE rounded to 4 decimals (obj 16709.97 vs 16710.03); OE kept unrounded now.
-- Rail-vs-belt in this instance: rail never wins. Also 60/120/200 HMF/min at S0_m1 and 120 HMF/min at Sm3_0 (time-limited,
-  gaps 4-6 %): no hub opened. Products compress at the ore, so only a belt or two crosses cells; break-even needs
-  several belts of uncompressible flow over several km (Mk.5 belt 1167 OE/km per 780/min vs double track 1826 OE/km
-  + 2 hubs 6980 + loco 720 + 2030 per car).
+- Rail-vs-belt in this instance: no hub opens, because nothing needs transport (one belt over 1.2 km). The larger
+  HMF runs (60/120/200 HMF/min, gaps 4-6 %) are time-limited incumbents and cannot rank the modes.
+  [Corrected in R1: "rail never wins" was wrong. Rail wins above a volume x distance threshold, e.g. 12 000
+  plate/min at Sm3_0: rail 95 123.6 vs belts 99 386.2, both proven optimal. See R1 results below.]
 - New test test_rail_chosen_when_belts_expensive (belts x20, 10 HMF at Sm3_0): optimal 42 s, hubs Sm2_m1+Sm3_0, rail
   only; checker now also verifies car and platform capacity per direction. All 8 tests pass (288 s).
 - Cross-process determinism: two CLI solves give identical solution JSON (md5 1896e83c...).
@@ -74,5 +75,51 @@ Next: G5 tools/geo_solve.py.
   solution_best_belts20.json, solution_map_belts20.png. All 15 solves Optimal, 7.9-40 s, 295 s total.
 - cost(p): p=0,1 106452 OE (belt only); p=2 72681 (F 1x) / 69191 (0.5x) / 79661 (2x); flat after p=2. p* = 2 for all
   three F (hubs Sm2_m1 + Sm3_0, one line, no belts). Shows the method; not a statement about the real belt cost.
+  [Superseded by the R1 rerun below (machine counts and tiered supply changed).]
 - Open: shared track segments / candidate paths, power balance, water from open water (currently "anywhere"),
   integer-belt gaps on bigger instances (4-6 % after 120-240 s; LP relaxation of belt counts is weak).
+
+## 2026-11-21 revision R1 in progress (machine counts, tiered supply, work weight)
+- tools/geo_solve.py: per_min() no longer multiplies by 60/time (game-data.json rates are already per minute;
+  machine counts were 60/time too small: x2 HMF, x10 plates/screws, x30 smelters). Default instance 10 HMF/min now
+  35417.31 OE optimal (machines 26888, extraction 7122, belts 1407); was 16710.03.
+- Supply per node now depends on the tier: miner Mk.1/2/3 (T0/T4/T8), oil T5, wells T8, 250 % clock from T3,
+  capped at one belt / pipe of the tier (pure node at T8: 780, not 1200).
+- New knobs: work_km (OE of player work per belt-km, pipe-km, track-km), machines_at, cbar_mult (car bound x2,
+  check() reports a binding bound); check() now also checks pipe capacity, fluid cars/platforms and recomputes the
+  objective from quantities.
+- Next: tests with hand values, then reruns.
+- R1 tests: new test_machine_counts_hand_values (5 Manufacturers / 25 Assemblers for 10 HMF; 600 Constructors +
+  600 Smelters for 12 000 plate), test_tier_supply, test_two_site_closed_form (6.5 km route: 780/min -> one belt
+  7583.3 OE; 7800/min -> rail 62 199 OE, 21 cars), test_fluid_pipes (1500 m3 oil at S0_m1). Pass.
+- tools/geo_breakeven.py (closed-form table + breakeven.png) and tools/geo_experiments.py (rail on/off pairs).
+- Running: full test suite, default sweep, sweep _plate12k (12000 plate at Sm3_0, p 0..4), _belts20, experiments.
+- First results: volume at Sm3_0 (all proven optimal): 1500/3000/6000 plate no rail; 12000 rail saves 4.3 %
+  (95 124 vs 99 386, hubs Sm1_2+Sm3_0, 5 cars, 5 760/min by rail); 24000 rail saves 7.9 % (3 hubs).
+  L9: hubs re-picked from the belt-only flow lose the useful pair -> no rail, 99 386 (sites.json rule is better here).
+- Fixed: solution_best*.json dump failed on meta['supply'] (tuple keys) -> excluded; check_obj tolerance 1e-5 rel
+  (binaries within the solver's integrality tolerance). Sweeps restarted 14:00 (default, _belts20, _plate12k,
+  _plate12k_work250 done: p*=2, 102 701 OE).
+- Experiments done (all proven optimal): 9000 plate at Sm3_0 still belt-only (17 belts); work 250 -> rail saves
+  7.9 %, work 1000 -> 15.9 %; 10 HMF at Sm3_0 with machines only at Sm3_0: no rail (hauls <= 2 km).
+- Next: report section 8.5 + summary item, then full test rerun, commit.
+
+## 2026-11-21 R1 results (corrected model; all numbers below supersede the G5/G7 ones above)
+- Default sweep (10 HMF/min at S0_m1, p 0..12 x F 0.5/1/2x): 39 solves all Optimal, 9-17 s each, 470 s total;
+  flat at 35 417.31 OE, no hub for any p or F (machines 26 888, extraction 7 122, one belt 1 407). Reason: no
+  transport to choose a mode for, not "rail never wins".
+- Break-even (tools/geo_breakeven.py -> breakeven.json/png), full Mk.5 belts above which one rail line is cheaper,
+  F 1x, work 0, route 1/2/3/5/7/10 km: stack 100: -/31/14/8/6/5; stack 200: -/11/7/5/4/4; stack 500: -/11/7/4/4/3.
+  Stack 200 at 3 km: F 0.5x 5, 2x 10; work 250 OE/km 5, 1000 OE/km 4.
+- Volume at Sm3_0 (tools/geo_experiments.py volume, all Optimal): plate 1500/3000/6000/9000 belts only;
+  12000 rail 95 123.6 vs 99 386.2 (-4.3 %, transport -10 %; hubs Sm1_2+Sm3_0, 3.5 km, 5 cars, 5 760/min);
+  24000 rail 209 065.5 vs 227 064.8 (-7.9 %, 3 hubs, private tracks -> conservative).
+- p sweep _plate12k (p 0..4): p* = 2 at F 0.5x (91 633.6) and 1x (95 123.6); F 2x p* = 0 (99 386.2).
+  _plate12k_work250 (F 1x): p* = 2, 102 700.98.
+- work: 12000 plate, work 250: -7.9 %; work 1000: -15.9 %. base_only: 10 HMF at Sm3_0 (machines only there or
+  anywhere): no rail (hauls 1.5 km). hubs (L9): hubs from belt-only outflow lose Sm1_2/Sm3_0 pair -> 99 386.2.
+- _belts20 (illustration, 10 HMF at Sm3_0): F1x 138 077 (p<=1) -> 103 277 (p=2) -> 98 326 (p=3); F2x p=3,4 hit 90 s.
+  Test test_rail_chosen_when_belts_expensive now uses p=2 (p free took >180 s to prove).
+- Plots regenerated (machine circles now scale with sqrt(count)). Report 00-最终报告.md: new §8.5, summary item 8,
+  §11 items. Next: full test rerun, commit, Resolution (geo) in docs/review/fable-review-3.md.
+- Full suite: python -I tools/geo_solve_test.py -> 12 tests pass, 303 s (stress 120 HMF at Sm3_0 stops at 180 s, gap 3.4 %, passes checker). Committed.

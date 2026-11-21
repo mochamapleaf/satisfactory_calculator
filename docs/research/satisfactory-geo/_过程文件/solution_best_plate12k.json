@@ -1,0 +1,203 @@
+{
+ "meta": {
+  "F": 3490.0,
+  "acc_s": 30.0,
+  "base": "Sm3_0",
+  "belt_cap": 780,
+  "belt_oe_km": 1166.6666666666665,
+  "belt_tier": 5,
+  "car_oe": 230.0,
+  "cbar_binding": [],
+  "cbar_mult": 2.0,
+  "check_obj": 95123.71295384603,
+  "dock_s": 27.08,
+  "feed": 1560,
+  "fluid_car": 1600,
+  "fmult": 1.0,
+  "items": [
+   "Desc_IronIngot_C",
+   "Desc_IronPlate_C",
+   "Desc_OreIron_C"
+  ],
+  "loco_oe": 720.0,
+  "mach_oe": {
+   "Recipe_IngotIron_C": 9.0,
+   "Recipe_IronPlate_C": 32.0
+  },
+  "oe": {
+   "Desc_AluminumCasing_C": 3.0000000000000004,
+   "Desc_AluminumPlate_C": 2.333333333333333,
+   "Desc_Cable_C": 1.0,
+   "Desc_Cement_C": 3.0,
+   "Desc_Computer_C": 72.0,
+   "Desc_CopperSheet_C": 2.0,
+   "Desc_IronPlateReinforced_C": 12.0,
+   "Desc_IronPlate_C": 1.5,
+   "Desc_IronRod_C": 1.0,
+   "Desc_ModularFrameHeavy_C": 420.0,
+   "Desc_ModularFrame_C": 24.0,
+   "Desc_Motor_C": 48.5,
+   "Desc_Plastic_C": 1.5,
+   "Desc_Rotor_C": 11.25,
+   "Desc_Rubber_C": 1.5,
+   "Desc_SteelPipe_C": 3.0,
+   "Desc_SteelPlateReinforced_C": 42.0,
+   "Desc_SteelPlate_C": 8.0,
+   "Desc_Wire_C": 0.5
+  },
+  "p": 2,
+  "pipe_cap": 600,
+  "pipe_oe_km": 2750.0,
+  "platform_oe": 900.0,
+  "rail": true,
+  "recipes": [
+   "Recipe_IngotIron_C",
+   "Recipe_IronPlate_C"
+  ],
+  "slots": 32,
+  "station_oe": 745.0,
+  "targets": {
+   "Desc_IronPlate_C": 12000.0
+  },
+  "tier": 8,
+  "track_oe_km": 1826.0,
+  "v_mps": 33.333,
+  "water_anywhere": true,
+  "work_km": 0.0
+ },
+ "obj": 95123.6300496921,
+ "p": 2,
+ "summary": {
+  "belt_count": 10,
+  "belts": [
+   {
+    "a": "Sm1_1",
+    "b": "Sm2_1",
+    "flow": {
+     "Desc_IronPlate_C": 780.0
+    },
+    "n": 1
+   },
+   {
+    "a": "Sm1_3",
+    "b": "Sm1_2",
+    "flow": {
+     "Desc_IronPlate_C": 780.0
+    },
+    "n": 1
+   },
+   {
+    "a": "Sm2_1",
+    "b": "Sm3_0",
+    "flow": {
+     "Desc_IronPlate_C": 2340.0
+    },
+    "n": 3
+   },
+   {
+    "a": "Sm2_m1",
+    "b": "Sm3_0",
+    "flow": {
+     "Desc_IronPlate_C": 1560.0
+    },
+    "n": 2
+   },
+   {
+    "a": "Sm3_m1",
+    "b": "Sm3_0",
+    "flow": {
+     "Desc_IronPlate_C": 2340.0
+    },
+    "n": 3
+   }
+  ],
+  "cbar_binding": [],
+  "cost_parts": {
+   "b": 17830.75,
+   "c": 10150.0,
+   "e": 28393.896154,
+   "f": 0.0,
+   "g": 0.0,
+   "h": 6980.0,
+   "u": 6448.983896,
+   "x": 24600.0,
+   "z": 720.0
+  },
+  "extraction": {
+   "Sm1_1": {
+    "Desc_OreIron_C": 1170.0
+   },
+   "Sm1_2": {
+    "Desc_OreIron_C": 7470.0
+   },
+   "Sm1_3": {
+    "Desc_OreIron_C": 1170.0
+   },
+   "Sm2_1": {
+    "Desc_OreIron_C": 2340.0
+   },
+   "Sm2_m1": {
+    "Desc_OreIron_C": 2340.0
+   },
+   "Sm3_m1": {
+    "Desc_OreIron_C": 3510.0
+   }
+  },
+  "hubs": [
+   "Sm1_2",
+   "Sm3_0"
+  ],
+  "lines": [
+   {
+    "a": "Sm1_2",
+    "b": "Sm3_0",
+    "dirs": {
+     "Sm1_2->Sm3_0": {
+      "cars": 5,
+      "flow": {
+       "Desc_IronPlate_C": 5760.0
+      },
+      "fluid_cars": 0
+     },
+     "Sm3_0->Sm1_2": {
+      "cars": 0,
+      "flow": {},
+      "fluid_cars": 0
+     }
+    }
+   }
+  ],
+  "machines": {
+   "Sm1_1": {
+    "Recipe_IngotIron_C": 39.0,
+    "Recipe_IronPlate_C": 39.0
+   },
+   "Sm1_2": {
+    "Recipe_IngotIron_C": 249.0,
+    "Recipe_IronPlate_C": 249.0
+   },
+   "Sm1_3": {
+    "Recipe_IngotIron_C": 39.0,
+    "Recipe_IronPlate_C": 39.0
+   },
+   "Sm2_1": {
+    "Recipe_IngotIron_C": 78.0,
+    "Recipe_IronPlate_C": 78.0
+   },
+   "Sm2_m1": {
+    "Recipe_IngotIron_C": 78.0,
+    "Recipe_IronPlate_C": 78.0
+   },
+   "Sm3_m1": {
+    "Recipe_IngotIron_C": 117.0,
+    "Recipe_IronPlate_C": 117.0
+   }
+  },
+  "machines_total": {
+   "Recipe_IngotIron_C": 600.0,
+   "Recipe_IronPlate_C": 600.0
+  },
+  "pipes": [],
+  "rail_flow_items_per_min": 5760.0
+ }
+}

@@ -1,0 +1,1463 @@
+{
+ "note": "smallest number of full Mk.5 belts (780/min) above which one rail line is cheaper",
+ "rows": [
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 31,
+   "items_per_min": 24180,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 14,
+   "items_per_min": 10920,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 11,
+   "items_per_min": 8580,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 11,
+   "items_per_min": 8580,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 21,
+   "items_per_min": 16380,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 10,
+   "items_per_min": 7800,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 48,
+   "items_per_min": 37440,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 20,
+   "items_per_min": 15600,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 10,
+   "items_per_min": 7800,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 17,
+   "items_per_min": 13260,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 10,
+   "items_per_min": 7800,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 17,
+   "items_per_min": 13260,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 9,
+   "items_per_min": 7020,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 0.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 16,
+   "items_per_min": 12480,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 9,
+   "items_per_min": 7020,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 1,
+   "belts": 52,
+   "items_per_min": 40560,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 1,
+   "belts": 52,
+   "items_per_min": 40560,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 12,
+   "items_per_min": 9360,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 1,
+   "belts": 40,
+   "items_per_min": 31200,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 1,
+   "belts": 40,
+   "items_per_min": 31200,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 22,
+   "items_per_min": 17160,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 13,
+   "items_per_min": 10140,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 12,
+   "items_per_min": 9360,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 1,
+   "belts": null,
+   "items_per_min": null,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 12,
+   "items_per_min": 9360,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 250.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 1,
+   "belts": 18,
+   "items_per_min": 14040,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 1,
+   "belts": 13,
+   "items_per_min": 10140,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 1,
+   "belts": 13,
+   "items_per_min": 10140,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 1.0,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 1,
+   "belts": 14,
+   "items_per_min": 10920,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 6,
+   "items_per_min": 4680,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 1,
+   "belts": 10,
+   "items_per_min": 7800,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 1,
+   "belts": 10,
+   "items_per_min": 7800,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 0.5,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 1,
+   "belts": 28,
+   "items_per_min": 21840,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 2,
+   "belts": 10,
+   "items_per_min": 7800,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 3,
+   "belts": 7,
+   "items_per_min": 5460,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 5,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 100,
+   "route_km": 10,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 1,
+   "belts": 20,
+   "items_per_min": 15600,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 2,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 200,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 1,
+   "belts": 20,
+   "items_per_min": 15600,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 2,
+   "belts": 8,
+   "items_per_min": 6240,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 3,
+   "belts": 5,
+   "items_per_min": 3900,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 5,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 7,
+   "belts": 4,
+   "items_per_min": 3120,
+   "belt_cap": 780
+  },
+  {
+   "work_km": 1000.0,
+   "fmult": 2.0,
+   "stack": 500,
+   "route_km": 10,
+   "belts": 3,
+   "items_per_min": 2340,
+   "belt_cap": 780
+  }
+ ]
+}

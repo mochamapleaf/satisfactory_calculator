@@ -1,0 +1,160 @@
+{
+ "group": "work",
+ "time_limit_s": 300.0,
+ "rows": [
+  {
+   "name": "12000 plate at Sm3_0, work 250",
+   "targets": {
+    "Desc_IronPlate_C": 12000.0
+   },
+   "kw": {
+    "base": "Sm3_0",
+    "work_km": 250.0
+   },
+   "rail": {
+    "label": "12000 plate at Sm3_0, work 250 rail",
+    "obj": 102700.97914353572,
+    "bound": 102700.97914353572,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 6.0,
+    "transport": 47479.82,
+    "cost_parts": {
+     "b": 19384.958333,
+     "c": 12180.0,
+     "e": 30621.159615,
+     "f": 0.0,
+     "g": 0.0,
+     "h": 6980.0,
+     "u": 8214.861195,
+     "x": 24600.0,
+     "z": 720.0
+    },
+    "hubs": [
+     "Sm1_2",
+     "Sm3_0"
+    ],
+    "belts": 9,
+    "rail_flow": 6671.505971,
+    "cars": 6,
+    "lines": [
+     [
+      "Sm1_2",
+      "Sm3_0"
+     ]
+    ],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_IngotIron_C": 600.0,
+     "Recipe_IronPlate_C": 600.0
+    }
+   },
+   "belt": {
+    "label": "12000 plate at Sm3_0, work 250 belt-only",
+    "obj": 111554.66442307681,
+    "bound": 111544.31706140883,
+    "gap": 9.2755975032483e-05,
+    "status": "Optimal",
+    "time_s": 5.3,
+    "transport": 56953.12,
+    "cost_parts": {
+     "b": 56953.116667,
+     "e": 30001.547756,
+     "f": 0.0,
+     "x": 24600.0
+    },
+    "hubs": [],
+    "belts": 26,
+    "rail_flow": 0,
+    "cars": 0,
+    "lines": [],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_IngotIron_C": 600.0,
+     "Recipe_IronPlate_C": 600.0
+    }
+   },
+   "saving": 8853.69,
+   "saving_pct": 7.94,
+   "conclusive": true,
+   "verdict": "rail cheaper"
+  },
+  {
+   "name": "12000 plate at Sm3_0, work 1000",
+   "targets": {
+    "Desc_IronPlate_C": 12000.0
+   },
+   "kw": {
+    "base": "Sm3_0",
+    "work_km": 1000.0
+   },
+   "rail": {
+    "label": "12000 plate at Sm3_0, work 1000 rail",
+    "obj": 124472.25975840089,
+    "bound": 124472.25975840089,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 9.3,
+    "transport": 62049.31,
+    "cost_parts": {
+     "b": 26626.816667,
+     "c": 14210.0,
+     "e": 37822.95,
+     "f": 0.0,
+     "g": 0.0,
+     "h": 6980.0,
+     "u": 13512.493092,
+     "x": 24600.0,
+     "z": 720.0
+    },
+    "hubs": [
+     "Sm1_2",
+     "Sm3_0"
+    ],
+    "belts": 9,
+    "rail_flow": 8100.0,
+    "cars": 7,
+    "lines": [
+     [
+      "Sm1_2",
+      "Sm3_0"
+     ]
+    ],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_IngotIron_C": 600.0,
+     "Recipe_IronPlate_C": 600.0
+    }
+   },
+   "belt": {
+    "label": "12000 plate at Sm3_0, work 1000 belt-only",
+    "obj": 148060.0749999994,
+    "bound": 148060.0749999994,
+    "gap": 0.0,
+    "status": "Optimal",
+    "time_s": 4.7,
+    "transport": 87104.77,
+    "cost_parts": {
+     "b": 87104.766667,
+     "e": 36355.308333,
+     "f": 0.0,
+     "x": 24600.0
+    },
+    "hubs": [],
+    "belts": 26,
+    "rail_flow": 0,
+    "cars": 0,
+    "lines": [],
+    "cbar_binding": [],
+    "machines_total": {
+     "Recipe_IngotIron_C": 600.0,
+     "Recipe_IronPlate_C": 600.0
+    }
+   },
+   "saving": 23587.82,
+   "saving_pct": 15.93,
+   "conclusive": true,
+   "verdict": "rail cheaper"
+  }
+ ]
+}
