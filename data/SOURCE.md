@@ -52,3 +52,16 @@
   `qualityRecord` (2.1: Q3 2.5/3.25/4/4.75/6.25 %; 2.0: …/6.2 %); `qualities` (tier names).
 - Version differences (asteroid reprocessing without quality in 2.1, crushing returns, module values,
   renamed ids) come from the data sets only; no patches in code.
+
+## satisfactory-geo/nodes.json (resource node coordinates, 2026-11-21)
+- **Source:** `rockfactory/satisfactory-logistics` @`bb997b42` (2026-04-18), `src/recipes/WorldResourceNodes.json`,
+  https://raw.githubusercontent.com/rockfactory/satisfactory-logistics/bb997b42/src/recipes/WorldResourceNodes.json
+  (stored unchanged as `data/satisfactory-geo/raw/WorldResourceNodes.json`, 626 records).
+- **Licence:** the repository is MIT (c) 2024 Leonardo Ascione; that covers code and compilation. The node
+  coordinates are Coffee Stain Studios game data, exported with FModel from the game's Persistent_Level;
+  game data (c) Coffee Stain Studios. No map art is shipped.
+- **Converted by:** `python -I tools/geo_nodes.py` -> `data/satisfactory-geo/nodes.json` (metres, `type`
+  node/well/well_core/geyser/deposit, `max_rate` at 250 % clock). The script asserts that the per-item totals
+  equal `resources[].limit` in `game-data.json` (12 items) and that item ids exist in `items`.
+- `data/satisfactory-geo/transport.json`: capacities and estimates, each with `source` and `confidence`
+  (see `docs/research/satisfactory-geo/00-最终报告.md` §2); sources are satisfactory.wiki.gg pages opened 2026-11-21.
