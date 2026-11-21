@@ -23,7 +23,9 @@
 //! solution of `matrix.rs` (in LP mode).
 use super::data::{GameData, Recipe};
 use super::compute;
+use super::quality;
 use super::rules::{self, Mode};
+
 use super::{
     ComputeSummary, CostWeights, ItemValue, MachineGroup, Plan, PlanRecipe, PlanSettings,
     RateLine, Status,
@@ -62,27 +64,31 @@ pub fn is_ore_conversion(data: &GameData, r: &Recipe) -> bool {
 
 /// Units that can contribute to the targets (upstream closure, extra inputs included).
 fn relevant<'a>(units: &[Unit<'a>], targets: &[String]) -> Vec<Unit<'a>> {
-    let mut needed: BTreeSet<String> = targets.iter().cloned().collect();
-    let mut chosen: BTreeSet<usize> = BTreeSet::new();
-    loop {
-        let mut grew = false;
-        for (i, u) in units.iter().enumerate() {
-            if chosen.contains(&i) {
-                continue;
+    let mut by_out: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (k, u) in units.iter().enumerate() {
+        for (it, q) in &u.outs {
+            if *q > 0.0 {
+                by_out.entry(it.as_str()).or_default().push(k);
             }
-            if u.recipe.outputs.iter().any(|(it, _)| needed.contains(it)) {
-                chosen.insert(i);
-                for (it, _) in u.recipe.inputs.iter().chain(&u.mode.extra_inputs) {
-                    needed.insert(it.clone());
-                }
-                grew = true;
-            }
-        }
-        if !grew {
-            break;
         }
     }
-    chosen.into_iter().map(|i| units[i].clone()).collect()
+    let mut needed: BTreeSet<&str> = targets.iter().map(|t| t.as_str()).collect();
+    let mut queue: Vec<&str> = needed.iter().copied().collect();
+    let mut chosen = vec![false; units.len()];
+    while let Some(it) = queue.pop() {
+        for &k in by_out.get(it).map(|v| v.as_slice()).unwrap_or(&[]) {
+            if chosen[k] {
+                continue;
+            }
+            chosen[k] = true;
+            for (i, _) in &units[k].ins {
+                if needed.insert(i.as_str()) {
+                    queue.push(i.as_str());
+                }
+            }
+        }
+    }
+    units.iter().zip(&chosen).filter(|(_, c)| **c).map(|(u, _)| u.clone()).collect()
 }
 
 /// Every item a set of units touches, plus targets and supplies.
@@ -94,7 +100,7 @@ fn items_of(
     let mut items: BTreeSet<String> = targets.keys().cloned().collect();
     items.extend(supplies.keys().cloned());
     for u in units {
-        for (it, _) in u.recipe.inputs.iter().chain(&u.recipe.outputs).chain(&u.mode.extra_inputs) {
+        for (it, _) in u.ins.iter().chain(&u.outs) {
             items.insert(it.clone());
         }
     }
@@ -157,6 +163,17 @@ struct Unit<'a> {
     recipe: &'a Recipe,
     mode: Mode,
     key: String,
+    /// Inputs (incl. the mode's extra inputs) and products per unit of work.
+    ins: Vec<(String, f64)>,
+    outs: Vec<(String, f64)>,
+}
+
+impl<'a> Unit<'a> {
+    fn new(recipe: &'a Recipe, mode: Mode) -> Self {
+        let ins = recipe.inputs.iter().chain(&mode.extra_inputs).cloned().collect();
+        let outs = rules::outputs(recipe, &mode);
+        Unit { recipe, key: format!("{}#{}", recipe.id, mode.key), mode, ins, outs }
+    }
 }
 
 struct Inputs<'a> {
@@ -278,36 +295,31 @@ fn build_scaled(
         .map(|it| (it.clone(), p.add_var(w.surplus, (0.0, f64::INFINITY))))
         .collect();
 
+    // item balance rows, built in one pass over the units (net coefficient per unit and item)
+    let mut rows: HashMap<&str, Vec<(Variable, f64)>> = HashMap::new();
+    for (u, v) in inp.units.iter().zip(&rv) {
+        let mut net: BTreeMap<&str, f64> = BTreeMap::new();
+        for (i, q) in &u.outs {
+            *net.entry(i.as_str()).or_insert(0.0) += q;
+        }
+        for (i, q) in &u.ins {
+            *net.entry(i.as_str()).or_insert(0.0) -= q;
+        }
+        for (i, a) in net {
+            if a != 0.0 {
+                rows.entry(i).or_default().push((v.x, a));
+            }
+        }
+    }
+    for (i, v) in raw.iter().chain(sup.iter()) {
+        rows.entry(i.as_str()).or_default().push((*v, 1.0));
+    }
+    for (i, v) in &surplus {
+        rows.entry(i.as_str()).or_default().push((*v, -1.0));
+    }
     let mut balance = Vec::new();
     for it in &inp.items {
-        let mut row: Vec<(Variable, f64)> = Vec::new();
-        for (u, v) in inp.units.iter().zip(&rv) {
-            let (r, f) = (u.recipe, &u.mode);
-            let mut a = 0.0;
-            for (i, q) in &r.outputs {
-                if i == it {
-                    a += q * f.out_mult;
-                }
-            }
-            for (i, q) in r.inputs.iter().chain(&f.extra_inputs) {
-                if i == it {
-                    a -= q;
-                }
-            }
-            if a != 0.0 {
-                row.push((v.x, a));
-            }
-        }
-        for (i, v) in raw.iter().chain(sup.iter()) {
-            if i == it {
-                row.push((*v, 1.0));
-            }
-        }
-        for (i, v) in &surplus {
-            if i == it {
-                row.push((*v, -1.0));
-            }
-        }
+        let row = rows.remove(it.as_str()).unwrap_or_default();
         let b = inp.targets.get(it).copied().unwrap_or(0.0);
         balance.push((it.clone(), p.add_constraint(row.as_slice(), ComparisonOp::Eq, b)));
     }
@@ -425,8 +437,7 @@ fn finish(
     integer: bool,
     plan: &mut Plan,
 ) {
-    let names = data.item_names();
-    let name = |id: &str| names.get(id).copied().unwrap_or(id).to_string();
+    let name = |id: &str| data.item_name(id);
     let clean = |v: f64| if v.abs() < 1e-7 { 0.0 } else { v };
     let c_max = s.max_clock();
     let mut summary: Option<ComputeSummary> = None;
@@ -465,16 +476,12 @@ fn finish(
             shards,
             groups,
             power,
-            inputs: r
-                .inputs
+            inputs: u.ins.iter().map(|(i, q)| RateLine::new(i, &name(i), q * x)).collect(),
+            outputs: u
+                .outs
                 .iter()
-                .chain(&f.extra_inputs)
+                .filter(|(_, q)| q * x > 1e-9)
                 .map(|(i, q)| RateLine::new(i, &name(i), q * x))
-                .collect(),
-            outputs: r
-                .outputs
-                .iter()
-                .map(|(i, q)| RateLine::new(i, &name(i), q * f.out_mult * x))
                 .collect(),
             somersloops: f.somersloops,
             compute: 0.0,
@@ -544,20 +551,27 @@ fn finish(
 pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
     let started = web_time::Instant::now();
     let mut plan = Plan::default();
-    let names = data.item_names();
-    let name = |id: &str| names.get(id).copied().unwrap_or(id).to_string();
+    let name = |id: &str| data.item_name(id);
+    // quality tiers (`x@q`) only where the data has them and some target or supply asks for one
+    let quality_on = quality::active(data, s);
+    let resolve = |key: &str| {
+        let q = if quality_on { quality::split(key).1 } else { 0 };
+        let it = data.resolve_item(key)?;
+        // fluids have no quality
+        Some(quality::qid(&it.id, if it.liquid { 0 } else { q }))
+    };
 
     let mut targets: BTreeMap<String, f64> = BTreeMap::new();
     for t in &s.targets {
-        match data.resolve_item(&t.item) {
-            Some(it) => *targets.entry(it.id.clone()).or_insert(0.0) += t.rate,
+        match resolve(&t.item) {
+            Some(id) => *targets.entry(id).or_insert(0.0) += t.rate,
             None => plan.warnings.push(format!("unknown target item '{}'", t.item)),
         }
     }
     let mut supplies: BTreeMap<String, f64> = BTreeMap::new();
     for t in &s.supplies {
-        if let Some(it) = data.resolve_item(&t.item) {
-            *supplies.entry(it.id.clone()).or_insert(0.0) += t.rate;
+        if let Some(id) = resolve(&t.item) {
+            *supplies.entry(id).or_insert(0.0) += t.rate;
         }
     }
     if targets.is_empty() {
@@ -567,16 +581,18 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
 
     let allowed = allowed_recipes(data, s);
     let target_ids: Vec<String> = targets.keys().cloned().collect();
-    let all_units: Vec<Unit> = allowed
-        .iter()
-        .flat_map(|r| {
-            rules::modes(data, r, s).into_iter().map(move |mode| Unit {
-                recipe: *r,
-                key: format!("{}#{}", r.id, mode.key),
-                mode,
-            })
-        })
-        .collect();
+    // quality plans: expanded recipes `r@i` with loadout modes (pruned at the base level first)
+    let expanded = if quality_on { quality::expand(data, s, &allowed, &target_ids) } else { vec![] };
+    let all_units: Vec<Unit> = if quality_on {
+        expanded.iter().flat_map(|(r, ms)| ms.iter().map(move |m| Unit::new(r, m.clone()))).collect()
+    } else {
+        // item recycling only makes sense with quality
+        allowed
+            .iter()
+            .filter(|r| !r.recycling)
+            .flat_map(|r| rules::modes(data, r, s).into_iter().map(move |mode| Unit::new(r, mode)))
+            .collect()
+    };
     let units = relevant(&all_units, &target_ids);
     let items = items_of(&units, &targets, &supplies);
     let mut weights = s.weights();
@@ -586,6 +602,15 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
         }
     }
     let inp = Inputs { units, items, targets, supplies, weights };
+    plan.columns = inp.units.len();
+    plan.rows = inp.items.len();
+    plan.quality = quality_on;
+    // Quality loops run tiers of a recipe on shared machines that switch recipes, which
+    // per-column whole buildings would overcount (report §2.1): solve them continuously.
+    let integer = s.integer && !quality_on;
+    if quality_on && s.integer {
+        plan.warnings.push("Quality plans are solved with fractional machines: the higher tiers of a recipe normally share machines that switch recipes.".into());
+    }
 
     // 1. continuous relaxation: lower bound, shadow prices, warm start
     let lp_model = build(data, s, &inp, false);
@@ -624,7 +649,7 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
         plan.item_values.sort_by(|a, b| b.value.partial_cmp(&a.value).unwrap_or(std::cmp::Ordering::Equal));
     }
 
-    if !s.integer {
+    if !integer {
         plan.status = Status::Optimal;
         plan.objective = lp.objective();
         plan.proven_optimal = true;

@@ -3,22 +3,29 @@ use crate::planner::{self, GameData, PlanSettings};
 use std::sync::OnceLock;
 use wasm_bindgen::prelude::*;
 
-fn data(game: &str) -> &'static GameData {
+fn data(game: &str, dataset: &str) -> &'static GameData {
     static SF: OnceLock<GameData> = OnceLock::new();
     static DSP: OnceLock<GameData> = OnceLock::new();
     static FAC: OnceLock<GameData> = OnceLock::new();
-    let cell = match game {
-        "dsp" => &DSP,
-        "factorio" => &FAC,
+    static F2X1: OnceLock<GameData> = OnceLock::new();
+    static F2Q1: OnceLock<GameData> = OnceLock::new();
+    static FSPA: OnceLock<GameData> = OnceLock::new();
+    let cell = match (game, dataset) {
+        ("dsp", _) => &DSP,
+        ("factorio", "2x1") => &F2X1,
+        ("factorio", "2q1") => &F2Q1,
+        ("factorio", "spa") => &FSPA,
+        ("factorio", _) => &FAC,
         _ => &SF,
     };
-    cell.get_or_init(|| GameData::for_game(game))
+    cell.get_or_init(|| GameData::for_set(game, dataset))
 }
 
 /// The embedded game data (items, recipes, buildings, resources, effects) as JSON.
+/// `dataset` picks a Factorio data set ("2.0", "2x1", "2q1", "spa"; "" = default).
 #[wasm_bindgen]
-pub fn game_data_json(game: &str) -> String {
-    planner::data::embedded(game).to_string()
+pub fn game_data_json(game: &str, dataset: &str) -> String {
+    planner::data::embedded_set(game, dataset).to_string()
 }
 
 /// DSP Compute (UPS) objective weights for a generator (`artificial_star`, `wind`, …), as a
@@ -39,5 +46,5 @@ pub fn solve_json(settings_json: &str) -> String {
                 .to_string()
         }
     };
-    serde_json::to_string(&planner::plan(data(&settings.game), &settings)).unwrap()
+    serde_json::to_string(&planner::plan(data(&settings.game, &settings.dataset), &settings)).unwrap()
 }

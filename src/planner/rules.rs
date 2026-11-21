@@ -32,6 +32,24 @@ pub struct Mode {
     pub somersloops: u32,
     /// Runs on proliferated inputs (needs spray coaters).
     pub sprayed: bool,
+    /// Products per unit of work when they are not `recipe.outputs × out_mult` (Factorio
+    /// quality modes: products split over quality tiers).
+    pub outputs: Option<Vec<(String, f64)>>,
+}
+
+/// Products per unit of work of `r` run in mode `m`. Productivity (`out_mult`) only
+/// multiplies the non-catalyst part of a product (Kovarex: 40 of the 41 U-235 are catalyst).
+pub fn outputs(r: &Recipe, m: &Mode) -> Vec<(String, f64)> {
+    if let Some(o) = &m.outputs {
+        return o.clone();
+    }
+    r.outputs
+        .iter()
+        .map(|(i, q)| {
+            let c = r.catalyst_of(i).min(*q);
+            (i.clone(), c + (q - c) * m.out_mult)
+        })
+        .collect()
 }
 
 pub fn modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
@@ -41,14 +59,16 @@ pub fn modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
     }
 }
 
-/// Factorio productivity cap (+300 %).
-const MAX_PRODUCTIVITY: f64 = 3.0;
+/// Factorio productivity cap (+300 %, recipe `maximum_productivity` default).
+pub const MAX_PRODUCTIVITY: f64 = 3.0;
 
 /// DSP / Factorio: every allowed machine tier, plain or with one enabled boost.
 /// DSP proliferator: one spray per input item, `sprays` items per proliferator; speed,
 /// extra products and power multipliers per the game. Factorio: all slots filled with one
-/// module type (mixed loadouts and beacons come later).
+/// module type at `module_quality` (quality plans use mixed loadouts, `quality.rs`), plus the
+/// machine's built-in and researched productivity, capped at +300 %.
 fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
+    let research = s.research_productivity.get(&r.id).copied().unwrap_or(0.0);
     let producers: Vec<&str> = if r.producers.is_empty() {
         vec![r.building.as_str()]
     } else {
@@ -61,12 +81,14 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
         }
         let Some(b) = data.building(pid) else { continue };
         let tier_label = if r.producers.len() > 1 { data.pick(&b.name, &b.name_zh).to_string() } else { String::new() };
+        // built-in + researched productivity (Factorio; 0 for DSP), only where productivity is allowed
+        let base_p = if r.productivity_allowed { b.base_productivity + research } else { 0.0 };
         out.push(Mode {
             key: b.id.clone(),
             label: String::new(),
             building: b.id.clone(),
             speed: b.speed,
-            out_mult: 1.0,
+            out_mult: 1.0 + base_p.min(MAX_PRODUCTIVITY),
             power_base: b.power,
             power_exp: 1.0,
             overclock: false,
@@ -74,12 +96,14 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
             held: vec![],
             somersloops: 0,
             sprayed: false,
+            outputs: None,
         });
         if b.modules == 0 {
             continue;
         }
         for eid in &s.effects {
             let Some(e) = data.effect(eid) else { continue };
+            let v = e.tier(if e.kind == "module" { s.module_quality } else { 0 });
             if e.productivity > 0.0
                 && (!r.productivity_allowed || b.disallowed_effects.iter().any(|x| x == "productivity"))
             {
@@ -98,7 +122,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     label,
                     building: b.id.clone(),
                     speed: b.speed * (1.0 + e.speed),
-                    out_mult: 1.0 + e.productivity,
+                    out_mult: 1.0 + e.productivity + base_p,
                     power_base: b.power * (1.0 + e.consumption),
                     power_exp: 1.0,
                     overclock: false,
@@ -106,6 +130,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     held: vec![],
                     somersloops: 0,
                     sprayed: true,
+                    outputs: None,
                 }
             } else {
                 let n = b.modules as f64;
@@ -113,15 +138,16 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     key: format!("{}|{}", b.id, e.id),
                     label: format!("{label} ×{}", b.modules),
                     building: b.id.clone(),
-                    speed: b.speed * (1.0 + n * e.speed).max(0.2),
-                    out_mult: 1.0 + (n * e.productivity).min(MAX_PRODUCTIVITY),
-                    power_base: b.power * (1.0 + n * e.consumption).max(0.2),
+                    speed: b.speed * (1.0 + n * v.speed).max(0.2),
+                    out_mult: 1.0 + (base_p + n * v.productivity).min(MAX_PRODUCTIVITY),
+                    power_base: b.power * (1.0 + n * v.consumption).max(0.2),
                     power_exp: 1.0,
                     overclock: false,
                     extra_inputs: vec![],
                     held: vec![(e.item.clone(), n)],
                     somersloops: 0,
                     sprayed: false,
+                    outputs: None,
                 }
             };
             out.push(mode);
@@ -157,6 +183,7 @@ fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode
                 held: if k == 0 { vec![] } else { vec![(SOMERSLOOP.into(), k as f64)] },
                 somersloops: k,
                 sprayed: false,
+                outputs: None,
             }
         })
         .collect()

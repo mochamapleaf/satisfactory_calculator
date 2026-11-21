@@ -360,14 +360,15 @@ fn factorio_circuits_and_modules() {
 
 #[test]
 fn every_game_solves_its_items() {
-    for g in ["dsp", "factorio"] {
-        let d = GameData::for_game(g);
+    for (g, ds) in [("dsp", ""), ("factorio", ""), ("factorio", "2x1"), ("factorio", "2q1"), ("factorio", "spa")] {
+        let d = GameData::for_set(g, ds);
         let produced: std::collections::BTreeSet<_> =
             d.recipes.iter().flat_map(|r| r.outputs.iter().map(|o| o.0.clone())).collect();
         let mut bad = vec![];
         for it in &produced {
             let mut s = settings(&[(it.as_str(), 10.0)]);
             s.game = g.into();
+            s.dataset = ds.into();
             s.integer = false;
             let p = plan(&d, &s);
             if p.status != Status::Optimal {
@@ -376,7 +377,7 @@ fn every_game_solves_its_items() {
                 assert_balanced(&p);
             }
         }
-        assert!(bad.is_empty(), "{g}: unsolvable {bad:?}");
+        assert!(bad.is_empty(), "{g} {ds}: unsolvable {bad:?}");
     }
 }
 

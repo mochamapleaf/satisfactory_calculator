@@ -5,7 +5,10 @@ pub mod data;
 pub mod flows;
 pub mod lp;
 pub mod matrix;
+pub mod quality;
 pub mod rules;
+#[cfg(test)]
+mod quality_tests;
 #[cfg(test)]
 mod tests;
 
@@ -138,6 +141,20 @@ pub struct PlanSettings {
     pub generator: String,
     /// Compute objective: all inputs of a machine share one mixed belt (one input sorter).
     pub mixed_belts: bool,
+    /// Factorio data set: "2.0" (base 2.0.77, default), "2x1", "2q1", "spa" (`data::FACTORIO_DATASETS`).
+    pub dataset: String,
+    /// Factorio: quality tier of all modules (0 normal … 4 legendary).
+    pub module_quality: u8,
+    /// Factorio quality plans: module ids for the quality / productivity slots ("" = none).
+    pub quality_module: String,
+    pub prod_module: String,
+    /// Factorio quality plans: recycling scope "chain" (targets' ingredient chain, default),
+    /// "all" (every recycling recipe) or "list" (only `recycle_allow`).
+    pub recycling: String,
+    /// Items (or recycling recipe ids) whose recycling is allowed in any scope.
+    pub recycle_allow: Vec<String>,
+    /// Researched productivity per recipe id (0.1 per level), counted against the +300 % cap.
+    pub research_productivity: HashMap<String, f64>,
 }
 
 impl Default for PlanSettings {
@@ -165,6 +182,13 @@ impl Default for PlanSettings {
             time_limit_ms: 4000,
             generator: compute::GENERATORS[0].into(),
             mixed_belts: false,
+            dataset: String::new(),
+            module_quality: 0,
+            quality_module: "quality-module-3".into(),
+            prod_module: "productivity-module-3".into(),
+            recycling: "chain".into(),
+            recycle_allow: vec![],
+            research_productivity: HashMap::new(),
         }
     }
 }
@@ -303,6 +327,11 @@ pub struct Plan {
     pub warnings: Vec<String>,
     /// DSP plans: compute (UPS) cost under the dsp-ups model, whatever the objective.
     pub compute: Option<ComputeSummary>,
+    /// Model size: solver columns (recipe × mode units) and item balance rows.
+    pub columns: usize,
+    pub rows: usize,
+    /// Factorio quality expansion was used (`quality.rs`).
+    pub quality: bool,
 }
 
 pub fn plan(data: &GameData, settings: &PlanSettings) -> Plan {

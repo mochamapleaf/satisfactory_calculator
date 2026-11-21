@@ -76,6 +76,15 @@ def main(game, dataset="2.0"):
                      for k in ("speed", "productivity", "consumption", "quality")} for t in tiers]
         if "belt" in i:
             belts.append(i["belt"]["speed"] * 60.0)
+    # Space Age plants (yumako, jellynut, trees) grow from seeds without a machine in the data:
+    # an agricultural tower (100 kW, no module slots) runs them, one plant per "building"
+    plants = [r for r in d["recipes"] if "plant" in r.get("flags", [])]
+    if plants and "agricultural-tower" in items_by_id:
+        buildings.append({"id": "agricultural-tower", "name": items_by_id["agricultural-tower"]["name"],
+                          "name_zh": None, "power": 0.1, "power_exp": 1.0, "somersloop_slots": 0,
+                          "speed": 1.0, "modules": 0, "disallowed_effects": [], "base_productivity": 0.0})
+        for r in plants:
+            r.setdefault("producers", ["agricultural-tower"])
     machine_ids = {b["id"] for b in buildings}
 
     # items some non-recycling recipe crafts: their "-recycling" recipe is a reverse recipe
@@ -88,6 +97,13 @@ def main(game, dataset="2.0"):
             continue
         producers = [p for p in r.get("producers", []) if p in machine_ids]
         if not producers:
+            # Space Age asteroid fields (per space location, no machine): chunks are raw
+            if not r.get("in") and not r.get("producers"):
+                for it in r["out"]:
+                    if it not in raw_items:
+                        raw_items.add(it)
+                        resources.append({"item": it, "limit": None, "extractor": "asteroid collector",
+                                          "extractor_rate": 60.0, "extractor_power": 0.0, "weight": 1.0})
             continue
         if "mining" in flags or not r.get("in"):
             m = items_by_id[producers[-1]].get("machine", {})
@@ -124,7 +140,8 @@ def main(game, dataset="2.0"):
             recipes[-1]["catalyst"] = [[k, per_min(v, r["time"])] for k, v in r["catalyst"].items()]
 
     # inputs nobody makes (DSP Dark Fog drops, ...) become raw with a high weight
-    made = {x for r in recipes for x, _ in r["out"]} | raw_items
+    # (item recycling does not count: it only returns what was crafted)
+    made = {x for r in recipes if not r.get("recycling") for x, _ in r["out"]} | raw_items
     for r in recipes:
         for x, _ in r["in"]:
             if x not in made:
