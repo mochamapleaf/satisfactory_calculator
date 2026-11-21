@@ -127,7 +127,7 @@ Spec: `docs/research/factorio-quality/00-最终报告.md` §5; step log `…/_�
   self-recycling 2726.9 : 1, wiki yields EM 2.722332 / cryo 4.835199 / AM3 0.583017 / chem 0.341205 / foundry
   1.608046 %, normal : higher 7.09 and 5.03, LDS shuffle 1.000 at research 15 (0.048 at 5).
 - Scale: gear@4 416 columns (44 ms in WASM), processing unit@4 2 857 columns (53 ms); "recycle everything"
-  16 578 columns, 80–137 s native.
+  16 578 columns, 80–137 s native, 191 s in WASM (gear).
 - UI: quality select per target / input row, coloured quality pip on icons, "★legendary" names in plan rows and
   Item flow, Quality section (module quality, slot modules, recycling scope + allow-list).
 - Open: shared-machine integer constraint (report §5 step 6), module cost in CostWeights, machine quality,

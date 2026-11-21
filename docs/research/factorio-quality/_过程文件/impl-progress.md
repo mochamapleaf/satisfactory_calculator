@@ -46,3 +46,14 @@ Spec: `../00-最终报告.md` §5. Branch `refactor`, not pushed.
   287.7 MW, 189 units) / Satisfactory RIP (78 MW, 120 ore) unchanged. Native regression vs 60a2427 on 10 plans:
   identical except rocket part with prod modules (coal liquefaction catalyst fix: coal 785.7 → 823.1).
 - Next: WASM timing of "all" scope, commit UI, PROGRESS.md.
+- "Everything" recycling scope in WASM (gear@4, 2x1): 16 689 columns / 1 351 items, 190.6 s (browser pane hidden,
+  may be throttled) vs 79.7 s native → keep "Target chain" default; UI hint warns.
+- cargo test: 37 pass (2 ignored: scale report, DSP compute report). tsc + vite build clean.
+
+## Remaining (not in this pass)
+- Report §5 step 6: shared-machine integer constraint for tier machines; module cost in CostWeights; machine
+  quality (speed ×(1+0.3·level)). Step 8 beacons. Step 3 quality mining (mining as recipes).
+- Planet/location filter: Space Age plans may use Gleba agriculture / bacteria freely under Raw (plants cost 0).
+- UI for research productivity (setting `research_productivity` exists, used by the LDS test); switch to stop
+  recycling at a tier ("legendary not recycled" is implicit: the LP never chooses it unless useful).
+- Catalyst share in quality rolls is assumed to roll with the rest (report §7 存疑).
