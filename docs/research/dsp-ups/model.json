@@ -1,0 +1,349 @@
+{
+  "game": "dsp",
+  "version": "0.10.34.x",
+  "unit": "1.0 = one AssemblerComponent-type machine (incl. its power consumer) updated once per logic tick, vanilla game; costs are per entity per tick, independent of utilisation",
+  "unit_time_estimate_us": {
+    "value": 0.25,
+    "range": [
+      0.03,
+      2.5
+    ],
+    "kind": "multi-thread wall-clock per unit per tick, unknown CPU",
+    "confidence": "very low",
+    "source": "devlog 100K-matrix save 80 ms (likely old MT framework) / ~133k units, scaled by 1/1.9 (new MT) and 1/1.2 (0.10.34); conflicts with GPUOpen 6.8M/min TR PRO data point. Only relative weights matter for the MILP."
+  },
+  "runtime": {
+    "vanilla": {
+      "multiplier": 1.0,
+      "idle_entities_cost": "same as working"
+    },
+    "sample_and_hold": {
+      "remote_planet_multiplier": 0.1,
+      "note": "1/UpdatePeriod (default 10); relative weights unchanged; incompatible with Weaver",
+      "source": "https://github.com/starfi5h/DSP_Mod/tree/master/SampleAndHoldSim"
+    },
+    "weaver": {
+      "multiplier": 0.3,
+      "idle_entities_cost": "low but non-zero (power + neighbour checks each tick)",
+      "note": "author's whole-game 3.0-3.5x vs pre-0.10.34 vanilla, remote planets only; mostly threading/data layout",
+      "confidence": "low",
+      "source": "https://github.com/TheAIBot/DSP_Weaver"
+    }
+  },
+  "buildings": {
+    "assembling-machine-1": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "AssemblerComponent; tier only changes speed (Weaver OptimizedAssembler.cs)"
+    },
+    "assembling-machine-2": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "assembling-machine-3": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "df-recomposing-assembler": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "arc-smelter": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "plane-smelter": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "df-negentropy-smelter": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "chemical-plant": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "quantum-chemical-plant": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "oil-refinery": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "miniature-particle-collider": {
+      "cost": 1.0,
+      "confidence": "medium",
+      "source": "same"
+    },
+    "fractionator": {
+      "cost": 1.2,
+      "range": [
+        1.0,
+        2.0
+      ],
+      "confidence": "low",
+      "source": "estimate: belt interaction every tick"
+    },
+    "matrix-lab": {
+      "cost": 1.5,
+      "range": [
+        1.0,
+        3.0
+      ],
+      "confidence": "low",
+      "source": "estimate: like assembler, main-thread (devlog), stacked-lab transfers"
+    },
+    "df-self-evolution-lab": {
+      "cost": 1.5,
+      "range": [
+        1.0,
+        3.0
+      ],
+      "confidence": "low",
+      "source": "same"
+    },
+    "sorter-1": {
+      "cost": 0.12,
+      "range": [
+        0.05,
+        0.3
+      ],
+      "confidence": "low",
+      "source": "x = s/(m*k): sorters 1/6 of a 22 ms frame (GPUOpen devlog), k=3 per machine, machines 1/3-1/2 of frame"
+    },
+    "sorter-2": {
+      "cost": 0.12,
+      "range": [
+        0.05,
+        0.3
+      ],
+      "confidence": "low",
+      "source": "x = s/(m*k): sorters 1/6 of a 22 ms frame (GPUOpen devlog), k=3 per machine, machines 1/3-1/2 of frame"
+    },
+    "sorter-3": {
+      "cost": 0.12,
+      "range": [
+        0.05,
+        0.3
+      ],
+      "confidence": "low",
+      "source": "x = s/(m*k): sorters 1/6 of a 22 ms frame (GPUOpen devlog), k=3 per machine, machines 1/3-1/2 of frame"
+    },
+    "sorter-4": {
+      "cost": 0.14,
+      "range": [
+        0.05,
+        0.35
+      ],
+      "confidence": "low",
+      "source": "sorter estimate + stack gathering polls belt up to ~4 ticks (Weaver OptimizedInserter.cs; speed constant 存疑)"
+    },
+    "spray-coater": {
+      "cost": 0.2,
+      "confidence": "low",
+      "source": "estimate: two belt queries per tick"
+    },
+    "automatic-piler": {
+      "cost": 0.2,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "planetary-logistics-station": {
+      "cost": 3.0,
+      "range": [
+        1,
+        20
+      ],
+      "confidence": "low",
+      "source": "estimate: InternalTickLocal each tick but dispatch likely staggered via timeGene (StationExecutor.cs passes time%60 to InternalTickRemote, 存疑); 笑笑 ep18 26:58 logistics 九牛一毛"
+    },
+    "interstellar-logistics-station": {
+      "cost": 5.0,
+      "range": [
+        1,
+        40
+      ],
+      "confidence": "low",
+      "source": "same + InternalTickRemote; vessels in flight extra"
+    },
+    "logistics-distributor": {
+      "cost": 1.0,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "orbital-collector": {
+      "cost": 2.0,
+      "confidence": "low",
+      "source": "estimate: station-type (isCollector)"
+    },
+    "mining-machine": {
+      "cost": 0.6,
+      "confidence": "low",
+      "source": "estimate; vein locks (Weaver readme)"
+    },
+    "advanced-mining-machine": {
+      "cost": 0.8,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "water-pump": {
+      "cost": 0.5,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "oil-extractor": {
+      "cost": 0.5,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "wind-turbine": {
+      "cost": 0.15,
+      "confidence": "low",
+      "source": "estimate: per-generator power calc each tick (Weaver readme, DSPOptimizations planned list)"
+    },
+    "solar-panel": {
+      "cost": 0.15,
+      "confidence": "low",
+      "source": "same"
+    },
+    "thermal-power-plant": {
+      "cost": 0.4,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "geothermal-power-station": {
+      "cost": 0.3,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "mini-fusion-power-plant": {
+      "cost": 0.4,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "artificial-star": {
+      "cost": 0.4,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "energy-exchanger": {
+      "cost": 0.5,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "ray-receiver": {
+      "cost": 0.5,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "ray-receiver-pro": {
+      "cost": 0.5,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "ray-receiver-dark-fog": {
+      "cost": 0.5,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "em-rail-ejector": {
+      "cost": 1.0,
+      "confidence": "low",
+      "source": "estimate; sails cost extra (DSPOptimizations README: hidden ejected-sail impact reduced to ~15%, optimisation disabled in v1.1.19)"
+    },
+    "vertical-launching-silo": {
+      "cost": 1.0,
+      "confidence": "low",
+      "source": "estimate"
+    }
+  },
+  "entities_not_in_plan": {
+    "splitter": {
+      "cost": 0.3,
+      "range": [
+        0.1,
+        1.0
+      ],
+      "plus": "extra belt paths it creates",
+      "confidence": "low",
+      "source": "estimate: up to 4 in + 4 out path queries per tick (Weaver OptimizedSplitter.cs)"
+    },
+    "traffic-monitor": {
+      "cost": 0.1,
+      "confidence": "low",
+      "source": "estimate"
+    },
+    "belt_path": {
+      "cost": 0.1,
+      "range": [
+        0.05,
+        0.5
+      ],
+      "confidence": "low",
+      "source": "per CargoPath per tick; jammed path cheap via persisted updateLen (Weaver OptimizedCargoPath.cs 1378/1390)"
+    },
+    "belt_segment": {
+      "cost": 0.002,
+      "range": [
+        0.0,
+        0.01
+      ],
+      "confidence": "low",
+      "source": "memmove of moving region"
+    }
+  },
+  "per_machine_terms": {
+    "sorter_cost": 0.12,
+    "sorters_per_machine": "sum over input/output ports of ceil(port_rate_per_machine / sorter_capacity); mixed-belt mode merges all inputs into one port. Direct insertion is a layout choice, not a per-recipe constant: model as a separate mode or ignore.",
+    "sorter_capacity_items_per_s": {
+      "value": 120,
+      "note": "capped at belt max (Mk.III x4 stack = 120 items/s); sorter's own capacity from calculators-survey.md 2.1.2 is 存疑. Result: k_r = port count in practice"
+    },
+    "spray_coaters_per_machine": {
+      "default": 0.0,
+      "note": "optional: 1 coater per input belt shared by the machines on it"
+    }
+  },
+  "logistics": {
+    "belt_item_cost_per_item_per_min": {
+      "value": 3e-05,
+      "formula": "(belt_path + belt_segment*L)/(belt_speed_per_min*stack)",
+      "defaults": {
+        "L": 60,
+        "belt_speed_per_min": 1800,
+        "stack": 4
+      },
+      "note": "assumes full belts; underestimates low-flow items (exact: integer belts ceil(F/7200))",
+      "confidence": "low"
+    },
+    "belt_hops_per_item": {
+      "default": 1
+    },
+    "station_item_cost_per_item_per_min": {
+      "planetary": 0.0001,
+      "interstellar": 0.00017,
+      "charged": "per station passed; a drone/vessel delivery passes 2 stations (t=2)",
+      "formula": "station_cost / station_throughput (default 28800/min = 4 stacked blue belts)",
+      "confidence": "low",
+      "source": "4 belts = 笑笑 ep19 42:37 PLS worst-case-distance capacity (not a cap); ILS throughput unknown (存疑)"
+    }
+  },
+  "notes": [
+    "Cost is per entity, not per unit of work: idle or blocked entities cost the same in vanilla (sleep states are a Weaver addition; inferred from Weaver load/save code, not from a vanilla decompile).",
+    "Sorter state (waiting vs travelling) is second-order; sorter count is first-order.",
+    "Only relative weights matter for the MILP optimum; absolute ms conversion is ~10x uncertain.",
+    "Not modelled: Dyson swarm sails, Dark Fog combat, local-planet rendering.",
+    "All coefficients except the assembler-class baseline are estimates; calibrate in sandbox (belts and sorters share one performance-panel category: isolate by layout)."
+  ]
+}
