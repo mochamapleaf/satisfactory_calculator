@@ -46,3 +46,13 @@
 ## step 6 — fixes applied, done
 - Report rewritten with review fixes: platform-lock cap in train table, item-vs-stack compression, drone T0 204 s, fluid cars separate, rail segment graph + station/headway caveat, p-scan with warm start and bounds, solver wording, file-parser, minor fixes. Toy rerun numbers in §8.1.
 - Deliverable: 00-最终报告.md. Intermediate: _过程文件/{progress.md, 00-最终报告.review.md, scripts/}.
+
+## step 7 — fable-review revision (2026-11-21)
+- Reran geo_toy_hubk.py (DEMSCALE=4 POORBASE=1, 60 s): 12 hubs relax-mach 1728.14 opt 22.9 s; +CARUB=16 1726.67 opt 12.4 s; all 703 pairs relax-mach 1860.6 bound 1463.7 gap 21 %; 12 hubs int machines 1929.1 bound 1609.3 gap 17 %. Machine constant 1195.6.
+- Verified arithmetic: platform under-fill (2027/1858 vs 2248), t_acc 13 s table, truck 1.0 ~1260 vs 1.2 ~1470, cluster.py water wells 966–3819 m from bbox centre.
+- Next: rewrite report sections 0, 2, 5, 7, 8, 9, 10, 11.
+- microlp spot check (rust 1.91, opt 3): 12 hubs CARUB=16 LP 0.6 s (1555.0); MILP 60 s -> 1738.24 feasible, matches review.
+- Writing report: §0–§2 (summary, transport table t_acc 13/30 s, truck 1.0/1.2, fluid 979, map size verified).
+- Report rewritten in full (§0–§11): new §2.2 table (t_acc 13/30 s), platform/fluid/direction constraints, candidate hubs K, path selection + double track, weights section, p envelope, §8.1 two tables with transport-part gaps, microlp measured table, HiGHS required, slope scaling refs. Scripts copied to _过程文件/scripts/{geo_toy_hubk.py, microlp_bench/}.
+- Next: Resolution section in fable-review file.
+- Resolution section appended to 00-最终报告.fable-review.md (all items fixed). Done; nothing committed.

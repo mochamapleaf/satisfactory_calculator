@@ -1,0 +1,24 @@
+﻿## L=81 prolif=false z=1000: photons/cube 1.000, ray-receiver power 20.0 GW, buildings 3137
+  copper-ore 14318, critical-photon 1000, crude-oil 17239, fractal-silicon 1000, iron-ore 20591, organic-crystal 2000, silicon-ore 24000, stone 4000, sulfuric-acid 3080, titanium-ore 18000, unipolar-magnet 4205, water 2000
+## L=81 prolif=false z=10000: photons/cube 1.000, ray-receiver power 200.0 GW, buildings 31237
+  copper-ore 143182, critical-photon 10000, crude-oil 172386, fractal-silicon 10000, iron-ore 205908, organic-crystal 20000, silicon-ore 240000, stone 40000, sulfuric-acid 30795, titanium-ore 180000, unipolar-magnet 42046, water 20000
+## L=81 prolif=false z=20000: photons/cube 1.000, ray-receiver power 400.0 GW, buildings 52544
+  copper-ore 286363, critical-photon 20000, crude-oil 218592, deuterium 30052, fire-ice 84120, fractal-silicon 20000, iron-ore 411817, organic-crystal 40000, silicon-ore 480000, stone 80000, sulfuric-acid 19531, titanium-ore 360000, unipolar-magnet 84092, water 40000
+## L=81 prolif=false z=50000: photons/cube 1.000, ray-receiver power 1000.0 GW, buildings 101855
+  coal 31408, copper-ore 715908, critical-photon 50000, crude-oil 218592, deuterium 64800, fire-ice 307954, fractal-silicon 50000, hydrogen 453335, iron-ore 1029542, kimberlite-ore 75000, organic-crystal 100000, silicon-ore 1200000, stone 200000, titanium-ore 900000, unipolar-magnet 210229, water 100000
+## L=81 prolif=false z=100000: photons/cube 1.000, ray-receiver power 2000.0 GW, buildings 214577
+  coal 281408, copper-ore 1431817, critical-photon 100000, crude-oil 218592, deuterium 64800, fire-ice 615908, fractal-silicon 100000, hydrogen 1299358, iron-ore 2059083, kimberlite-ore 150000, organic-crystal 200000, silicon-ore 2400000, stone 400000, titanium-ore 1800000, unipolar-magnet 420458, water 200000
+## L=81 prolif=false z=200000: photons/cube 9.099, ray-receiver power 36396.1 GW, buildings 467023
+  coal 781408, copper-ore 2863633, critical-photon 1819804, crude-oil 218592, deuterium 64800, fire-ice 1231817, fractal-silicon 200000, hydrogen 1371600, iron-ore 4118167, kimberlite-ore 300000, organic-crystal 400000, silicon-ore 4800000, stone 800000, titanium-ore 3600000, unipolar-magnet 840917, water 400000
+## L=81 prolif=true z=1000: photons/cube 0.800, ray-receiver power 16.0 GW, buildings 1746
+  coal 3214, copper-ore 3686, critical-photon 800, crude-oil 10877, fractal-silicon 410, iron-ore 2982, organic-crystal 774, silicon-ore 7340, stone 1049, sulfuric-acid 1356, titanium-ore 6223, unipolar-magnet 3277, water 655
+## L=81 prolif=true z=10000: photons/cube 0.800, ray-receiver power 160.0 GW, buildings 17309
+  coal 32136, copper-ore 36864, critical-photon 8000, crude-oil 108772, fractal-silicon 4096, iron-ore 29819, organic-crystal 7741, silicon-ore 73400, stone 10486, sulfuric-acid 13562, titanium-ore 62232, unipolar-magnet 32768, water 6554
+## L=81 prolif=true z=20000: photons/cube 0.800, ray-receiver power 320.0 GW, buildings 34602
+  coal 64272, copper-ore 73728, critical-photon 16000, crude-oil 217543, fractal-silicon 8192, iron-ore 59638, organic-crystal 15483, silicon-ore 146801, stone 20972, sulfuric-acid 27124, titanium-ore 124465, unipolar-magnet 65536, water 13107
+## L=81 prolif=true z=50000: photons/cube 0.800, ray-receiver power 800.0 GW, buildings 57337
+  coal 172629, copper-ore 184320, critical-photon 40000, crude-oil 218592, fire-ice 140102, fractal-silicon 20480, iron-ore 149094, kimberlite-ore 10537, organic-crystal 38707, silicon-ore 367002, stone 52429, titanium-ore 314149, unipolar-magnet 163840, water 32768
+## L=81 prolif=true z=100000: photons/cube 0.800, ray-receiver power 1600.0 GW, buildings 92936
+  coal 341754, copper-ore 368640, critical-photon 80000, crude-oil 218592, deuterium 64800, fire-ice 278890, fractal-silicon 40960, hydrogen 78969, iron-ore 298189, kimberlite-ore 140818, organic-crystal 77414, silicon-ore 734003, stone 104858, titanium-ore 627421, unipolar-magnet 327680, water 65536
+## L=81 prolif=true z=200000: photons/cube 0.800, ray-receiver power 3200.0 GW, buildings 193880
+  coal 901882, copper-ore 737280, critical-photon 160000, crude-oil 218592, deuterium 64800, fire-ice 553976, fractal-silicon 81920, hydrogen 634977, iron-ore 596378, kimberlite-ore 301461, organic-crystal 154829, silicon-ore 1468006, stone 209715, titanium-ore 1252306, unipolar-magnet 655360, water 131072

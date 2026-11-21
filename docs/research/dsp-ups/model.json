@@ -3,14 +3,14 @@
   "version": "0.10.34.x",
   "unit": "1.0 = one AssemblerComponent-type machine (incl. its power consumer) updated once per logic tick, vanilla game; costs are per entity per tick, independent of utilisation",
   "unit_time_estimate_us": {
-    "value": 0.25,
+    "value": 0.5,
     "range": [
-      0.03,
-      2.5
+      0.2,
+      1.0
     ],
-    "kind": "multi-thread wall-clock per unit per tick, unknown CPU",
-    "confidence": "very low",
-    "source": "devlog 100K-matrix save 80 ms (likely old MT framework) / ~133k units, scaled by 1/1.9 (new MT) and 1/1.2 (0.10.34); conflicts with GPUOpen 6.8M/min TR PRO data point. Only relative weights matter for the MILP."
+    "kind": "CPU time (summed over threads) per unit per tick; wall-clock ~= value / effective threads",
+    "confidence": "low",
+    "source": "GPUOpen devlog 6.8M universe matrix/min save (~0.8e7-1.6e7 units): i9-14900K 170 ms (pre-opt), TR PRO 9985WX 43-46 ms after opt; consistent with 'each Assembler a few hundred to a few thousand ns'. devtrackers '100 K Matrix save, 80 ms' is an outlier (rate, CPU, framework unstated) and not used. 'non-critical frame time' scope unknown. Only relative weights matter for the MILP."
   },
   "runtime": {
     "vanilla": {
@@ -113,42 +113,6 @@
       "confidence": "low",
       "source": "same"
     },
-    "sorter-1": {
-      "cost": 0.12,
-      "range": [
-        0.05,
-        0.3
-      ],
-      "confidence": "low",
-      "source": "x = s/(m*k): sorters 1/6 of a 22 ms frame (GPUOpen devlog), k=3 per machine, machines 1/3-1/2 of frame"
-    },
-    "sorter-2": {
-      "cost": 0.12,
-      "range": [
-        0.05,
-        0.3
-      ],
-      "confidence": "low",
-      "source": "x = s/(m*k): sorters 1/6 of a 22 ms frame (GPUOpen devlog), k=3 per machine, machines 1/3-1/2 of frame"
-    },
-    "sorter-3": {
-      "cost": 0.12,
-      "range": [
-        0.05,
-        0.3
-      ],
-      "confidence": "low",
-      "source": "x = s/(m*k): sorters 1/6 of a 22 ms frame (GPUOpen devlog), k=3 per machine, machines 1/3-1/2 of frame"
-    },
-    "sorter-4": {
-      "cost": 0.14,
-      "range": [
-        0.05,
-        0.35
-      ],
-      "confidence": "low",
-      "source": "sorter estimate + stack gathering polls belt up to ~4 ticks (Weaver OptimizedInserter.cs; speed constant 存疑)"
-    },
     "spray-coater": {
       "cost": 0.2,
       "confidence": "low",
@@ -210,17 +174,21 @@
     "wind-turbine": {
       "cost": 0.15,
       "confidence": "low",
-      "source": "estimate: per-generator power calc each tick (Weaver readme, DSPOptimizations planned list)"
+      "source": "estimate: per-generator power calc each tick (Weaver readme, DSPOptimizations planned list); 0.3 MW (data/dsp.json)",
+      "cost_per_mw": 0.5
     },
     "solar-panel": {
       "cost": 0.15,
       "confidence": "low",
-      "source": "same"
+      "source": "same; 0.36 MW (data/dsp.json)",
+      "cost_per_mw": 0.42
     },
     "thermal-power-plant": {
       "cost": 0.4,
       "confidence": "low",
-      "source": "estimate"
+      "source": "estimate; rated MW is in-game nominal, not in data/dsp.json (存疑)",
+      "cost_per_mw": 0.1852,
+      "rated_mw": 2.16
     },
     "geothermal-power-station": {
       "cost": 0.3,
@@ -230,12 +198,16 @@
     "mini-fusion-power-plant": {
       "cost": 0.4,
       "confidence": "low",
-      "source": "estimate"
+      "source": "estimate; rated MW is in-game nominal, not in data/dsp.json (存疑)",
+      "cost_per_mw": 0.0267,
+      "rated_mw": 15
     },
     "artificial-star": {
       "cost": 0.4,
       "confidence": "low",
-      "source": "estimate"
+      "source": "estimate; rated MW is in-game nominal, not in data/dsp.json (存疑)",
+      "cost_per_mw": 0.0056,
+      "rated_mw": 72
     },
     "energy-exchanger": {
       "cost": 0.5,
@@ -291,7 +263,7 @@
         0.5
       ],
       "confidence": "low",
-      "source": "per CargoPath per tick; jammed path cheap via persisted updateLen (Weaver OptimizedCargoPath.cs 1378/1390)"
+      "source": "per CargoPath per tick; jammed path cheap via persisted updateLen (Weaver OptimizedCargoPath.cs 1379-1381/1390)"
     },
     "belt_segment": {
       "cost": 0.002,
@@ -301,49 +273,90 @@
       ],
       "confidence": "low",
       "source": "memmove of moving region"
+    },
+    "sorter": {
+      "cost": 0.12,
+      "range": [
+        0.05,
+        0.6
+      ],
+      "confidence": "low",
+      "note": "non-bidirectional path, any grade. Used only via per_machine_terms (not a recipe building, so not in building_weights).",
+      "source": "low end: x = s/(m*k), sorters 1/6 of a 22 ms frame (GPUOpen devlog), k=3, machine share m unknown; high end: 笑笑 ep18 16:52/19:18 panel shows belts+sorters larger than machines (needs x >= ~0.3-0.5). Planner choices unchanged for 0.12/0.4/0.6 (scripts/prolif_modes.py)."
+    },
+    "sorter_bidirectional": {
+      "cost": null,
+      "range": [
+        0.12,
+        1.0
+      ],
+      "confidence": "unknown",
+      "note": "vanilla InternalUpdate_Bidirectional (Weaver UnOptimizedPlanetWorkChunk.cs 860-870, OptimizedBiInserter.cs): no travel timers or Delay, polls belt/machine every tick except idleTick backoff. Possibly pile sorters; bidirectional assignment 存疑."
     }
   },
   "per_machine_terms": {
-    "sorter_cost": 0.12,
-    "sorters_per_machine": "sum over input/output ports of ceil(port_rate_per_machine / sorter_capacity); mixed-belt mode merges all inputs into one port. Direct insertion is a layout choice, not a per-recipe constant: model as a separate mode or ignore.",
+    "sorter_cost": "see entities_not_in_plan.sorter (0.12, range 0.05-0.6)",
+    "sorters_per_machine": "sum over input/output ports of ceil(port_rate_per_machine / sorter_capacity) = port count in practice. Mixed belts: a global PlanSettings flag that merges all inputs into one port (not an LP mode: it would always win). Direct insertion: not modelled.",
     "sorter_capacity_items_per_s": {
       "value": 120,
       "note": "capped at belt max (Mk.III x4 stack = 120 items/s); sorter's own capacity from calculators-survey.md 2.1.2 is 存疑. Result: k_r = port count in practice"
     },
     "spray_coaters_per_machine": {
-      "default": 0.0,
-      "note": "optional: 1 coater per input belt shared by the machines on it"
-    }
-  },
-  "logistics": {
-    "belt_item_cost_per_item_per_min": {
-      "value": 3e-05,
-      "formula": "(belt_path + belt_segment*L)/(belt_speed_per_min*stack)",
-      "defaults": {
-        "L": 60,
-        "belt_speed_per_min": 1800,
-        "stack": 4
-      },
-      "note": "assumes full belts; underestimates low-flow items (exact: integer belts ceil(F/7200))",
-      "confidence": "low"
+      "default_with_proliferator": 0.1,
+      "default_without": 0.0,
+      "cost_each": 0.2,
+      "note": "1 coater per input belt, ~10 machines per belt"
     },
-    "belt_hops_per_item": {
-      "default": 1
+    "belt_per_machine": {
+      "value": 0.03,
+      "range": [
+        0.02,
+        0.06
+      ],
+      "note": "belt segments (6-10 per machine x 0.002) plus share of belt paths; belts scale with machine count and layout, not flow"
     },
-    "station_item_cost_per_item_per_min": {
-      "planetary": 0.0001,
-      "interstellar": 0.00017,
-      "charged": "per station passed; a drone/vessel delivery passes 2 stations (t=2)",
-      "formula": "station_cost / station_throughput (default 28800/min = 4 stacked blue belts)",
-      "confidence": "low",
-      "source": "4 belts = 笑笑 ep19 42:37 PLS worst-case-distance capacity (not a cap); ILS throughput unknown (存疑)"
-    }
+    "station_per_machine": {
+      "value": 0.1,
+      "note": "planetary station cost 3 / M machines per station, M = 30 (笑笑 ep19 50:05)"
+    },
+    "implementation": "Step 1: building_weights from buildings + Custom objective (buildings 1.0, power = generation.cost_per_mw). Step 2: Mode.aux_cost = sorter*k_r + belt + station + spray*s_r, objective w.buildings*(building_weight + aux_cost)*scale. Do not put aux in build_scaled's scale (multiplier, overwritten each heuristic round)."
   },
   "notes": [
-    "Cost is per entity, not per unit of work: idle or blocked entities cost the same in vanilla (sleep states are a Weaver addition; inferred from Weaver load/save code, not from a vanilla decompile).",
-    "Sorter state (waiting vs travelling) is second-order; sorter count is first-order.",
-    "Only relative weights matter for the MILP optimum; absolute ms conversion is ~10x uncertain.",
-    "Not modelled: Dyson swarm sails, Dark Fog combat, local-planet rendering.",
-    "All coefficients except the assembler-class baseline are estimates; calibrate in sandbox (belts and sorters share one performance-panel category: isolate by layout)."
-  ]
+    "Cost is per entity, not per unit of work: idle or blocked entities cost the same in vanilla (vanilla call layer confirmed via Weaver UnOptimizedPlanetWorkChunk.cs; sleep states are a Weaver addition).",
+    "Sorter count is first-order; sorter state second-order, except the bidirectional path which polls every tick.",
+    "Proliferator: per-recipe choice by the solver (products mode compounds upstream x0.8 per level; speed halves only the level); never fix 'speed' globally.",
+    "Belts and stations scale with machine count, so the objective is close to min-buildings with these weights plus a generation term.",
+    "Only relative weights matter for the MILP optimum; absolute time conversion is order-of-magnitude only.",
+    "Not modelled: Dyson swarm sails, Dark Fog combat, local-planet rendering, mining.",
+    "All coefficients except the assembler-class baseline are estimates; first to calibrate: sorter:machine ratio (normal vs pile sorter), in sandbox with chests (belts and sorters share one performance-panel category)."
+  ],
+  "generation": {
+    "cost_per_mw": {
+      "default": 0.006,
+      "artificial_star": 0.0056,
+      "mini_fusion": 0.027,
+      "thermal": 0.19,
+      "solar": 0.42,
+      "wind": 0.5
+    },
+    "note": "objective term c_gen * sum p_r (MW); proliferator modes multiply power by 2.5. With wind/solar this term dominates (10k universe matrix/min ~57 GW -> ~2.8e4 units with wind vs ~1.2e4 for machines+sorters)."
+  },
+  "example_10k_universe_matrix": {
+    "script": "_过程文件/scripts/prolif_modes.py",
+    "tier_A_no_proliferator": {
+      "machines": 34056,
+      "labs": 9000,
+      "cost": 51004
+    },
+    "top_tier_all_speed_incl_proliferator_line": {
+      "machines": 16834,
+      "cost": 22965
+    },
+    "top_tier_per_recipe_optimum_incl_proliferator_line": {
+      "machines": 7977,
+      "cost": 11873,
+      "power_gw": 56.6
+    },
+    "basis": "machines + sorters 0.12/port; excludes mining, belts, stations, ray receivers, coaters, generation, research-consuming labs"
+  }
 }

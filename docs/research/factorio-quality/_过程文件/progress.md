@@ -51,3 +51,12 @@
   research-productivity step, spa data facts, removed false PROGRESS step-10 citation), M4 (27:1 wording), M5 (7:1
   sensitivity), minors (LDS premise/losses/source, mod-page inference, quality-calc 0.124 存疑, prior art, 47.7:1).
 - DONE.
+
+## Step 7 — second review (fable-review) applied, 2026-11-21
+- Script: added H (wiki metric LP with loadout mixing; wiki fractional rows substituted), I (normal:higher
+  ratio by loadout: 4.12/5.03/7.09/3.68), J (LDS shuffle by research level: 15 lv P3L & 25 lv Q3L both 1.000,
+  14.9 vs 7.7 casts per 5 plastic, cost 1.31 M vs 75.75 M; <15 lv best is all-prod, 14 lv 0.696).
+- Report §0 and §1.1/§1.2/§1.5 revised (catalyst, mining as 2nd stage, 2.1 API fields, 2x1 module values, crush loop 6350:1).
+- Next: §1.6 LDS, §2, §3, §4, §5, §6/§7, sources.
+- §1.6 LDS rewritten (table from J), §2.1 catalyst + shared-machine, §2.3 allowed-recipes, §2.4 H-section numbers, §2.5 ratio table, §3.1 scale, §3.3 recycle scope, §4 7:1 scope + ep46 4-tries. Next: §5-§7, sources.
+- §5 rewritten (step 0 scale test, datasets spa/2x1/2q1, catalyst, mining choice, recycle scope, tests, shared machines, version switch), §6/§7/sources updated. Resolution appended to fable-review. DONE (not committed).

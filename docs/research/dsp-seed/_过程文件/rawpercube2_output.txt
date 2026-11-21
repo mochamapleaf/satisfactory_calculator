@@ -1,0 +1,90 @@
+﻿S(6) = 815449
+S(19) = 649350
+S(25) = 538567
+S(40) = 302425
+S(60) = 122368
+S(81) = 43286
+S(98) = 17923
+## prolif_mk3_extra=false research_factor=1 oil_capped=false: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 39.0
+    coal 6.00, copper-ore 15.91, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 5.26, fractal-silicon 1.00, hydrogen 9.37, iron-ore 28.55, kimberlite-ore 1.50, optical-grating-crystal 6.61, organic-crystal 1.17, silicon-ore 24.00, spiniform-stalagmite-crystal 3.38, stone 4.00, titanium-ore 11.91, unipolar-magnet 0.22, water 2.00
+## prolif_mk3_extra=false research_factor=1 oil_capped=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 39.0
+    coal 6.00, copper-ore 15.91, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 5.26, fractal-silicon 1.00, hydrogen 9.37, iron-ore 28.55, kimberlite-ore 1.50, optical-grating-crystal 6.61, organic-crystal 1.17, silicon-ore 24.00, spiniform-stalagmite-crystal 3.38, stone 4.00, titanium-ore 11.91, unipolar-magnet 0.22, water 2.00
+  profile L=40: Optimal buildings 37.0
+    coal 6.00, copper-ore 15.76, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 3.88, fractal-silicon 1.00, hydrogen 10.06, iron-ore 27.80, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 0.60, water 2.00
+  profile L=60: Optimal buildings 37.0
+    coal 6.00, copper-ore 15.41, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 3.70, fractal-silicon 1.00, hydrogen 10.15, iron-ore 26.03, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 1.49, water 2.00
+  profile L=81: Optimal buildings 37.0
+    coal 6.00, copper-ore 14.32, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 3.16, fractal-silicon 1.00, hydrogen 10.42, iron-ore 20.59, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 4.20, water 2.00
+  profile L=98: Optimal buildings 33.0
+    coal 6.00, copper-ore 12.00, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 2.00, fractal-silicon 1.00, hydrogen 11.00, iron-ore 9.00, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 10.00, water 2.00
+  profile L=120: Optimal buildings 33.0
+    coal 6.00, copper-ore 12.00, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 2.00, fractal-silicon 1.00, hydrogen 11.00, iron-ore 9.00, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 10.00, water 2.00
+## prolif_mk3_extra=false research_factor=0.8 oil_capped=false: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 38.0
+    coal 6.00, copper-ore 15.89, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 4.83, fractal-silicon 1.00, hydrogen 9.59, iron-ore 28.44, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 4.23, stone 4.00, titanium-ore 10.59, unipolar-magnet 0.28, water 2.00
+## prolif_mk3_extra=false research_factor=0.8 oil_capped=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 38.0
+    coal 6.00, copper-ore 15.89, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 4.83, fractal-silicon 1.00, hydrogen 9.59, iron-ore 28.44, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 4.23, stone 4.00, titanium-ore 10.59, unipolar-magnet 0.28, water 2.00
+  profile L=40: Optimal buildings 37.0
+    coal 6.00, copper-ore 15.70, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 3.85, fractal-silicon 1.00, hydrogen 10.08, iron-ore 27.50, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 0.75, water 2.00
+  profile L=60: Optimal buildings 37.0
+    coal 6.00, copper-ore 15.26, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 3.63, fractal-silicon 1.00, hydrogen 10.19, iron-ore 25.28, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 1.86, water 2.00
+  profile L=81: Optimal buildings 37.0
+    coal 6.00, copper-ore 13.90, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 2.95, fractal-silicon 1.00, hydrogen 10.53, iron-ore 18.49, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 5.26, water 2.00
+  profile L=98: Optimal buildings 33.0
+    coal 6.00, copper-ore 12.00, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 2.00, fractal-silicon 1.00, hydrogen 11.00, iron-ore 9.00, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 10.00, water 2.00
+  profile L=120: Optimal buildings 33.0
+    coal 6.00, copper-ore 12.00, critical-photon 1.00, crude-oil 2.00, deuterium 5.00, fire-ice 2.00, fractal-silicon 1.00, hydrogen 11.00, iron-ore 9.00, kimberlite-ore 1.50, optical-grating-crystal 8.00, organic-crystal 1.00, silicon-ore 24.00, spiniform-stalagmite-crystal 6.00, stone 4.00, titanium-ore 10.00, unipolar-magnet 10.00, water 2.00
+## prolif_mk3_extra=true research_factor=1 oil_capped=false: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 41.0
+    coal 6.94, copper-ore 4.25, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 2.04, fractal-silicon 0.41, hydrogen 3.71, iron-ore 5.86, kimberlite-ore 1.51, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 3.38, stone 1.05, titanium-ore 4.11, unipolar-magnet 0.22, water 0.66
+## prolif_mk3_extra=true research_factor=1 oil_capped=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 41.0
+    coal 6.94, copper-ore 4.25, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 2.04, fractal-silicon 0.41, hydrogen 3.71, iron-ore 5.86, kimberlite-ore 1.51, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 3.38, stone 1.05, titanium-ore 4.11, unipolar-magnet 0.22, water 0.66
+  profile L=40: Optimal buildings 40.0
+    coal 6.15, copper-ore 4.18, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 1.08, fractal-silicon 0.41, hydrogen 4.31, iron-ore 5.50, kimberlite-ore 1.53, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.69, stone 1.05, titanium-ore 3.51, unipolar-magnet 0.60, water 0.66
+  profile L=60: Optimal buildings 40.0
+    coal 6.03, copper-ore 4.02, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.94, fractal-silicon 0.41, hydrogen 4.40, iron-ore 4.67, kimberlite-ore 1.50, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.58, stone 1.05, titanium-ore 3.51, unipolar-magnet 1.49, water 0.66
+  profile L=81: Optimal buildings 36.0
+    coal 5.79, copper-ore 3.69, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.66, fractal-silicon 0.41, hydrogen 4.58, iron-ore 2.98, kimberlite-ore 1.44, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.35, stone 1.05, titanium-ore 3.51, unipolar-magnet 3.28, water 0.66
+  profile L=98: Optimal buildings 36.0
+    coal 5.79, copper-ore 3.69, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.66, fractal-silicon 0.41, hydrogen 4.58, iron-ore 2.98, kimberlite-ore 1.44, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.35, stone 1.05, titanium-ore 3.51, unipolar-magnet 3.28, water 0.66
+  profile L=120: Optimal buildings 36.0
+    coal 5.79, copper-ore 3.69, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.66, fractal-silicon 0.41, hydrogen 4.58, iron-ore 2.98, kimberlite-ore 1.44, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.35, stone 1.05, titanium-ore 3.51, unipolar-magnet 3.28, water 0.66
+## prolif_mk3_extra=true research_factor=0.8 oil_capped=false: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 41.0
+    coal 6.92, copper-ore 4.24, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 1.69, fractal-silicon 0.41, hydrogen 3.93, iron-ore 5.81, kimberlite-ore 1.51, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 4.23, stone 1.05, titanium-ore 3.88, unipolar-magnet 0.28, water 0.66
+## prolif_mk3_extra=true research_factor=0.8 oil_capped=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 41.0
+    coal 6.92, copper-ore 4.24, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 1.69, fractal-silicon 0.41, hydrogen 3.93, iron-ore 5.81, kimberlite-ore 1.51, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 4.23, stone 1.05, titanium-ore 3.88, unipolar-magnet 0.28, water 0.66
+  profile L=40: Optimal buildings 40.0
+    coal 6.13, copper-ore 4.15, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 1.06, fractal-silicon 0.41, hydrogen 4.32, iron-ore 5.36, kimberlite-ore 1.52, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.67, stone 1.05, titanium-ore 3.51, unipolar-magnet 0.75, water 0.66
+  profile L=60: Optimal buildings 40.0
+    coal 5.98, copper-ore 3.95, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.88, fractal-silicon 0.41, hydrogen 4.43, iron-ore 4.32, kimberlite-ore 1.49, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.53, stone 1.05, titanium-ore 3.51, unipolar-magnet 1.86, water 0.66
+  profile L=81: Optimal buildings 36.0
+    coal 5.79, copper-ore 3.69, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.66, fractal-silicon 0.41, hydrogen 4.58, iron-ore 2.98, kimberlite-ore 1.44, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.35, stone 1.05, titanium-ore 3.51, unipolar-magnet 3.28, water 0.66
+  profile L=98: Optimal buildings 36.0
+    coal 5.79, copper-ore 3.69, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.66, fractal-silicon 0.41, hydrogen 4.58, iron-ore 2.98, kimberlite-ore 1.44, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.35, stone 1.05, titanium-ore 3.51, unipolar-magnet 3.28, water 0.66
+  profile L=120: Optimal buildings 36.0
+    coal 5.79, copper-ore 3.69, critical-photon 0.80, crude-oil 0.66, deuterium 2.05, fire-ice 0.66, fractal-silicon 0.41, hydrogen 4.58, iron-ore 2.98, kimberlite-ore 1.44, optical-grating-crystal 3.28, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 5.35, stone 1.05, titanium-ore 3.51, unipolar-magnet 3.28, water 0.66
+# variants (oil capped, fewest buildings, research factor 1)
+## prolif=false no_solid_rare=true no_gas_giant=false: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 39.0
+    coal 21.82, copper-ore 16.00, critical-photon 1.00, crude-oil 12.41, deuterium 5.00, iron-ore 29.00, log 26.23, plant-fuel 39.35, silicon-ore 28.00, stone 4.00, sulfuric-acid 3.50, titanium-ore 18.00, water 15.80
+## prolif=false no_solid_rare=false no_gas_giant=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 40.0
+    coal 6.00, copper-ore 15.91, critical-photon 20.37, crude-oil 2.00, fire-ice 5.26, fractal-silicon 1.00, iron-ore 28.55, kimberlite-ore 1.50, optical-grating-crystal 6.61, organic-crystal 1.17, silicon-ore 24.00, spiniform-stalagmite-crystal 3.38, stone 4.00, titanium-ore 11.91, unipolar-magnet 0.22, water 2.00
+## prolif=false no_solid_rare=true no_gas_giant=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 40.0
+    coal 21.82, copper-ore 16.00, critical-photon 10.83, crude-oil 12.41, iron-ore 29.00, log 26.23, plant-fuel 39.35, silicon-ore 28.00, stone 4.00, sulfuric-acid 3.50, titanium-ore 18.00, water 15.80
+## prolif=true no_solid_rare=true no_gas_giant=false: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 41.0
+    coal 21.82, copper-ore 5.95, critical-photon 0.80, crude-oil 2.74, deuterium 2.05, hydrogen 2.70, iron-ore 8.76, silicon-ore 10.81, stone 1.31, sulfuric-acid 1.68, titanium-ore 7.89, water 1.27
+## prolif=true no_solid_rare=false no_gas_giant=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 42.0
+    coal 6.99, copper-ore 4.25, critical-photon 0.80, crude-oil 0.66, fire-ice 12.96, fractal-silicon 0.41, iron-ore 5.86, kimberlite-ore 1.74, optical-grating-crystal 2.62, organic-crystal 0.51, silicon-ore 7.34, spiniform-stalagmite-crystal 3.38, stone 1.05, titanium-ore 4.33, unipolar-magnet 0.22, water 0.66
+## prolif=true no_solid_rare=true no_gas_giant=true: first feasible L = Some(6)
+  at threshold L=6: Optimal buildings 42.0
+    coal 21.82, copper-ore 5.95, critical-photon 7.60, crude-oil 2.74, iron-ore 8.76, silicon-ore 10.81, stone 1.31, sulfuric-acid 1.68, titanium-ore 7.89, water 1.27
