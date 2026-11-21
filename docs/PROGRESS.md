@@ -133,3 +133,15 @@ Spec: `docs/research/factorio-quality/00-最终报告.md` §5; step log `…/_�
 - Open: shared-machine integer constraint (report §5 step 6), module cost in CostWeights, machine quality,
   beacons, quality mining, planet / location filter (Space Age plans may use Gleba agriculture freely), research
   productivity UI (setting exists), legendary-stage recycling switch.
+
+## Satisfactory geography data, G1-G3 (2026-11-21)
+Plan: `docs/research/satisfactory-geo/00-最终报告.md` §11; step log `docs/research/satisfactory-geo/_过程文件/impl-progress.md`.
+- `data/satisfactory-geo/nodes.json` (`python -I tools/geo_nodes.py`): 626 records from rockfactory/satisfactory-logistics
+  @bb997b42 (459 node, 118 well, 17 well_core, 31 geyser, 1 deposit), metres, `max_rate` at 250 %; raw copy in `raw/`.
+  The script asserts the 12 world limits equal `game-data.json`. Provenance in `data/SOURCE.md`.
+- `data/satisfactory-geo/transport.json` (`tools/geo_transport.py`): belts, pipes, rail, train, drone, truck, power;
+  each value has source and confidence (wiki / derived / estimate), 1.0 and 1.2 variants. Asserts reproduce the report's
+  throughput tables (1793.1, 2247.8, 979.1, 2027, ...).
+- `data/satisfactory-geo/sites.json` (`tools/geo_sites.py`): 39 one-km grid sites, 119 belt arcs, 12 candidate hubs
+  (base, top-output proxy, farthest-point sampling); plot in `docs/research/satisfactory-geo/_过程文件/sites.png`.
+- Not done: Rust loaders and the location layer (G4 onward); hub choice by a belt-only solve instead of the output proxy.
