@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import type { Game } from './solver'
+import { qsplit, type Game } from './solver'
 
 // Local item/building icons: one sprite sheet per game and style, built by tools/build_icons.py.
 export type IconStyle = 'original' | 'flat' | 'mono' | 'off'
@@ -51,12 +51,21 @@ export function useIconsOn() {
   return style !== 'off' && !!meta
 }
 
-/** Item or building icon; renders nothing when icons are off or the id has none. */
+/** Factorio quality pip (uncommon … legendary), drawn on the icon's corner or on its own. */
+export function QualityPip({ q }: { q: number }) {
+  if (!q) return null
+  return <span className={`qpip q${q}`} aria-hidden="true" />
+}
+
+/** Item or building icon; renders nothing when icons are off or the id has none. Quality ids
+ *  (`item@q`) draw the base icon with a coloured pip; without an icon only the pip shows. */
 export function Icon({ id, size = 20, title }: { id: string | undefined; size?: number; title?: string }) {
   const { game, style, meta } = useContext(IconCtx)
-  if (style === 'off' || !meta || !id) return null
-  const n = meta.index[id]
-  if (n === undefined) return null
+  if (!id) return null
+  const [base, q] = qsplit(id)
+  if (style === 'off' || !meta) return q ? <QualityPip q={q} /> : null
+  const n = meta.index[base]
+  if (n === undefined) return q ? <QualityPip q={q} /> : null
   const x = (n % meta.cols) * size
   const y = Math.floor(n / meta.cols) * size
   return (
@@ -70,7 +79,7 @@ export function Icon({ id, size = 20, title }: { id: string | undefined; size?: 
         backgroundSize: `${meta.cols * size}px ${meta.rows * size}px`,
         backgroundPosition: `-${x}px -${y}px`,
       }}
-    />
+    >{q > 0 && <QualityPip q={q} />}</span>
   )
 }
 

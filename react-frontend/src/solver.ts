@@ -11,15 +11,46 @@ export interface Item { id: string; name: string; name_zh?: string | null; liqui
 export interface Recipe {
   id: string; name: string; name_zh?: string | null; alt: boolean; building: string; producers?: string[]; time: number
   in: [string, number][]; out: [string, number][]; power?: number
+  /** Factorio item recycling (used only in quality plans). */
+  recycling?: boolean
 }
 export interface Building {
   id: string; name: string; name_zh?: string | null; power: number; power_exp: number; somersloop_slots: number
   speed?: number; modules?: number
 }
-export interface Effect { id: string; name: string; name_zh?: string | null; kind: string; speed: number; productivity: number; consumption: number; sprays?: number | null; item: string }
+export interface EffectTier { speed: number; productivity: number; consumption: number; quality: number }
+export interface Effect {
+  id: string; name: string; name_zh?: string | null; kind: string; speed: number; productivity: number; consumption: number
+  quality?: number; sprays?: number | null; item: string; by_quality?: EffectTier[]
+}
+
+/** Factorio data sets (data::FACTORIO_DATASETS). */
+export const DATASETS: { id: string; name: string }[] = [
+  { id: '2.0', name: '2.0.77 base' },
+  { id: '2x1', name: '2.1.25 Space Age' },
+  { id: '2q1', name: '2.1.25 base + quality' },
+  { id: 'spa', name: '2.0.77 Space Age' },
+]
+/** Quality tiers: "iron-gear-wheel@4" → ["iron-gear-wheel", 4]; normal keeps the bare id. */
+export function qsplit(id: string): [string, number] {
+  const m = /^(.+)@([1-4])$/.exec(id)
+  return m ? [m[1], +m[2]] : [id, 0]
+}
+export const withQ = (id: string, q: number) => (q > 0 ? `${qsplit(id)[0]}@${q}` : qsplit(id)[0])
+export const QUALITY_NAMES = ['normal', 'uncommon', 'rare', 'epic', 'legendary']
+/** Item name with its quality ("Iron gear wheel ★legendary"). */
+export function itemName(data: GameData, id: string): string {
+  const [base, q] = qsplit(id)
+  const it = data.items.find(i => i.id === base)
+  const n = dn(it, data.game, base)
+  return q ? `${n} ★${(data.qualities?.[q] ?? QUALITY_NAMES[q]).toLowerCase()}` : n
+}
+export const isLiquid = (data: GameData, id: string) => data.items.find(i => i.id === qsplit(id)[0])?.liquid ?? false
 export interface Resource { item: string; limit: number | null; extractor: string; extractor_rate: number; extractor_power: number }
 export interface GameData {
   game: Game; effects?: Effect[]
+  /** Factorio: quality tier names (normal … legendary); absent = no quality in this data set. */
+  qualities?: string[]; dataset?: string
   version: string; source: string; items: Item[]; recipes: Recipe[]; buildings: Building[]
   resources: Resource[]; belts: number[]; pipes: number[]
 }
@@ -74,6 +105,18 @@ export interface Settings {
   time_limit_ms: number
   generator: Generator
   mixed_belts: boolean
+  /** Factorio data set ('' = 2.0 base). */
+  dataset: string
+  /** Factorio: quality tier of all modules (0 normal … 4 legendary). */
+  module_quality: number
+  /** Factorio quality plans: module ids for quality / productivity slots ('' = none). */
+  quality_module: string
+  prod_module: string
+  /** Quality plans: recycling scope. */
+  recycling: 'chain' | 'all' | 'list'
+  /** Items whose recycling is allowed in any scope. */
+  recycle_allow: string[]
+  research_productivity: Record<string, number>
 }
 
 export interface RateLine { item: string; name: string; rate: number }
@@ -99,6 +142,8 @@ export interface Plan {
   shards: number; somersloops: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
   item_values: ItemValue[]; flows: Flow[]; warnings: string[]
   compute?: ComputeSummary | null
+  /** Model size: solver columns and item rows; quality = item@q expansion was used. */
+  columns?: number; rows?: number; quality?: boolean
 }
 
 const DEFAULT_TARGET: Record<Game, ItemRate> = {
@@ -130,19 +175,28 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   time_limit_ms: 4000,
   generator: 'artificial_star',
   mixed_belts: false,
+  dataset: game === 'factorio' ? '2.0' : '',
+  module_quality: 0,
+  quality_module: 'quality-module-3',
+  prod_module: 'productivity-module-3',
+  recycling: 'chain',
+  recycle_allow: [],
+  research_productivity: {},
 })
 
 let wasm: Promise<unknown> | null = null
-const cache = new Map<Game, GameData>()
-export async function loadSolver(game: Game): Promise<GameData> {
+const cache = new Map<string, GameData>()
+export async function loadSolver(game: Game, dataset = ''): Promise<GameData> {
   wasm ??= init()
   await wasm
-  if (!cache.has(game)) {
-    const d = JSON.parse(game_data_json(game)) as GameData
+  const key = `${game}/${game === 'factorio' ? dataset : ''}`
+  if (!cache.has(key)) {
+    const d = JSON.parse(game_data_json(game, game === 'factorio' ? dataset : '')) as GameData
     d.game ??= game // Satisfactory's JSON predates the field
-    cache.set(game, d)
+    d.dataset ??= game === 'factorio' ? '2.0' : ''
+    cache.set(key, d)
   }
-  return cache.get(game)!
+  return cache.get(key)!
 }
 
 /** Display name: Chinese for DSP when available. */

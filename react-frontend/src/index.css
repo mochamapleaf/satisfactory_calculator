@@ -289,6 +289,14 @@ td select { min-height: 26px; padding: 1px 4px; }
 /* item / building icons (sprite sheets in public/icons) */
 .icon { display: inline-block; vertical-align: middle; margin-right: 6px; background-repeat: no-repeat; flex: none; image-rendering: auto; position: relative; top: -1px; }
 .small .icon { margin-right: 4px; }
+/* Factorio quality pip: a small diamond in the game's tier colours, on the icon's lower-left corner */
+.qpip { display: inline-block; width: 7px; height: 7px; transform: rotate(45deg); border-radius: 1px; vertical-align: middle; margin: 0 6px 0 2px; box-shadow: 0 0 0 1px var(--bg); flex: none; }
+.icon > .qpip { position: absolute; left: 0; bottom: 1px; margin: 0; }
+.qpip.q1 { background: oklch(0.72 0.17 145); }
+.qpip.q2 { background: oklch(0.62 0.16 250); }
+.qpip.q3 { background: oklch(0.55 0.2 305); }
+.qpip.q4 { background: oklch(0.72 0.17 60); }
+.qsel { width: auto; }
 /* the flat and minimal sheets draw dark ink; on the dark theme give them a soft light halo so dark icons
    (coal, buildings) stay visible without a tile behind them */
 @media (prefers-color-scheme: dark) {

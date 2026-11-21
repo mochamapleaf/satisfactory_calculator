@@ -1,5 +1,5 @@
 import { Icon, RemoveMark } from './Icon'
-import { carrier, dn, fmt, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
+import { carrier, dn, fmt, isLiquid, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
 
 /** CPU time per tick: µs, or ms from 1000 µs. */
 const fmtUs = (us: number) => (us >= 1000 ? `${fmt(us / 1000, 1)} ms` : `${fmt(us, us < 10 ? 1 : 0)} µs`)
@@ -24,7 +24,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       </div>
     )
   }
-  const liquid = (id: string) => data.items.find(i => i.id === id)?.liquid ?? false
+  const liquid = (id: string) => isLiquid(data, id)
   const recipeById = new Map(data.recipes.map(r => [r.id, r]))
   const bid = (name: string) => data.buildings.find(b => dn(b, data.game) === name || b.name === name)?.id
   const slots = (rid: string) => {
@@ -41,10 +41,12 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
     })
   const exclude = (rid: string) => setSettings(x => ({ ...x, disabled_recipes: [...x.disabled_recipes, rid] }))
   const totalSloops = plan.somersloops
+  // quality plans are always solved continuously
+  const whole = s.integer && !plan.quality
 
   // group buildings by type
   const byBuilding = new Map<string, number>()
-  for (const r of plan.recipes) byBuilding.set(r.building, (byBuilding.get(r.building) ?? 0) + (s.integer ? r.machines : r.machines_ceil))
+  for (const r of plan.recipes) byBuilding.set(r.building, (byBuilding.get(r.building) ?? 0) + (whole ? r.machines : r.machines_ceil))
 
   const limit = (item: string) => {
     if (s.ignore_limits) return null
@@ -73,8 +75,11 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
           </div>
         )}
         <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}`}>
-          <div className="big">{!s.integer ? 'LP' : plan.proven_optimal ? 'optimal' : (plan.gap ?? 1) < 0.0005 ? '≈ optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
-          <div className="muted">{s.integer ? 'whole buildings' : 'fractional buildings'} · {fmt(plan.solve_ms, 0)} ms</div>
+          <div className="big">{!whole ? 'LP' : plan.proven_optimal ? 'optimal' : (plan.gap ?? 1) < 0.0005 ? '≈ optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
+          <div className="muted" title={plan.columns ? `${plan.columns} solver columns (recipe × machine × modules), ${plan.rows} item rows` : undefined}>
+            {whole ? 'whole buildings' : 'fractional buildings'} · {fmt(plan.solve_ms, 0)} ms
+          </div>
+
         </div>
       </div>
       {plan.warnings.map(w => <p className="warn" key={w}>{w}</p>)}
@@ -96,7 +101,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 <td><Icon id={r.outputs[0]?.item} />{r.name}{r.alt && <span className="tag">alt</span>}{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
                 <td><Icon id={bid(r.building)} />{r.building}</td>
                 <td className="num" title={`work = ${fmt(r.throughput, 4)} machines at 100 %`}>
-                  {s.integer ? fmt(r.machines) : <>{fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span></>}
+                  {whole ? fmt(r.machines) : <>{fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span></>}
                 </td>
                 <td className="small">{r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}</td>
                 <td>

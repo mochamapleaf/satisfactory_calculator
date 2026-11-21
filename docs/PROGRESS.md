@@ -109,3 +109,27 @@ optimum and a user-defined cost function.
 - Tests: model coefficients, hand-computed 120 ingot/min (1 + 0.24 + 0.13 + 0.0056·1.44),
   top tier + mixed belts, per-recipe modes (universe matrix → extra products, iron ingot →
   speedup, wind → fewer sprayed); `compute_universe_matrix_report` (ignored) prints the table.
+
+## 2026-11-21 — Factorio quality (legendary production)
+Spec: `docs/research/factorio-quality/00-最终报告.md` §5; step log `…/_过程文件/impl-progress.md`.
+- Data sets (FactorioLab @50d8e977, MIT): Space Age 2.1.25 (`2x1`), base + quality 2.1.25 (`2q1`), Space Age
+  2.0.77 (`spa`); base 2.0.77 stays the default. Sidebar "Game data" picks one. Converter adds item recycling,
+  quality_allowed, catalyst, machine base productivity (foundry / EM plant +50 %), per-quality module values,
+  agricultural towers for Gleba plants, asteroid chunks as raw (weight 100).
+- `src/planner/quality.rs`: a target or input at quality > normal turns on `item@q` expansion: recipes on the
+  target chain become `r@i` per input tier; each machine × loadout (k quality + N−k productivity modules, plus
+  plain) is a mode with products split by the quality matrix; recyclers are ordinary recipes within a scope
+  (target chain by default, allow-list, or everything). Quality plans solve as LP (shared tier machines would be
+  overcounted by per-column whole buildings). Quality mining is not modelled (ores are normal).
+- Fixes for all Factorio plans: productivity skips catalysts (Kovarex, coal liquefaction); built-in and
+  researched productivity count against the +300 % cap; module quality applies to the module modes.
+- Oracle tests (`quality_tests.rs`, from quality_lp.py): scottmsul gear 79.8786 (2.0 values), 78.40 (2.1),
+  self-recycling 2726.9 : 1, wiki yields EM 2.722332 / cryo 4.835199 / AM3 0.583017 / chem 0.341205 / foundry
+  1.608046 %, normal : higher 7.09 and 5.03, LDS shuffle 1.000 at research 15 (0.048 at 5).
+- Scale: gear@4 416 columns (44 ms in WASM), processing unit@4 2 857 columns (53 ms); "recycle everything"
+  16 578 columns, 80–137 s native.
+- UI: quality select per target / input row, coloured quality pip on icons, "★legendary" names in plan rows and
+  Item flow, Quality section (module quality, slot modules, recycling scope + allow-list).
+- Open: shared-machine integer constraint (report §5 step 6), module cost in CostWeights, machine quality,
+  beacons, quality mining, planet / location filter (Space Age plans may use Gleba agriculture freely), research
+  productivity UI (setting exists), legendary-stage recycling switch.

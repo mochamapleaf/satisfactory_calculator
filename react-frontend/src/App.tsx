@@ -22,8 +22,8 @@ export default function App() {
   useEffect(() => {
     setData(null)
     setPlan(null)
-    loadSolver(settings.game).then(setData).catch(e => setError(String(e)))
-  }, [settings.game])
+    loadSolver(settings.game, settings.dataset).then(setData).catch(e => setError(String(e)))
+  }, [settings.game, settings.dataset])
   const switchGame = (g: Game) => setSettings(() => loadGame(g))
   useEffect(() => saveSettings(settings), [settings])
   // a plan link pasted into an open tab (saveSettings uses replaceState, which does not fire this)
@@ -37,6 +37,7 @@ export default function App() {
   const [solving, setSolving] = useState(false)
   useEffect(() => {
     if (!data || data.game !== settings.game) return
+    if (data.game === 'factorio' && data.dataset !== (settings.dataset || '2.0')) return
     setSolving(true)
     const t = setTimeout(() => {
       const req = solveAsync(settings)

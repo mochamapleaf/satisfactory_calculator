@@ -97,13 +97,14 @@ def main(game, dataset="2.0"):
             continue
         producers = [p for p in r.get("producers", []) if p in machine_ids]
         if not producers:
-            # Space Age asteroid fields (per space location, no machine): chunks are raw
+            # Space Age asteroid fields (per space location, no machine): chunks are raw, weight 100
+            # (one chunk crushes to 20-55 ore with modules; planet ores stay the default)
             if not r.get("in") and not r.get("producers"):
                 for it in r["out"]:
                     if it not in raw_items:
                         raw_items.add(it)
                         resources.append({"item": it, "limit": None, "extractor": "asteroid collector",
-                                          "extractor_rate": 60.0, "extractor_power": 0.0, "weight": 1.0})
+                                          "extractor_rate": 60.0, "extractor_power": 0.0, "weight": 100.0})
             continue
         if "mining" in flags or not r.get("in"):
             m = items_by_id[producers[-1]].get("machine", {})
