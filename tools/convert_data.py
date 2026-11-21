@@ -52,6 +52,25 @@ EXTRACTORS = {
 DEFAULT_EXTRACTOR = ("Miner Mk.3", 240, 45)
 
 
+SF_GROUP = {
+    "Desc_SmelterMk1_C": "ingots", "Desc_FoundryMk1_C": "ingots",
+    "Desc_ConstructorMk1_C": "basic", "Desc_AssemblerMk1_C": "intermediate",
+    "Desc_ManufacturerMk1_C": "advanced", "Desc_OilRefinery_C": "fluids", "Desc_Blender_C": "fluids",
+    "Desc_Packager_C": "fluids", "Desc_HadronCollider_C": "exotic", "Desc_QuantumEncoder_C": "exotic",
+    "Desc_Converter_C": "exotic",
+}
+
+
+def sf_group(k, v, is_raw, building):
+    if is_raw:
+        return "raw"
+    if "SpaceElevatorPart" in k:
+        return "project"
+    if v.get("liquid") and building != "Desc_Packager_C":
+        return "fluids"
+    return SF_GROUP.get(building, "other")
+
+
 def main(src, dst):
     d = json.load(open(src, encoding="utf8"))
     items_used = set()
@@ -85,6 +104,12 @@ def main(src, dst):
         recipes.append(rec)
 
     raw = set(d["resources"].keys())
+    # item picker groups: by the building of the item's first standard recipe
+    made_in = {}
+    for r in sorted(d["recipes"].values(), key=lambda r: r.get("alternate", False)):
+        bs = [b for b in r.get("producedIn", []) if b in SF_GROUP]
+        for p in r.get("products", []) if bs else []:
+            made_in.setdefault(p["item"], bs[0])
     items = []
     for k, v in d["items"].items():
         if k in items_used:
@@ -94,6 +119,9 @@ def main(src, dst):
                 "liquid": bool(v["liquid"]),
                 "sink": v.get("sinkPoints", 0),
                 "raw": k in raw,
+                "group": sf_group(k, v, k in raw, made_in.get(k, "")),
+                "row": 0,
+                "order": v.get("sinkPoints", 0),
             })
     buildings = []
     for k in sorted(buildings_used):

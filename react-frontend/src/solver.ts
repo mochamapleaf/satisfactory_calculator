@@ -7,7 +7,7 @@ export const GAMES: { id: Game; name: string }[] = [
   { id: 'dsp', name: '戴森球计划' },
   { id: 'factorio', name: 'Factorio' },
 ]
-export interface Item { id: string; name: string; name_zh?: string | null; liquid: boolean; sink: number; raw: boolean }
+export interface Item { id: string; name: string; name_zh?: string | null; liquid: boolean; sink: number; raw: boolean; group?: string; row?: number; order?: number }
 export interface Recipe {
   id: string; name: string; name_zh?: string | null; alt: boolean; building: string; producers?: string[]; time: number
   in: [string, number][]; out: [string, number][]; power?: number

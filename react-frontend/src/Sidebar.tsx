@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Icon, RemoveMark } from './Icon'
+import ItemPicker from './ItemPicker'
 import { defaultSettings, dn, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
@@ -12,33 +13,43 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
   data: GameData; list: ItemRate[]; onChange: (l: ItemRate[]) => void; producibleOnly?: boolean
 }) {
   const produced = useMemo(() => new Set(data.recipes.flatMap(r => r.out.map(o => o[0]))), [data])
-  const options = data.items.filter(i => !producibleOnly || produced.has(i.id) || i.raw)
-  const [text, setText] = useState('')
-  const byName = useMemo(() => new Map(data.items.flatMap(i => [[dn(i, data.game).toLowerCase(), i.id], [i.name.toLowerCase(), i.id]] as [string, string][])), [data])
+  const options = useMemo(() => data.items.filter(i => !producibleOnly || produced.has(i.id) || i.raw), [data, produced, producibleOnly])
+  // which picker is open: a row index (replace that item) or 'add'
+  const [open, setOpen] = useState<number | 'add' | null>(null)
   const name = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)
-  const add = (v: string) => {
-    const id = byName.get(v.trim().toLowerCase())
-    if (id && !list.some(t => t.item === id)) {
-      onChange([...list, { item: id, rate: 10 }])
-      setText('')
-    } else setText(v)
+  const pick = (id: string) => {
+    if (open === 'add') {
+      if (!list.some(t => t.item === id)) onChange([...list, { item: id, rate: 10 }])
+    } else if (open !== null) {
+      const dup = list.findIndex(t => t.item === id)
+      onChange(dup >= 0 && dup !== open ? list.filter((_, j) => j !== open)
+        : list.map((t, j) => (j === open ? { ...t, item: id } : t)))
+    }
+    setOpen(null)
   }
+  const picker = (current?: string) => (
+    <ItemPicker data={data} items={options} current={current} onPick={pick} onClose={() => setOpen(null)} />
+  )
   return (
     <div>
       {list.map((t, i) => (
-        <div className="row" key={t.item}>
-          <span className="grow"><Icon id={t.item} />{name(t.item)}</span>
-          <input type="number" min={0} step="any" value={t.rate}
-            onChange={e => onChange(list.map((x, j) => j === i ? { ...x, rate: Math.max(0, +e.target.value) } : x))} />
-          <span className="muted">/min</span>
-          <button className="x" title={`Remove ${name(t.item)}`} aria-label={`Remove ${name(t.item)}`} onClick={() => onChange(list.filter((_, j) => j !== i))}><RemoveMark /></button>
+        <div key={t.item}>
+          <div className="row">
+            <button type="button" className="swap grow" title={`Change ${name(t.item)}`}
+              aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>
+              <Icon id={t.item} />{name(t.item)}
+            </button>
+            <input type="number" min={0} step="any" value={t.rate}
+              onChange={e => onChange(list.map((x, j) => j === i ? { ...x, rate: Math.max(0, +e.target.value) } : x))} />
+            <span className="muted">/min</span>
+            <button className="x" title={`Remove ${name(t.item)}`} aria-label={`Remove ${name(t.item)}`} onClick={() => onChange(list.filter((_, j) => j !== i))}><RemoveMark /></button>
+          </div>
+          {open === i && picker(t.item)}
         </div>
       ))}
-      <input className="wide" list={producibleOnly ? 'items-prod' : 'items-all'} placeholder="Add an item…"
-        value={text} onChange={e => add(e.target.value)} />
-      <datalist id={producibleOnly ? 'items-prod' : 'items-all'}>
-        {options.map(i => <option key={i.id} value={dn(i, data.game)} />)}
-      </datalist>
+      <button type="button" className="addpick" aria-expanded={open === 'add'}
+        onClick={() => setOpen(open === 'add' ? null : 'add')}>+ Add an item</button>
+      {open === 'add' && picker()}
     </div>
   )
 }

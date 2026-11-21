@@ -45,6 +45,12 @@ export function IconProvider({ game, style, children }: { game: Game; style: Ico
   return <IconCtx.Provider value={{ game, style, meta: m }}>{children}</IconCtx.Provider>
 }
 
+/** True when icons are being drawn (a style is chosen and the sheet has loaded). */
+export function useIconsOn() {
+  const { style, meta } = useContext(IconCtx)
+  return style !== 'off' && !!meta
+}
+
 /** Item or building icon; renders nothing when icons are off or the id has none. */
 export function Icon({ id, size = 20, title }: { id: string | undefined; size?: number; title?: string }) {
   const { game, style, meta } = useContext(IconCtx)

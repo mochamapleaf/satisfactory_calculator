@@ -11,6 +11,13 @@ pub struct Item {
     pub liquid: bool,
     pub sink: f64,
     pub raw: bool,
+    /// Item picker layout: group (crafting-menu tab or derived class), row within it, sort key.
+    #[serde(default)]
+    pub group: String,
+    #[serde(default)]
+    pub row: u32,
+    #[serde(default)]
+    pub order: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

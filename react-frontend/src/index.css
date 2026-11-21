@@ -298,3 +298,39 @@ td select { min-height: 26px; padding: 1px 4px; }
 /* keep icon + name together; wide tables scroll inside .tablewrap instead of wrapping names */
 td:first-child { white-space: nowrap; }
 aside input[type=number] { width: 72px; }
+
+/* ---------- item picker: compact icon grid ---------- */
+button.swap {
+  display: flex; align-items: center; gap: var(--s1); min-width: 0; text-align: left;
+  border: 1px solid transparent; background: none; padding: 2px 4px; margin-left: -4px; font-weight: 400;
+}
+button.swap:hover { border-color: var(--rule-strong); background: none; }
+button.addpick {
+  width: 100%; margin-top: var(--s2); text-align: left; color: var(--muted); font-weight: 400;
+  border-style: dashed; background: none;
+}
+button.addpick:hover, button.addpick[aria-expanded=true] { color: var(--fg); border-color: var(--faint); background: none; }
+.picker {
+  margin: var(--s1) 0 var(--s2); padding: var(--s2); border: 1px solid var(--rule-strong);
+  border-radius: var(--radius); background: var(--raised);
+}
+.picker input.wide { margin-top: 0; }
+.pickgroups { display: flex; flex-wrap: wrap; gap: 2px 10px; margin: var(--s2) 0 var(--s1); border-bottom: 1px solid var(--rule); }
+.pickgroups button {
+  border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; min-height: 0;
+  padding: 2px 0 3px; margin-bottom: -1px; font-size: var(--t-sm); color: var(--muted); font-weight: 400;
+}
+.pickgroups button:hover { color: var(--fg); background: none; }
+.pickgroups button.on { color: var(--fg); border-bottom-color: var(--accent); }
+.pickgrid { max-height: 232px; overflow-y: auto; padding-top: var(--s1); }
+.pickrow { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 8px; }
+.pickrow:last-child { margin-bottom: 2px; }
+button.pick {
+  display: grid; place-items: center; width: 32px; height: 32px; min-height: 0; padding: 0;
+  border: 1px solid transparent; background: none;
+}
+button.pick:hover { border-color: var(--rule-strong); background: var(--hover); }
+button.pick.on { border-color: var(--accent); }
+button.pick.text { width: auto; height: auto; padding: 1px 6px; font-size: var(--t-xs); font-weight: 400; }
+button.pick .icon { margin: 0; }
+.pickname { font-size: var(--t-sm); color: var(--muted); padding-top: var(--s1); border-top: 1px solid var(--rule); min-height: 1.4em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

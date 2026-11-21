@@ -107,12 +107,14 @@ def main(game):
                                   "extractor_rate": 60.0, "extractor_power": 0.0, "weight": 10.0})
     used = {x for r in recipes for k in ("in", "out") for x, _ in r[k]} | raw_items
     items = []
-    for i in d["items"]:
+    for n, i in enumerate(d["items"]):
         if i["id"] not in used:
             continue
         items.append({
             "id": i["id"], "name": i["name"], "name_zh": zh.get(i["id"]),
             "liquid": "fluid" in i.get("types", []), "sink": 0, "raw": i["id"] in raw_items,
+            # in-game crafting-menu layout (tab, row, position), used by the item picker
+            "group": i.get("category", "other"), "row": i.get("row", 0), "order": n,
         })
     version = " ".join(f"{k} {v}" for k, v in d["version"].items())
     out = {
