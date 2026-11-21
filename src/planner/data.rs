@@ -56,6 +56,9 @@ pub struct Recipe {
     /// Catalyst amount per product (per minute): productivity only multiplies the rest.
     #[serde(default)]
     pub catalyst: Vec<(String, f64)>,
+    /// Space Age: planets / space platform where this recipe can run (empty = anywhere).
+    #[serde(default)]
+    pub locations: Vec<String>,
 }
 
 impl Recipe {
@@ -102,6 +105,9 @@ pub struct Resource {
     /// Cost of one unit/min; `None` = scarcity from `limit` (Satisfactory).
     #[serde(default)]
     pub weight: Option<f64>,
+    /// Space Age: where this resource can be mined or pumped (empty = anywhere).
+    #[serde(default)]
+    pub locations: Vec<String>,
 }
 
 /// A boost: DSP proliferator mode or Factorio module.
@@ -159,6 +165,65 @@ impl Effect {
     }
 }
 
+/// Space Age planet or the space platform (FactorioLab `locations`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Location {
+    pub id: String,
+    pub name: String,
+}
+
+/// Researched productivity family: one infinite technology and the recipes it boosts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Research {
+    pub id: String,
+    pub name: String,
+    pub recipes: Vec<String>,
+    /// Productivity per level (0.1).
+    pub step: f64,
+}
+
+/// Factorio beacon: transmits `effectivity` × its modules' effects to each machine in range,
+/// times `profile[n-1]` when a machine is covered by n beacons (2.0 diminishing returns).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Beacon {
+    pub id: String,
+    pub name: String,
+    pub effectivity: f64,
+    pub modules: u32,
+    /// MW per beacon.
+    pub power: f64,
+    #[serde(default)]
+    pub profile: Vec<f64>,
+    #[serde(default)]
+    pub disallowed_effects: Vec<String>,
+    /// Per quality tier (normal … legendary): effectivity and MW.
+    #[serde(default)]
+    pub by_quality: Vec<BeaconTier>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+pub struct BeaconTier {
+    pub effectivity: f64,
+    pub power: f64,
+}
+
+impl Beacon {
+    /// Effectivity and MW at quality tier `q`.
+    pub fn tier(&self, q: u8) -> BeaconTier {
+        self.by_quality
+            .get(q as usize)
+            .copied()
+            .unwrap_or(BeaconTier { effectivity: self.effectivity, power: self.power })
+    }
+    /// Distance profile for `n` beacons (1 for n ≤ 1; last entry beyond the table).
+    pub fn profile_at(&self, n: u32) -> f64 {
+        if n == 0 || self.profile.is_empty() {
+            return 1.0;
+        }
+        self.profile.get(n as usize - 1).copied().unwrap_or(*self.profile.last().unwrap())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameData {
     /// "satisfactory" | "dsp" | "factorio" — selects the rules in `rules.rs`.
@@ -180,6 +245,14 @@ pub struct GameData {
     /// Factorio data set ("2.0", "2x1", "2q1", "spa").
     #[serde(default)]
     pub dataset: String,
+    /// Space Age locations; empty = no planet filter.
+    #[serde(default)]
+    pub locations: Vec<Location>,
+    /// Researched productivity families (Space Age).
+    #[serde(default)]
+    pub research: Vec<Research>,
+    #[serde(default)]
+    pub beacons: Vec<Beacon>,
 }
 
 fn yes() -> bool {
@@ -249,6 +322,13 @@ impl GameData {
         self.item(key)
             .or_else(|| self.items.iter().find(|i| i.name.eq_ignore_ascii_case(key)))
             .or_else(|| self.items.iter().find(|i| i.name_zh.as_deref() == Some(key)))
+    }
+    /// Available under the planet filter: data without locations, untagged, or on a chosen planet.
+    pub fn located(&self, locations: &[String], planets: &[String]) -> bool {
+        self.locations.is_empty() || locations.is_empty() || locations.iter().any(|l| planets.contains(l))
+    }
+    pub fn beacon(&self, id: &str) -> Option<&Beacon> {
+        self.beacons.iter().find(|b| b.id == id)
     }
     pub fn effect(&self, id: &str) -> Option<&Effect> {
         self.effects.iter().find(|e| e.id == id)

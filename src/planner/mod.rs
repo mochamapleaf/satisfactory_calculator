@@ -158,6 +158,10 @@ pub struct PlanSettings {
     /// Do not solve models with more columns than this (0 = no limit): the plan comes back
     /// with status `TooLarge` and its size, so the front end can ask before a minutes-long solve.
     pub max_columns: usize,
+    /// Factorio Space Age: planets (and "space-platform") whose recipes and resources may be used.
+    /// Default Nauvis only, so Gleba plants and Vulcanus calcite are not free; items from other
+    /// planets can still be given as supplies. Ignored on data without locations.
+    pub planets: Vec<String>,
 }
 
 impl Default for PlanSettings {
@@ -193,6 +197,7 @@ impl Default for PlanSettings {
             recycle_allow: vec![],
             research_productivity: HashMap::new(),
             max_columns: 0,
+            planets: vec!["nauvis".into()],
         }
     }
 }

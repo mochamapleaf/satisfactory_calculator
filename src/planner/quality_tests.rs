@@ -28,6 +28,7 @@ fn add_resource(d: &mut GameData, item: &str, weight: f64) {
         extractor_rate: 60.0,
         extractor_power: 0.0,
         weight: Some(weight),
+        locations: vec![],
     });
 }
 
@@ -211,6 +212,7 @@ fn loop_data(building: &str, productivity: bool) -> GameData {
         recycling: rec,
         quality_allowed: true,
         catalyst: vec![],
+        locations: vec![],
     };
     d.recipes.push(r("widget", building, ("part", 60.0), ("widget", 60.0), false));
     d.recipes.push(r("widget-recycling", "recycler", ("widget", 60.0), ("part", 15.0), true));

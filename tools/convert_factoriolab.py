@@ -15,6 +15,9 @@ Conventions (same as data/game-data.json for Satisfactory):
   is a normal recipe since nothing crafts scrap), `catalyst` (per minute), `quality_allowed`;
   machines carry `base_productivity`; modules carry per-quality values `by_quality` (from
   FactorioLab `qualityRecord`, never x1.3); top-level `qualities` lists the tier names.
+- Space Age: `locations` (planets / space platform) on recipes and resources, top-level `locations`;
+  `beacons` (effectivity, slots, MW, distance `profile`, per-quality values); `research` families
+  (technology id, recipes, productivity per level).
 """
 import json
 import sys
@@ -46,7 +49,7 @@ def main(game, dataset="2.0"):
     excluded = set(d.get("defaults", {}).get("excludedRecipes", []))
     prod_ok_dsp = set(d.get("limitations", {}).get("productivity", []))
 
-    buildings, effects, belts = [], [], []
+    buildings, effects, belts, beacons = [], [], [], []
     for i in d["items"]:
         m = i.get("machine")
         if m and "speed" in m or (m and i["id"] == "fractionator"):
@@ -76,6 +79,18 @@ def main(game, dataset="2.0"):
                      for k in ("speed", "productivity", "consumption", "quality")} for t in tiers]
         if "belt" in i:
             belts.append(i["belt"]["speed"] * 60.0)
+        if "beacon" in i:
+            be = i["beacon"]
+            beacons.append({
+                "id": i["id"], "name": i["name"], "effectivity": be.get("effectivity", 1.0),
+                "modules": be.get("modules", 0), "power": be.get("usage", 0) / 1000.0,
+                "profile": be.get("profile", []), "disallowed_effects": be.get("disallowedEffects", []),
+            })
+            if tiers:
+                rec = be.get("qualityRecord", {})
+                beacons[-1]["by_quality"] = [
+                    {"effectivity": rec.get(t, {}).get("effectivity", be.get("effectivity", 1.0)),
+                     "power": rec.get(t, {}).get("usage", be.get("usage", 0)) / 1000.0} for t in tiers]
     # Space Age plants (yumako, jellynut, trees) grow from seeds without a machine in the data:
     # an agricultural tower (100 kW, no module slots) runs them, one plant per "building"
     plants = [r for r in d["recipes"] if "plant" in r.get("flags", [])]
@@ -86,6 +101,10 @@ def main(game, dataset="2.0"):
         for r in plants:
             r.setdefault("producers", ["agricultural-tower"])
     machine_ids = {b["id"] for b in buildings}
+    # Space Age: planets / space platform (FactorioLab `locations`); recipes and resources tagged with
+    # locations are only available there (planner setting `planets`). Base data (Nauvis only): none.
+    locations = d.get("locations", [])
+    multi_loc = len(locations) > 1
 
     # items some non-recycling recipe crafts: their "-recycling" recipe is a reverse recipe
     crafted = {x for r in d["recipes"] if r.get("in") and not {"recycling", "mining"} & set(r.get("flags", []))
@@ -104,13 +123,20 @@ def main(game, dataset="2.0"):
                     if it not in raw_items:
                         raw_items.add(it)
                         resources.append({"item": it, "limit": None, "extractor": "asteroid collector",
-                                          "extractor_rate": 60.0, "extractor_power": 0.0, "weight": 100.0})
+                                          "extractor_rate": 60.0, "extractor_power": 0.0, "weight": 100.0,
+                                          "locations": ["space-platform"] if multi_loc else []})
             continue
         if "mining" in flags or not r.get("in"):
             m = items_by_id[producers[-1]].get("machine", {})
             for it, q in r["out"].items():
                 raw_items.add(it)
-                if any(x["item"] == it for x in resources):
+                old = next((x for x in resources if x["item"] == it), None)
+                if old is not None:
+                    # a resource found on several planets: available where any of its recipes is
+                    if old.get("locations") and r.get("locations"):
+                        old["locations"] = sorted(set(old["locations"]) | set(r["locations"]))
+                    elif not r.get("locations"):
+                        old["locations"] = []
                     continue
                 resources.append({
                     "item": it, "limit": None,
@@ -118,6 +144,7 @@ def main(game, dataset="2.0"):
                     "extractor_rate": per_min(q, r["time"]) * m.get("speed", 1.0),
                     "extractor_power": m.get("usage", 0) / 1000.0,
                     "weight": RAW_WEIGHT.get(it, 1.0),
+                    "locations": sorted(r.get("locations") or []) if multi_loc else [],
                 })
             continue
         if game == "dsp":
@@ -137,6 +164,8 @@ def main(game, dataset="2.0"):
             recipes[-1]["recycling"] = "recycling" in flags and len(ins) == 1 and (
                 ins[0] in crafted or ins[0] in r["out"])
             recipes[-1]["quality_allowed"] = "quality" not in r.get("disallowedEffects", [])
+        if multi_loc and r.get("locations"):
+            recipes[-1]["locations"] = sorted(r["locations"])
         if r.get("catalyst"):
             recipes[-1]["catalyst"] = [[k, per_min(v, r["time"])] for k, v in r["catalyst"].items()]
 
@@ -183,6 +212,21 @@ def main(game, dataset="2.0"):
     }
     if tiers:
         out["qualities"] = [q["name"] for q in d["qualities"]]
+    if multi_loc:
+        out["locations"] = [{"id": x["id"], "name": x["name"]} for x in locations]
+    if beacons:
+        out["beacons"] = beacons
+    # researched productivity: infinite technologies naming the recipes they boost (+10 % per level)
+    rids = {r["id"] for r in recipes}
+    research = []
+    for i in d["items"]:
+        rp = i.get("technology", {}).get("recipeProductivity")
+        if rp:
+            rs = [x["id"] for x in rp if x["id"] in rids]
+            if rs:
+                research.append({"id": i["id"], "name": i["name"], "recipes": rs, "step": rp[0]["value"]})
+    if research:
+        out["research"] = research
     if game == "factorio":
         out["dataset"] = dataset
     name = game if game == "dsp" or dataset == "2.0" else f"{game}-{dataset}"

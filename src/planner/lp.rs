@@ -53,6 +53,7 @@ pub fn allowed_recipes<'a>(data: &'a GameData, s: &PlanSettings) -> Vec<&'a Reci
         .filter(|r| !s.disabled_recipes.contains(&r.id))
         .filter(|r| !r.alt || s.allow_all_alternates || s.enabled_alternates.contains(&r.id))
         .filter(|r| s.allow_ore_conversion || !is_ore_conversion(data, r))
+        .filter(|r| data.located(&r.locations, &s.planets))
         .collect()
 }
 
@@ -276,7 +277,7 @@ fn build_scaled(
 
     let mut raw = Vec::new();
     for it in &inp.items {
-        if let Some(res) = data.resource(it) {
+        if let Some(res) = data.resource(it).filter(|r| data.located(&r.locations, &s.planets)) {
             let limit = match s.resource_limits.get(it) {
                 Some(v) => *v,
                 None => res.limit,
@@ -657,6 +658,27 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
             plan.warnings.push(
                 "No feasible plan: targets exceed resource limits or need a disabled recipe.".into(),
             );
+            let off: Vec<String> = inp
+                .items
+                .iter()
+                .filter(|it| data.resource(it).is_some_and(|r| !data.located(&r.locations, &s.planets)))
+                .filter(|it| !inp.supplies.contains_key(*it))
+                .map(|it| {
+                    let r = data.resource(it).unwrap();
+                    let at: Vec<&str> = r
+                        .locations
+                        .iter()
+                        .map(|l| data.locations.iter().find(|x| x.id == *l).map(|x| x.name.as_str()).unwrap_or(l))
+                        .collect();
+                    format!("{} ({})", name(it), at.join(", "))
+                })
+                .collect();
+            if !off.is_empty() {
+                plan.warnings.push(format!(
+                    "Not on the chosen planets: {}. Add the planet or give the item as an input.",
+                    off.join("; ")
+                ));
+            }
             return plan;
         }
         Err(microlp::Error::Unbounded) => {

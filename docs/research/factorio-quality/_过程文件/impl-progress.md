@@ -57,3 +57,21 @@ Spec: `../00-最终报告.md` §5. Branch `refactor`, not pushed.
 - UI for research productivity (setting `research_productivity` exists, used by the LDS test); switch to stop
   recycling at a tier ("legendary not recycled" is implicit: the LP never chooses it unless useful).
 - Catalyst share in quality rolls is assumed to roll with the rest (report §7 存疑).
+
+## Step 4 — planet filter (done, 2026-11-21)
+- Converter: FactorioLab `locations` on recipes and resources (union over a resource's mining recipes;
+  asteroid chunks → space-platform), top-level `locations` (only when >1, i.e. Space Age); also emits
+  `beacons` (profile, per-quality effectivity/MW) and `research` families (technology.recipeProductivity) for
+  the next steps. Other data unchanged (checked: recipes/resources equal ignoring the new field; dsp.json same).
+- Rust: `Recipe/Resource.locations`, `GameData.{locations,research,beacons}`, `GameData::located`;
+  `PlanSettings.planets` (default ["nauvis"]); filter in `allowed_recipes` and raw-resource columns; on an
+  infeasible plan a warning names the needed resources that are off-planet ("Tungsten ore (Vulcanus)").
+  Supplies are never filtered (imports). Machines are not filtered (a biochamber may run on Nauvis).
+- Test `planet_filter_space_age`: plastic 60/min on all planets = bioplastic from free plants; Nauvis only =
+  coal liquefaction, no Gleba recipe, every raw on Nauvis; tungsten plate infeasible on Nauvis with hint,
+  optimal with Vulcanus or with tungsten ore + calcite as supplies; no asteroid chunks without the platform.
+  `every_game_solves_its_items` runs with all planets. Suite: 46 pass, 4 ignored.
+- UI: Game data → Planets checkboxes (Space Age sets only) + hint. Browser (planner-dist, 2x1, plastic 60/min):
+  Nauvis → coal liquefaction plan; +Gleba → bioplastic from agricultural towers, no raw input.
+- Seen, not changed: heat exchanger runs without a heat input (heat dropped as an unused resource in step L9).
+- Next: research productivity UI.

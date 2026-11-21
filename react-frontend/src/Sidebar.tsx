@@ -271,6 +271,18 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             </select>
           </div>
           {!hasQuality && <p className="hint">Quality (legendary items, recyclers) needs a 2.1.25 or Space Age data set.</p>}
+          {(data.locations?.length ?? 0) > 1 && <>
+            <div className="row small"><span className="grow">Planets</span></div>
+            <div className="chips" role="group" aria-label="Planets">
+              {data.locations!.map(l => (
+                <label key={l.id} className="chip">
+                  <input type="checkbox" checked={s.planets.includes(l.id)}
+                    onChange={() => set({ planets: toggle(s.planets, l.id) })} />{l.name}
+                </label>
+              ))}
+            </div>
+            <p className="hint">Recipes and resources of other planets are off (Gleba plants, Vulcanus calcite, asteroid chunks on the space platform). Items from elsewhere can be added under Available inputs.</p>
+          </>}
         </section>
       )}
 

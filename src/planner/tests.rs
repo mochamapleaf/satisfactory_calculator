@@ -376,6 +376,7 @@ fn every_game_solves_its_items() {
             s.game = g.into();
             s.dataset = ds.into();
             s.integer = false;
+            s.planets = d.locations.iter().map(|l| l.id.clone()).collect();
             let p = plan(&d, &s);
             if p.status != Status::Optimal {
                 bad.push(it.clone());
@@ -532,4 +533,63 @@ fn compute_universe_matrix_report() {
             );
         }
     }
+}
+
+fn space_age(targets: &[(&str, f64)], planets: &[&str]) -> (GameData, PlanSettings) {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = settings(targets);
+    s.game = "factorio".into();
+    s.dataset = "2x1".into();
+    s.integer = false;
+    s.planets = planets.iter().map(|p| p.to_string()).collect();
+    (d, s)
+}
+
+#[test]
+fn planet_filter_space_age() {
+    let all = ["nauvis", "vulcanus", "gleba", "fulgora", "aquilo", "space-platform"];
+    let d = GameData::for_set("factorio", "2x1");
+    assert_eq!(d.locations.len(), 6);
+    assert_eq!(d.resource("calcite").unwrap().locations, vec!["vulcanus".to_string()]);
+    assert!(d.recipe("yumako-tree").unwrap().locations == vec!["gleba".to_string()]);
+    // base data has no locations: the filter never applies
+    assert!(GameData::for_set("factorio", "").locations.is_empty());
+    assert_eq!(PlanSettings::default().planets, vec!["nauvis".to_string()]);
+
+    // Gleba plants grow from their own seeds (no raw cost): with every planet, plastic is free
+    // bioplastic; on Nauvis only it comes from crude oil
+    let (d, s) = space_age(&[("plastic-bar", 60.0)], &all);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert!(p.recipes.iter().any(|r| r.id == "bioplastic"), "all planets: bioplastic");
+    let (d, s) = space_age(&[("plastic-bar", 60.0)], &["nauvis"]);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert_balanced(&p);
+    assert!(!p.recipes.iter().any(|r| r.id == "bioplastic" || r.id.starts_with("yumako") || r.id.starts_with("jelly")));
+    // coal liquefaction / crude oil, not plants
+    assert!(p.raw.iter().any(|l| (l.item == "crude-oil" || l.item == "coal") && l.rate > 1.0), "{:?}", p.raw);
+    assert!(p.raw.iter().all(|l| d.resource(&l.item).unwrap().locations.iter().any(|x| x == "nauvis") || d.resource(&l.item).unwrap().locations.is_empty()));
+
+    // tungsten is Vulcanus-only: infeasible on Nauvis with a hint, fine with Vulcanus or as a supply
+    let (d, s) = space_age(&[("tungsten-plate", 10.0)], &["nauvis"]);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Infeasible);
+    assert!(p.warnings.iter().any(|w| w.contains("Tungsten ore (Vulcanus)")), "{:?}", p.warnings);
+    let (d, s) = space_age(&[("tungsten-plate", 10.0)], &["nauvis", "vulcanus"]);
+    assert_eq!(plan(&d, &s).status, Status::Optimal);
+    let (d, mut s) = space_age(&[("tungsten-plate", 10.0)], &["nauvis"]);
+    // tungsten plate is cast with molten iron, which needs calcite (also Vulcanus)
+    s.supplies = vec![
+        ItemRate { item: "tungsten-ore".into(), rate: 1000.0 },
+        ItemRate { item: "calcite".into(), rate: 1000.0 },
+    ];
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert!(p.supplied.iter().any(|l| l.item == "tungsten-ore"));
+
+    // asteroid chunks only with the space platform
+    let (d, s) = space_age(&[("carbon", 60.0)], &["nauvis"]);
+    let p = plan(&d, &s);
+    assert!(p.raw.iter().all(|l| !l.item.contains("asteroid")));
 }

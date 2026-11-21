@@ -62,11 +62,20 @@ export function itemName(data: GameData, id: string): string {
   return q ? `${n} ★${(data.qualities?.[q] ?? QUALITY_NAMES[q]).toLowerCase()}` : n
 }
 export const isLiquid = (data: GameData, id: string) => data.items.find(i => i.id === qsplit(id)[0])?.liquid ?? false
+export interface Beacon {
+  id: string; name: string; effectivity: number; modules: number; power: number; profile: number[]
+  by_quality?: { effectivity: number; power: number }[]
+}
 export interface Resource { item: string; limit: number | null; extractor: string; extractor_rate: number; extractor_power: number }
 export interface GameData {
   game: Game; effects?: Effect[]
   /** Factorio: quality tier names (normal … legendary); absent = no quality in this data set. */
   qualities?: string[]; dataset?: string
+  /** Space Age planets / space platform (absent = no planet filter). */
+  locations?: { id: string; name: string }[]
+  /** Researched productivity families: technology, recipes it boosts, productivity per level. */
+  research?: { id: string; name: string; recipes: string[]; step: number }[]
+  beacons?: Beacon[]
   version: string; source: string; items: Item[]; recipes: Recipe[]; buildings: Building[]
   resources: Resource[]; belts: number[]; pipes: number[]
 }
@@ -133,6 +142,8 @@ export interface Settings {
   /** Items whose recycling is allowed in any scope. */
   recycle_allow: string[]
   research_productivity: Record<string, number>
+  /** Space Age: planets whose recipes and resources may be used (default Nauvis). */
+  planets: string[]
   /** Solver guard: models with more columns are not solved (0 = no limit). Set per request, not saved. */
   max_columns?: number
 }
@@ -209,6 +220,7 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   recycling: 'chain',
   recycle_allow: [],
   research_productivity: {},
+  planets: ['nauvis'],
 })
 
 let wasm: Promise<unknown> | null = null

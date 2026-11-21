@@ -220,6 +220,7 @@ summary::marker { color: var(--faint); }
 .chips li { display: inline-flex; align-items: center; gap: var(--s1); }
 .chips b { font-variant-numeric: tabular-nums; font-weight: 600; }
 .chips .icon { margin-right: 2px; }
+.chips label.chip { display: inline-flex; align-items: center; gap: var(--s1); font-size: var(--t-sm); cursor: pointer; }
 
 /* ---------- tables: hairline rows, no boxes ---------- */
 .tablewrap { overflow-x: auto; }
