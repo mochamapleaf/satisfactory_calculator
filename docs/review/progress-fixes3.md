@@ -26,3 +26,9 @@
   hint explains the one-time vs per-minute units (deriving costs needs a payback time the player must choose).
   Test beacon_power_and_mode_order (L3 integer plan power = base x load + beacons x n; L4 cap; L5 DSP order).
   UI hint on burner fuel in Game data.
+- Builds: cargo test 56 passed / 4 ignored (78 s); wasm-pack, tsc -b, vite build pass.
+- Regression vs b6c29d5 (scratch harness, 20 plans): SF + DSP identical; Factorio diffs only fuel/heat/beacon power.
+- Browser: headless Chrome, scratch profile (user's localStorage untouched) against rebuilt dist on :4173: A scrap
+  4000 / 26.67 recyclers; B 2q1 leftover research ignored (300 plates); C malformed link renders; D heat exchanger
+  600 MJ heat + 0.25 reactor; E hint "Metallurgic science pack (Vulcanus)"; F boiler 45 coal; G switch spa->2q1
+  clears research. Resolution appended to fable-review-3.md. DONE.
