@@ -88,3 +88,24 @@ optimum and a user-defined cost function.
   Shown in the plan table, inputs/outputs, raw/outputs, flow-graph nodes, item values and sidebar.
 - 笑笑meow: DSP 最高难度攻略 (20) + Factorio Space Age 全成就 (54) audio fetched via the signed-in
   page; transcription queued on the shared GPU (`docs/research/_过程文件/xiaoxiao/batch.py`, resumable).
+
+## 2026-11-21 — DSP "算力/UPS" (minimise compute) objective
+- New preset `Objective::Compute`, shown only for DSP. Objective per the dsp-ups report §4.1:
+  Σ n_r·(c_bld + 0.12·sorter ports + 0.13 belts/stations + 0.02 coater if sprayed) + c_gen·MW
+  (c_gen by generator: 人造恒星 0.0056 … 风机 0.5 /MW); raw resources keep the 0.001 tie-break.
+  Logistics are per building, not per item flow (report §4.1). Coefficients are read at start-up
+  from `docs/research/dsp-ups/model.json` (`include_str!`, `src/planner/compute.rs`), so source
+  and confidence notes stay with the numbers. Tier and proliferator mode per recipe are solver
+  columns as before (`rules.rs::tiered_modes`); aux terms are added to the building weight in
+  `lp.rs::build_scaled`, not to the heuristic `scale`.
+- Settings: power source (generator), mixed input belts (one input sorter). Custom weights gain
+  sorter / per-building / coater rows for DSP.
+- Every DSP plan (any preset) reports its compute cost: units/tick, breakdown, ≈ µs CPU/tick
+  (0.5 µs/unit, range 0.2–1.0) and a 算力 % column in the Plan table, so presets can be compared.
+- 60 universe matrix/min, Mk.III both modes, 4 s: Compute and Buildings give the same plan
+  (110 buildings, 287.7 MW, 189 units ≈ 95 µs, 38–189); with wind power Compute → 127 buildings,
+  198.7 MW, 311 units vs Buildings 332 (fewer sprayed recipes, as the report predicts);
+  without proliferator 211 buildings, 344 units. Both MILPs end at the time limit (gap ~10–14 %).
+- Tests: model coefficients, hand-computed 120 ingot/min (1 + 0.24 + 0.13 + 0.0056·1.44),
+  top tier + mixed belts, per-recipe modes (universe matrix → extra products, iron ingot →
+  speedup, wind → fewer sprayed); `compute_universe_matrix_report` (ignored) prints the table.

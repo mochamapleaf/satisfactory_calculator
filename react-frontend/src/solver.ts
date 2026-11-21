@@ -1,5 +1,5 @@
 // Typed wrapper around the Rust/WASM planner (src/wasm_api.rs).
-import init, { game_data_json, solve_json } from './wasm-pkg/satisfactory_calculator.js'
+import init, { compute_weights_json, game_data_json, solve_json } from './wasm-pkg/satisfactory_calculator.js'
 
 export type Game = 'satisfactory' | 'dsp' | 'factorio'
 export const GAMES: { id: Game; name: string }[] = [
@@ -24,17 +24,30 @@ export interface GameData {
   resources: Resource[]; belts: number[]; pipes: number[]
 }
 
-export type Objective = 'resources' | 'buildings' | 'power' | 'custom'
+export type Objective = 'resources' | 'buildings' | 'power' | 'compute' | 'custom'
 export interface CostWeights {
   resources: number; buildings: number; power: number; shards: number; surplus: number
   resource_weights: Record<string, number>; building_weights: Record<string, number>
+  /** DSP compute terms: per sorter port, per building (belts + stations), per sprayed building. */
+  sorter: number; per_machine: number; coater: number
 }
-/** Same numbers as Objective::preset in src/planner/mod.rs. */
-export function preset(o: Objective): CostWeights {
+/** Same numbers as Objective::preset in src/planner/mod.rs; Compute comes from the WASM
+ *  module (coefficients of docs/research/dsp-ups/model.json), so call it after loadSolver. */
+export function preset(o: Objective, generator: Generator = 'artificial_star'): CostWeights {
+  if (o === 'compute') return JSON.parse(compute_weights_json(generator)) as CostWeights
   const [resources, buildings, power, shards] =
     o === 'buildings' ? [0.001, 1, 0, 0.01] : o === 'power' ? [0.001, 1, 1, 0.01] : [1, 0.01, 0, 0.01]
-  return { resources, buildings, power, shards, surplus: 0, resource_weights: {}, building_weights: {} }
+  return { resources, buildings, power, shards, surplus: 0, resource_weights: {}, building_weights: {}, sorter: 0, per_machine: 0, coater: 0 }
 }
+/** Generators for the DSP Compute objective (keys of model.json generation.cost_per_mw). */
+export type Generator = 'artificial_star' | 'mini_fusion' | 'thermal' | 'solar' | 'wind'
+export const GENERATORS: { id: Generator; name: string }[] = [
+  { id: 'artificial_star', name: '人造恒星' },
+  { id: 'mini_fusion', name: '微型聚变电站' },
+  { id: 'thermal', name: '火力发电厂' },
+  { id: 'solar', name: '太阳能板' },
+  { id: 'wind', name: '风力涡轮机' },
+]
 /** Default scarcity weight of a raw resource (Iron Ore = 1), as in lp.rs. */
 export const scarcity = (limit: number | null) => (limit && limit > 0 ? 92100 / limit : 0.001)
 export interface ItemRate { item: string; rate: number }
@@ -59,6 +72,8 @@ export interface Settings {
   shard_budget: number | null
   cost: CostWeights
   time_limit_ms: number
+  generator: Generator
+  mixed_belts: boolean
 }
 
 export interface RateLine { item: string; name: string; rate: number }
@@ -66,6 +81,13 @@ export interface PlanRecipe {
   id: string; mode: string; mode_label: string; name: string; alt: boolean; building: string; machines: number; machines_ceil: number
   throughput: number; shards: number; groups: MachineGroup[]
   power: number; inputs: RateLine[]; outputs: RateLine[]; somersloops: number
+  /** DSP: compute units per tick of this recipe (incl. its power). */
+  compute: number
+}
+/** DSP compute (UPS) cost of a plan; 1 unit = one machine updated once per logic tick. */
+export interface ComputeSummary {
+  total: number; machines: number; sorters: number; logistics: number; coaters: number; generation: number
+  generator: Generator; cost_per_mw: number; us_per_tick: number; us_low: number; us_high: number
 }
 export interface MachineGroup { count: number; clock_percent: number; shards: number }
 export interface ItemValue { item: string; name: string; value: number }
@@ -76,6 +98,7 @@ export interface Plan {
   surplus: RateLine[]; production_power: number; extraction_power: number; buildings: number
   shards: number; somersloops: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
   item_values: ItemValue[]; flows: Flow[]; warnings: string[]
+  compute?: ComputeSummary | null
 }
 
 const DEFAULT_TARGET: Record<Game, ItemRate> = {
@@ -105,6 +128,8 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   shard_budget: null,
   cost: preset('resources'),
   time_limit_ms: 4000,
+  generator: 'artificial_star',
+  mixed_belts: false,
 })
 
 let wasm: Promise<unknown> | null = null

@@ -14,6 +14,7 @@ function upgrade(raw: Record<string, unknown>): Settings {
     delete s.clock_percent
   }
   s.cost = { ...defaultSettings(game).cost, ...(s.cost ?? {}) }
+  if (s.objective === 'compute' && game !== 'dsp') s.objective = 'buildings' // DSP-only preset
   return s
 }
 

@@ -1,6 +1,9 @@
 import { Icon, RemoveMark } from './Icon'
 import { carrier, dn, fmt, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
 
+/** CPU time per tick: µs, or ms from 1000 µs. */
+const fmtUs = (us: number) => (us >= 1000 ? `${fmt(us / 1000, 1)} ms` : `${fmt(us, us < 10 ? 1 : 0)} µs`)
+
 const groupText = (g: MachineGroup) =>
   `${fmt(g.count)} × ${fmt(g.clock_percent, 2)}%${g.shards ? ` (${g.shards} shard${g.shards > 1 ? 's' : ''})` : ''}`
 
@@ -58,6 +61,17 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
         <div className="card"><div className="big">{fmt(plan.production_power + plan.extraction_power, 1)}<span className="unit">MW</span></div><div className="muted">total power</div></div>
         {plan.shards > 0 && <div className="card"><div className="big">{fmt(plan.shards, 0)}</div><div className="muted">power shards</div></div>}
         {totalSloops > 0 && <div className="card"><div className="big">{fmt(totalSloops, 0)}</div><div className="muted">Somersloops</div></div>}
+        {plan.compute && (
+          <div className="card" title={`machines ${fmt(plan.compute.machines, 1)} · sorters ${fmt(plan.compute.sorters, 1)} · belts + stations ${fmt(plan.compute.logistics, 1)} · coaters ${fmt(plan.compute.coaters, 1)} · generation ${fmt(plan.compute.generation, 1)} (${fmt(plan.compute.cost_per_mw, 4)}/MW)`}>
+            <div className="big">{fmt(plan.compute.total, 0)}</div><div className="muted">compute units / tick</div>
+          </div>
+        )}
+        {plan.compute && (
+          <div className="card" title="CPU time summed over threads; wall clock ≈ this ÷ effective threads. 60 UPS leaves 16 667 µs per tick. Order-of-magnitude estimate (report §2.1).">
+            <div className="big">≈ {fmtUs(plan.compute.us_per_tick)}</div>
+            <div className="muted">CPU / tick <span className="nocase">({fmtUs(plan.compute.us_low)}–{fmtUs(plan.compute.us_high)})</span></div>
+          </div>
+        )}
         <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}`}>
           <div className="big">{!s.integer ? 'LP' : plan.proven_optimal ? 'optimal' : (plan.gap ?? 1) < 0.0005 ? '≈ optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
           <div className="muted">{s.integer ? 'whole buildings' : 'fractional buildings'} · {fmt(plan.solve_ms, 0)} ms</div>
@@ -74,7 +88,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       <div className="tablewrap">
         <table>
           <thead>
-            <tr><th>Recipe</th><th>Building</th><th className="num">Buildings</th><th>Clock</th><th>{data.game === 'satisfactory' ? 'Somersloops' : ''}</th><th className="num">MW</th><th>In (/min)</th><th>Out (/min)</th><th></th></tr>
+            <tr><th>Recipe</th><th>Building</th><th className="num">Buildings</th><th>Clock</th><th>{data.game === 'satisfactory' ? 'Somersloops' : ''}</th><th className="num">MW</th>{plan.compute && <th className="num" title="Share of the plan's compute (units per tick incl. power)">算力</th>}<th>In (/min)</th><th>Out (/min)</th><th></th></tr>
           </thead>
           <tbody>
             {plan.recipes.map(r => (
@@ -94,6 +108,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                     : <span className="muted">—</span>}
                 </td>
                 <td className="num">{fmt(r.power, 1)}</td>
+                {plan.compute && <td className="num" title={`${fmt(r.compute, 2)} units / tick`}>{fmt((100 * r.compute) / (plan.compute.total || 1), 1)}%</td>}
                 <td className="small">{r.inputs.map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
                 <td className="small">{r.outputs.map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
                 <td><button className="x" title="Exclude this recipe and re-solve" aria-label={`Exclude ${r.name}`} onClick={() => exclude(r.id)}><RemoveMark /></button></td>

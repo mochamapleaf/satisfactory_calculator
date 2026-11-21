@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, RemoveMark } from './Icon'
 import ItemPicker from './ItemPicker'
-import { defaultSettings, dn, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
+import { defaultSettings, dn, fmt, GENERATORS, preset, scarcity, type CostWeights, type Generator, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
   data: GameData
@@ -79,6 +79,11 @@ function CostEditor({ data, cost, onChange }: { data: GameData; cost: CostWeight
     ['power', 'Power', 'per MW'],
     ['shards', 'Power shards', 'per shard'],
     ['surplus', 'Byproducts', 'per unit/min dumped'],
+    ...(data.game === 'dsp' ? [
+      ['sorter', 'Sorters', 'per port of each building'],
+      ['per_machine', 'Belts + stations', 'per building'],
+      ['coater', 'Spray coaters', 'per sprayed building'],
+    ] as [keyof CostWeights, string, string][] : []),
   ]
   const perMap = (key: 'resource_weights' | 'building_weights', id: string, v: number | undefined) => {
     const m = { ...cost[key] }
@@ -136,6 +141,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
   }
   const itemName = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)
   const sf = data.game === 'satisfactory'
+  const dsp = data.game === 'dsp'
   // buildings that compete for some recipe (machine tiers)
   const tiers = data.buildings.filter(b => data.recipes.some(r => (r.producers?.length ?? 0) > 1 && r.producers!.includes(b.id)))
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter(x => x !== id) : [...list, id])
@@ -151,12 +157,13 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
       <section>
         <h2>Optimise for</h2>
         <div className="seg">
-          {(['resources', 'buildings', 'power', 'custom'] as Objective[]).map(o => (
-            <button key={o} className={s.objective === o ? 'on' : ''}
+          {(['resources', 'buildings', 'power', ...(dsp ? ['compute'] : []), 'custom'] as Objective[]).map(o => (
+            <button key={o} className={s.objective === o ? 'on' : ''} title={o === 'compute' ? 'Minimise compute (UPS)' : undefined}
               onClick={() => set(o === 'custom' && s.objective !== 'custom'
-                ? { objective: o, cost: { ...preset(s.objective), resource_weights: s.cost.resource_weights, building_weights: s.cost.building_weights } }
+                ? { objective: o, cost: s.objective === 'compute' ? preset('compute', s.generator)
+                    : { ...preset(s.objective), resource_weights: s.cost.resource_weights, building_weights: s.cost.building_weights } }
                 : { objective: o })}>
-              {o === 'resources' ? 'Raw' : o === 'buildings' ? 'Buildings' : o === 'power' ? 'Power' : 'Custom'}
+              {o === 'resources' ? 'Raw' : o === 'buildings' ? 'Buildings' : o === 'power' ? 'Power' : o === 'compute' ? '算力/UPS' : 'Custom'}
             </button>
           ))}
         </div>
@@ -164,8 +171,27 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           {s.objective === 'resources' && (sf ? 'Raw resources weighted by scarcity (Iron Ore = 1, uranium ≈ 44); buildings break ties.' : 'Raw resources (ores 1, water 0.01, oil 0.2, drops 10); buildings break ties.')}
           {s.objective === 'buildings' && 'Fewest whole buildings; raw resources break ties.'}
           {s.objective === 'power' && 'MW (production + extraction) + 1 per building, so it underclocks where that pays.'}
+          {s.objective === 'compute' && 'CPU per logic tick: every building costs the same whether working or idle, plus its sorters, belts, stations, coaters and the generators for its power. The solver picks tier and proliferator mode per recipe.'}
           {s.objective === 'custom' && 'Minimise the weighted sum below. Edit any weight; the plan re-solves.'}
         </p>
+        {s.objective === 'compute' && <>
+          <div className="row small">
+            <span className="grow">Power from</span>
+            <select value={s.generator} onChange={e => set({ generator: e.target.value as Generator })} aria-label="Generator">
+              {GENERATORS.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
+          <label className="row small">
+            <input type="checkbox" checked={s.mixed_belts} onChange={e => set({ mixed_belts: e.target.checked })} />
+            <span>Mixed input belts (one input sorter per building)</span>
+          </label>
+          {!s.effects.some(e => e.startsWith('proliferator')) && (
+            <p className="hint">No proliferator mode is enabled, so every recipe runs unsprayed.{' '}
+              <a href="#" onClick={e => { e.preventDefault(); set({ effects: [...s.effects, 'proliferator-3-speed', 'proliferator-3-products'] }) }}>Enable Mk.III (both modes)</a>
+            </p>
+          )}
+          <p className="hint">Coefficients: dsp-ups research model (machine = 1, sorter 0.12, belts + station 0.13 per building; estimates, low confidence).</p>
+        </>}
         {s.objective === 'custom' && <CostEditor data={data} cost={s.cost} onChange={cost => set({ cost })} />}
       </section>
 
