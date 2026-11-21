@@ -265,6 +265,12 @@ pub struct PlanRecipe {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildingCount {
+    pub building: String,
+    pub count: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MachineGroup {
     pub count: f64,
     pub clock_percent: f64,
@@ -319,6 +325,9 @@ pub struct Plan {
     /// Estimate: Miner Mk.3 / extractors at 100 % on normal nodes.
     pub extraction_power: f64,
     pub buildings: f64,
+    /// Buildings to place per building name (sums to `buildings`).
+    #[serde(default)]
+    pub building_counts: Vec<BuildingCount>,
     pub shards: f64,
     pub somersloops: f64,
     /// Integer solve: proven optimal, or the best plan found before the time limit.

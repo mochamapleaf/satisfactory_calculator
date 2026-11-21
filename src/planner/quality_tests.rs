@@ -159,6 +159,8 @@ fn gear_with_2_1_values() {
     let mut s = lp_settings("2q1", "iron-gear-wheel@4", 30.0);
     s.disabled_buildings = vec!["assembling-machine-1".into(), "assembling-machine-2".into()];
     let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert_balanced(&p);
     let sets = raw(&p, "iron-plate") / 2.0 / 30.0;
     assert!((sets - 78.40).abs() < 0.005, "{sets}");
 }
@@ -359,6 +361,17 @@ fn normal_plans_unchanged() {
     let base = GameData::for_game("factorio");
     let p = plan(&base, &lp_settings("2.0", "iron-gear-wheel@4", 60.0));
     assert!(!p.quality && p.status == Status::Optimal);
+    assert!(p.warnings.iter().any(|w| w.contains("no quality")), "{:?}", p.warnings);
+    // L3: compare numbers, not only flags: a normal target on quality data plans like base data
+    let mut s = lp_settings("2x1", "iron-gear-wheel", 60.0);
+    s.disabled_buildings = vec!["foundry".into()];
+    let q_data = plan(&d, &s);
+    let mut s0 = lp_settings("2.0", "iron-gear-wheel", 60.0);
+    s0.disabled_buildings = s.disabled_buildings.clone();
+    let b = plan(&base, &s0);
+    assert!(q_data.warnings.is_empty() && b.warnings.is_empty(), "{:?} {:?}", q_data.warnings, b.warnings);
+    assert!(close(raw(&q_data, "iron-ore"), raw(&b, "iron-ore"), 1e-7), "{} vs {}", raw(&q_data, "iron-ore"), raw(&b, "iron-ore"));
+    assert!(close(raw(&b, "iron-ore"), 120.0, 1e-7));
 }
 
 /// Scale (report §5 step 0): model size and native solve time; `cargo test --release -- --ignored --nocapture scale`.
@@ -480,4 +493,96 @@ fn model_sizes() {
         let p = plan(&d, &s);
         println!("{game} {ds} {target} {scope}: {} columns, {} rows {:?}", p.columns, p.rows, p.warnings.first());
     }
+}
+
+/// Review 2 M2: quality plans count buildings per (base recipe, machine, loadout), since the
+/// tiers of a recipe share machines, not one whole building per tier column.
+#[test]
+fn quality_building_count_shares_tiers() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = lp_settings("2x1", "iron-gear-wheel@4", 10.0);
+    s.cost = Objective::Resources.preset();
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    let per_column: f64 = p.recipes.iter().map(|r| r.machines_ceil).sum();
+    let mut groups: HashMap<(String, String), f64> = HashMap::new();
+    for r in &p.recipes {
+        *groups.entry((split(&r.id).0.to_string(), r.mode.clone())).or_default() += r.machines;
+    }
+    let shared: f64 = groups.values().map(|n| (n - 1e-6).ceil()).sum();
+    assert_eq!(p.buildings, shared);
+    assert!(p.buildings < per_column, "{} vs {per_column}", p.buildings);
+    assert_eq!(p.building_counts.iter().map(|b| b.count).sum::<f64>(), p.buildings);
+    let fractional: f64 = p.recipes.iter().map(|r| r.machines).sum();
+    assert!(p.buildings >= fractional - 1e-9);
+}
+
+/// Review 2 L2: "id@0" excludes only the normal tier of a recipe, "id@i" one tier, and the
+/// bare id every tier.
+#[test]
+fn exclude_single_tiers() {
+    let mut d = GameData::for_set("factorio", "spa");
+    keep(&mut d, &["iron-gear-wheel", "iron-gear-wheel-recycling"]);
+    add_resource(&mut d, "iron-plate", 1.0);
+    let ids = |disabled: &[&str]| {
+        let mut s = lp_settings("spa", "iron-gear-wheel@4", 30.0);
+        s.disabled_recipes = disabled.iter().map(|x| x.to_string()).collect();
+        let allowed = lp::allowed_recipes(&d, &s);
+        let mut v: Vec<String> = quality::expand(&d, &s, &allowed, &["iron-gear-wheel@4".into()]).into_iter().map(|(r, _)| r.id).collect();
+        v.sort();
+        v
+    };
+    assert_eq!(ids(&[]).len(), 10);
+    let no_normal_recycling = ids(&["iron-gear-wheel-recycling@0"]);
+    assert_eq!(no_normal_recycling.len(), 9);
+    assert!(!no_normal_recycling.contains(&"iron-gear-wheel-recycling".to_string()));
+    assert!(no_normal_recycling.contains(&"iron-gear-wheel".to_string()));
+    assert_eq!(ids(&["iron-gear-wheel@2"]).len(), 9);
+    assert!(ids(&["iron-gear-wheel-recycling"]).iter().all(|r| !r.contains("recycling")));
+    // the plan without normal-tier recycling still solves (normal gears leave as surplus)
+    let mut s = lp_settings("spa", "iron-gear-wheel@4", 30.0);
+    s.disabled_recipes = vec!["iron-gear-wheel-recycling@0".into()];
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert!(p.recipes.iter().all(|r| r.id != "iron-gear-wheel-recycling"));
+}
+
+/// Review 2 L3: the quality path's own catalyst formula, `quality_allowed = false`, and
+/// module quality in normal module modes.
+#[test]
+fn quality_paths_catalyst_flags_module_tier() {
+    // Kovarex in a quality plan: productivity multiplies only the non-catalyst U-235
+    let d = GameData::for_set("factorio", "spa");
+    let k = d.recipe("kovarex-enrichment-process").unwrap();
+    let s = lp_settings("spa", "uranium-235@4", 1.0);
+    let ex = quality::expand(&d, &s, &[k], &["uranium-235@4".to_string()]);
+    let (r0, modes) = ex.iter().find(|(r, _)| r.id == "kovarex-enrichment-process").unwrap();
+    let a = r0.outputs.iter().find(|o| o.0 == "uranium-235").unwrap().1;
+    let c = k.catalyst_of("uranium-235");
+    assert!(c > 0.0 && a > c);
+    let m = modes.iter().find(|m| m.key.ends_with("q0p2")).expect("2P loadout");
+    assert!(m.out_mult > 1.0);
+    let total: f64 = m.outputs.as_ref().unwrap().iter().filter(|o| split(&o.0).0 == "uranium-235").map(|o| o.1).sum();
+    assert!((total - (c + (a - c) * m.out_mult)).abs() < 1e-9, "{total}");
+
+    // quality_allowed = false: no quality-module loadouts
+    let d = GameData::for_set("factorio", "2x1");
+    let r = d.recipe("metallic-asteroid-reprocessing").unwrap();
+    assert!(!r.quality_allowed);
+    let s = lp_settings("2x1", "carbonic-asteroid-chunk@4", 1.0);
+    let ex = quality::expand(&d, &s, &[r], &["carbonic-asteroid-chunk@4".to_string()]);
+    assert!(!ex.is_empty());
+    for (_, modes) in &ex {
+        assert!(modes.iter().all(|m| m.key.contains("|q0")), "{:?}", modes.iter().map(|m| &m.key).collect::<Vec<_>>());
+    }
+
+    // normal (non-quality) module modes at legendary module quality: values, label, held tier
+    let mut s = lp_settings("2x1", "iron-gear-wheel", 60.0);
+    s.effects = vec!["productivity-module-3".into()];
+    let g = d.recipe("iron-gear-wheel").unwrap();
+    let m = rules::modes(&d, g, &s).into_iter().find(|m| m.key == "assembling-machine-3|productivity-module-3").unwrap();
+    let leg = d.effect("productivity-module-3").unwrap().tier(4).productivity;
+    assert!((m.out_mult - (1.0 + 4.0 * leg)).abs() < 1e-9, "{}", m.out_mult);
+    assert!(m.label.contains("★legendary"), "{}", m.label);
+    assert_eq!(m.held[0].0, "productivity-module-3@4");
 }

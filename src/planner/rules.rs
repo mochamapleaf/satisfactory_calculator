@@ -135,9 +135,16 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                 }
             } else {
                 let n = b.modules as f64;
+                // module quality (data sets with quality): shown on the label, held at that tier
+                let mq = if data.qualities.is_empty() { 0 } else { s.module_quality.min(4) };
+                let qname = if mq > 0 {
+                    format!(" ★{}", data.qualities.get(mq as usize).map(|q| q.to_lowercase()).unwrap_or_default())
+                } else {
+                    String::new()
+                };
                 Mode {
                     key: format!("{}|{}", b.id, e.id),
-                    label: format!("{label} ×{}", b.modules),
+                    label: format!("{label}{qname} ×{}", b.modules),
                     building: b.id.clone(),
                     speed: b.speed * (1.0 + n * v.speed).max(0.2),
                     out_mult: 1.0 + (base_p + n * v.productivity).min(MAX_PRODUCTIVITY),
@@ -145,7 +152,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     power_exp: 1.0,
                     overclock: false,
                     extra_inputs: vec![],
-                    held: vec![(e.item.clone(), n)],
+                    held: vec![(super::quality::qid(&e.item, mq), n)],
                     somersloops: 0,
                     sprayed: false,
                     outputs: None,

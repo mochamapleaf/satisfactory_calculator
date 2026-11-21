@@ -25,6 +25,9 @@ pub const GENERATORS: [&str; 5] = ["artificial_star", "mini_fusion", "thermal", 
 pub struct ComputeModel {
     /// Per building id, units per building per tick.
     pub buildings: HashMap<String, f64>,
+    /// Per building id, share of the port sorters each machine pays: 0 for fractionators (on
+    /// the belt), 1/stack height for stacked labs; absent = 1.
+    pub sorter_share: HashMap<String, f64>,
     /// One sorter (normal path).
     pub sorter: f64,
     /// Items/min one sorter port carries before a second sorter is needed.
@@ -63,6 +66,12 @@ pub fn model() -> &'static ComputeModel {
             .iter()
             .filter_map(|(k, v)| v["cost"].as_f64().map(|c| (k.clone(), c)))
             .collect();
+        let sorter_share = j["buildings"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter_map(|(k, v)| v["sorters"].as_f64().or(v["sorter_share"].as_f64()).map(|c| (k.clone(), c)))
+            .collect();
         let pm = &j["per_machine_terms"];
         let cost_per_mw: HashMap<String, f64> = j["generation"]["cost_per_mw"]
             .as_object()
@@ -73,6 +82,7 @@ pub fn model() -> &'static ComputeModel {
         let t = &j["unit_time_estimate_us"];
         ComputeModel {
             buildings,
+            sorter_share,
             sorter: num(&j, &["entities_not_in_plan", "sorter", "cost"]),
             sorter_capacity: num(pm, &["sorter_capacity_items_per_s", "value"]) * 60.0,
             per_machine: round9(num(pm, &["belt_per_machine", "value"]) + num(pm, &["station_per_machine", "value"])),
@@ -106,9 +116,14 @@ impl ComputeModel {
     }
 }
 
-/// Sorters per machine: Σ over ports of ceil(port rate / sorter capacity). With mixed
-/// belts all inputs share one port.
+/// Sorters per machine: Σ over ports of ceil(port rate / sorter capacity), times the
+/// building's sorter share (fractionators 0, stacked labs 1/stack). With mixed belts all
+/// inputs share one port.
 pub fn sorters_per_machine(r: &Recipe, f: &Mode, mixed_belts: bool, capacity: f64) -> f64 {
+    let share = model().sorter_share.get(&f.building).copied().unwrap_or(1.0);
+    if share <= 0.0 {
+        return 0.0;
+    }
     let port = |q: f64| (q / capacity - 1e-9).ceil().max(1.0);
     let ins: Vec<f64> = r.inputs.iter().map(|(_, q)| q * f.speed).collect();
     let outs = r.outputs.iter().map(|(_, q)| port(q * f.speed * f.out_mult)).sum::<f64>();
@@ -117,7 +132,7 @@ pub fn sorters_per_machine(r: &Recipe, f: &Mode, mixed_belts: bool, capacity: f6
     } else {
         ins.iter().map(|q| port(*q)).sum()
     };
-    ins + outs
+    share * (ins + outs)
 }
 
 /// Per-machine cost of one mode under weights `w`, without power: c_bld + aux.

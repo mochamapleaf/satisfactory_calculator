@@ -267,7 +267,13 @@ fn objectives_on_complex_chains() {
                 let mut s = settings(&[(target, 10.0)]);
                 s.objective = obj;
                 s.allow_all_alternates = alts;
-                let p = plan(&d, &s);
+                let mut p = plan(&d, &s);
+                // debug builds under a parallel test run are slow: a timeout without any
+                // whole-building plan is a timing artefact here, so retry with more time
+                if p.status == Status::Infeasible && p.warnings.iter().any(|w| w.starts_with("Time limit")) {
+                    s.time_limit_ms = 20_000;
+                    p = plan(&d, &s);
+                }
                 assert_eq!(p.status, Status::Optimal, "{target} {obj:?} alts={alts} {:?}", p.warnings);
                 assert_balanced(&p);
                 assert!(!p.flows.is_empty());
@@ -437,6 +443,38 @@ fn compute_prefers_top_tier_and_counts_sorters() {
     s.mixed_belts = true;
     let mix = plan(&d, &s).compute.unwrap();
     assert!(mix.sorters < sep.sorters - 1e-6 && close(mix.machines, sep.machines));
+}
+
+/// Review 2 M4: per-entity terms count whole buildings also in a fractional (LP) plan.
+#[test]
+fn compute_counts_whole_entities_in_lp() {
+    // 60 ingots/min = 0.5 Plane Smelter: one smelter, two sorters, one belt+station share
+    let (d, mut s) = dsp_compute(&[("iron-ingot", 60.0)]);
+    s.integer = false;
+    let p = plan(&d, &s);
+    let r = &p.recipes[0];
+    assert!(close(r.machines, 0.5) && r.machines_ceil == 1.0);
+    let c = p.compute.as_ref().unwrap();
+    assert!(close(c.machines, 1.0) && close(c.sorters, 0.24) && close(c.logistics, 0.13), "{c:?}");
+    assert!(close(c.total, 1.0 + 0.24 + 0.13 + 0.0056 * r.power), "{c:?}");
+    assert_eq!(p.buildings, 1.0);
+}
+
+/// Review 2 L1: fractionators have no sorters; stacked labs pay a share of one set.
+#[test]
+fn compute_sorter_share() {
+    let d = GameData::for_game("dsp");
+    let s = PlanSettings { game: "dsp".into(), ..Default::default() };
+    let m = compute::model();
+    let k = |rid: &str| {
+        let r = d.recipe(rid).unwrap();
+        let f = rules::modes(&d, r, &s).into_iter().next().unwrap();
+        compute::sorters_per_machine(r, &f, false, m.sorter_capacity)
+    };
+    assert_eq!(k("deuterium-fractionation"), 0.0);
+    // universe matrix: 6 inputs + 1 output, one set per stack of 10
+    assert!(close(k("universe-matrix"), 0.7), "{}", k("universe-matrix"));
+    assert_eq!(k("iron-ingot"), 2.0);
 }
 
 fn sprayed_modes(p: &Plan) -> HashMap<String, String> {

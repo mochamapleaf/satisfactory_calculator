@@ -154,7 +154,9 @@ pub fn expand(data: &GameData, s: &PlanSettings, allowed: &[&Recipe], target_ids
         let max_in = if r.inputs.iter().any(|(i, _)| solid(i)) { LEGENDARY } else { 0 };
         for i in 0..=max_in {
             let id = qid(&r.id, i);
-            if i > 0 && s.disabled_recipes.contains(&id) {
+            // a tier is excluded by "id@i"; "id@0" excludes only normal-tier crafting (the bare
+            // id excludes the recipe at every tier, in `allowed_recipes`)
+            if s.disabled_recipes.iter().any(|d| *d == format!("{}@{i}", r.id)) {
                 continue;
             }
             let tier = |it: &str| if solid(it) { qid(it, i) } else { it.to_string() };
@@ -234,6 +236,10 @@ fn loadout_modes(
             let power = b.power * (1.0 + kq * qv.consumption + km * pv.consumption).max(0.2);
             let row = qrow(qchance, i);
             let mut outs: Vec<(String, f64)> = Vec::new();
+            // Open question (report §1.1, §7): whether the catalyst part rolls quality in game.
+            // Here the whole amount rolls; if the game keeps the catalyst at input quality,
+            // yields of catalyst recipes (pentapod egg, Kovarex) at higher tiers are overstated.
+            // The Quality section's hint says so.
             for (o, a) in &r.outputs {
                 let c = r.catalyst_of(o).min(*a);
                 let amount = c + (a - c) * (1.0 + p);

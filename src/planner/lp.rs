@@ -27,7 +27,7 @@ use super::quality;
 use super::rules::{self, Mode};
 
 use super::{
-    ComputeSummary, CostWeights, ItemValue, MachineGroup, Plan, PlanRecipe, PlanSettings,
+    BuildingCount, ComputeSummary, CostWeights, ItemValue, MachineGroup, Plan, PlanRecipe, PlanSettings,
     RateLine, Status,
 };
 use microlp::{
@@ -489,11 +489,14 @@ fn finish(
         if let Some(w) = &cw {
             let k = compute::sorters_per_machine(r, f, s.mixed_belts, compute::model().sorter_capacity);
             let bw = w.building_weights.get(&f.building).copied().unwrap_or(1.0);
+            // every placed entity costs, working or idle (spec §4.2): whole buildings also
+            // when the plan is fractional; power stays as solved
+            let ne = if integer { n } else { (n - 1e-6).ceil() };
             let parts = [
-                n * bw,
-                n * w.sorter * k,
-                n * w.per_machine,
-                if f.sprayed { n * w.coater } else { 0.0 },
+                ne * bw,
+                ne * w.sorter * k,
+                ne * w.per_machine,
+                if f.sprayed { ne * w.coater } else { 0.0 },
                 w.power * power,
             ];
             let c = summary.get_or_insert_with(ComputeSummary::default);
@@ -531,7 +534,21 @@ fn finish(
         plan.targets.push(RateLine::new(it, &name(it), *q));
     }
     plan.production_power = plan.recipes.iter().map(|r| r.power).sum();
-    plan.buildings = plan.recipes.iter().map(|r| if integer { r.machines } else { r.machines_ceil }).sum();
+    // Buildings to place per type. Fractional quality plans: the tiers of a base recipe run
+    // on shared machines that switch recipes, so round up per (base recipe, machine,
+    // loadout), not per tier column.
+    let mut groups: BTreeMap<(String, String), (String, f64)> = BTreeMap::new();
+    for r in &plan.recipes {
+        let base = if plan.quality { quality::split(&r.id).0 } else { r.id.as_str() };
+        let g = groups.entry((base.to_string(), r.mode.clone())).or_insert((r.building.clone(), 0.0));
+        g.1 += r.machines;
+    }
+    let mut counts: BTreeMap<String, f64> = BTreeMap::new();
+    for (_, (b, n)) in groups {
+        *counts.entry(b).or_insert(0.0) += if integer { n } else { (n - 1e-6).ceil() };
+    }
+    plan.building_counts = counts.into_iter().map(|(building, count)| BuildingCount { building, count }).collect();
+    plan.buildings = plan.building_counts.iter().map(|b| b.count).sum();
     plan.shards = plan.recipes.iter().map(|r| r.shards).sum();
     plan.somersloops = plan.recipes.iter().map(|r| r.machines * r.somersloops as f64).sum();
     plan.flows = super::flows::allocate(plan);
@@ -573,6 +590,11 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
         if let Some(id) = resolve(&t.item) {
             *supplies.entry(id).or_insert(0.0) += t.rate;
         }
+    }
+    if !quality_on && s.targets.iter().chain(&s.supplies).any(|t| quality::split(&t.item).1 > 0) {
+        plan.warnings.push(
+            "This data set has no quality: items asked for at a quality above normal are planned as normal.".into(),
+        );
     }
     if targets.is_empty() {
         plan.status = Status::Empty;

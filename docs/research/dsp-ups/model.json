@@ -88,6 +88,8 @@
     },
     "fractionator": {
       "cost": 1.2,
+      "sorters": 0,
+      "sorters_source": "fractionators sit on the belt: no sorters (review 2, L1)",
       "range": [
         1.0,
         2.0
@@ -97,6 +99,8 @@
     },
     "matrix-lab": {
       "cost": 1.5,
+      "sorter_share": 0.1,
+      "sorter_share_source": "estimate: stacked labs share one set of sorters per stack; typical stack 10 (review 2, L1)",
       "range": [
         1.0,
         3.0
@@ -106,6 +110,8 @@
     },
     "df-self-evolution-lab": {
       "cost": 1.5,
+      "sorter_share": 0.1,
+      "sorter_share_source": "same as matrix-lab",
       "range": [
         1.0,
         3.0
