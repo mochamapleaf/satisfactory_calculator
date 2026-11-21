@@ -277,7 +277,10 @@ td select { min-height: 26px; padding: 1px 4px; }
 }
 .slabel b { font-weight: 600; }
 .slabel .icon { margin-right: 4px; }
+.slabel { height: 100%; }
+.slabeltext { overflow: hidden; text-overflow: ellipsis; }
 .slabel.recipe { font-size: 11px; }
+.slabel .loopnote { color: var(--accent-text); }
 .backlabel { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
 .balance td { vertical-align: top; }
 

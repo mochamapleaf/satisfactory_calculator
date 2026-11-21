@@ -3,19 +3,27 @@ import { Icon } from './Icon'
 import { fmt, type GameData, type Plan } from './solver'
 
 // Sankey of item flow: sources (mined / supplied) → items → recipes → items → … → outputs.
-// Every item is a node whose size is its total rate, so "how much of X, and where does it go"
-// reads directly off the chart. Recipe loops (an item feeding back into its own chain) are
-// found with a DFS; those back edges are drawn as thin dashed return lines under the chart,
-// labelled with their rate. A recipe that uses and makes the same item (DSP X-ray cracking,
-// Kovarex) is shown with its net amount; the part it recycles internally is noted on the recipe.
+// Every item is a node whose size is the flow through it, so "how much of X, and where does it go"
+// reads directly off the chart. Recipe loops (an item feeding back into its own chain) are broken
+// at their smallest-rate edge, which is the recycle; those back edges are drawn as thin dashed return
+// lines under the chart, labelled with their rate. Links that span several columns are routed
+// through invisible dummy nodes so they pass around, not through, the nodes in between.
+// A recipe that uses and makes the same item (DSP X-ray cracking, Kovarex) is shown with its net
+// amount; the part it recycles internally is noted on the recipe (↻).
 
-type Kind = 'item' | 'recipe' | 'src' | 'sink'
-interface N { id: string; kind: Kind; label: string; sub: string; icon?: string; value: number; drawn: number; layer: number; y: number; h: number; order: number }
-interface L { from: string; to: string; item: string; rate: number; back: boolean; sy: number; ty: number; w: number }
+type Kind = 'item' | 'recipe' | 'src' | 'sink' | 'dummy'
+interface N {
+  id: string; kind: Kind; label: string; sub: string; building: string; note: string; icon?: string
+  value: number; drawn: number; layer: number; y: number; h: number; order: number
+}
+/** One drawn piece of a link between adjacent columns (a link spanning k columns has k segments). */
+interface Seg { from: string; to: string; rate: number; link: L; sy: number; ty: number; w: number }
+interface L { from: string; to: string; item: string; rate: number; back: boolean; sy: number; ty: number; w: number; segs: Seg[] }
 
 const NODE_W = 12
 const COL = 190
 const GAP = 14
+const DUMMY_GAP = 6
 const PAD = 30
 
 function hue(s: string) {
@@ -24,40 +32,93 @@ function hue(s: string) {
   return h % 360
 }
 
-function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
+interface RecipeFlow {
+  id: string; name: string; building: string; who: string; machines: number
+  ins: Map<string, number>; outs: Map<string, number>; cyc: { item: string; rate: number }[]; main?: string
+}
+
+/** One entry per recipe id (modes merged), with self-loops netted. Shared by the chart and the table. */
+function recipeFlows(plan: Plan): RecipeFlow[] {
+  const by = new Map<string, RecipeFlow>()
+  for (const r of plan.recipes) {
+    const e = by.get(r.id) ?? {
+      id: r.id, name: r.name, building: r.building, who: `${r.name} (${r.building})`, machines: 0,
+      ins: new Map(), outs: new Map(), cyc: [], main: r.outputs[0]?.item,
+    }
+    e.machines += r.machines
+    for (const l of r.inputs) e.ins.set(l.item, (e.ins.get(l.item) ?? 0) + l.rate)
+    for (const l of r.outputs) e.outs.set(l.item, (e.outs.get(l.item) ?? 0) + l.rate)
+    by.set(r.id, e)
+  }
+  for (const e of by.values()) e.cyc = netSelfLoops(e.ins, e.outs)
+  return [...by.values()]
+}
+
+/** Mark back edges until the forward graph is acyclic: each cycle is broken at its smallest-rate edge. */
+function markBackEdges(nodes: Map<string, N>, links: L[]) {
+  const out = new Map<string, L[]>()
+  const hasIn = new Set<string>()
+  for (const l of links) {
+    if (!out.has(l.from)) out.set(l.from, [])
+    out.get(l.from)!.push(l)
+    hasIn.add(l.to)
+  }
+  for (const es of out.values()) es.sort((a, b) => b.rate - a.rate)
+  const roots = [...nodes.keys()].sort((a, b) => (hasIn.has(a) ? 1 : 0) - (hasIn.has(b) ? 1 : 0))
+  const findCycle = (): L[] | null => {
+    const state = new Map<string, 1 | 2>() // 1 on stack, 2 done
+    for (const r of roots) {
+      if (state.has(r)) continue
+      const stack: [string, number][] = [[r, 0]]
+      const via: L[] = [] // via[k] is the edge that entered stack[k + 1]
+      const pos = new Map<string, number>([[r, 0]])
+      state.set(r, 1)
+      while (stack.length) {
+        const top = stack[stack.length - 1]
+        const es = out.get(top[0]) ?? []
+        if (top[1] >= es.length) { state.set(top[0], 2); pos.delete(top[0]); stack.pop(); via.pop(); continue }
+        const e = es[top[1]++]
+        if (e.back) continue
+        const s = state.get(e.to)
+        if (s === 1) return [...via.slice(pos.get(e.to)!), e]
+        if (!s) { state.set(e.to, 1); pos.set(e.to, stack.length); stack.push([e.to, 0]); via.push(e) }
+      }
+    }
+    return null
+  }
+  for (let guard = 0; guard <= links.length; guard++) {
+    const cyc = findCycle()
+    if (!cyc) return
+    // ties go to the edge that closed the cycle
+    let m = cyc[cyc.length - 1]
+    for (const e of cyc) if (e.rate < m.rate - 1e-9) m = e
+    m.back = true
+  }
+}
+
+function build(plan: Plan, names: Map<string, string>, flows: RecipeFlow[], scaleMax: number) {
   const nodes = new Map<string, N>()
   const links: L[] = []
-  const node = (id: string, kind: Kind, label: string, sub = '', icon?: string) => {
-    if (!nodes.has(id)) nodes.set(id, { id, kind, label, sub, icon, value: 0, drawn: 0, layer: 0, y: 0, h: 0, order: 0 })
+  const node = (id: string, kind: Kind, label: string, sub = '', icon?: string, building = '') => {
+    if (!nodes.has(id)) nodes.set(id, { id, kind, label, sub, building, note: '', icon, value: 0, drawn: 0, layer: 0, y: 0, h: 0, order: 0 })
     return id
   }
   const item = (it: string) => node('i:' + it, 'item', names.get(it) ?? it, '', it)
   const link = (from: string, to: string, it: string, rate: number) => {
-    if (rate > 1e-6) links.push({ from, to, item: it, rate, back: false, sy: 0, ty: 0, w: 0 })
+    if (rate > 1e-6) links.push({ from, to, item: it, rate, back: false, sy: 0, ty: 0, w: 0, segs: [] })
   }
-  // one node per recipe (modes merged), exact rates from the plan
-  const byRecipe = new Map<string, { name: string; building: string; machines: number; ins: Map<string, number>; outs: Map<string, number> }>()
-  for (const r of plan.recipes) {
-    const e = byRecipe.get(r.id) ?? { name: r.name, building: r.building, machines: 0, ins: new Map(), outs: new Map() }
-    e.machines += r.machines
-    for (const l of r.inputs) e.ins.set(l.item, (e.ins.get(l.item) ?? 0) + l.rate)
-    for (const l of r.outputs) e.outs.set(l.item, (e.outs.get(l.item) ?? 0) + l.rate)
-    byRecipe.set(r.id, e)
-  }
-  for (const [id, e] of byRecipe) {
-    const cyc = netSelfLoops(e.ins, e.outs)
-    const note = cyc.map(c => `↻ ${fmt(c.rate)} ${names.get(c.item) ?? c.item}`).join(', ')
-    const rid = node('r:' + id, 'recipe', e.name, `${fmt(e.machines)}× ${e.building}`, [...e.outs.keys()][0])
-    if (note) nodes.get(rid)!.label += ` · ${note}`
+  for (const e of flows) {
+    const rid = node('r:' + e.id, 'recipe', e.name, `${fmt(e.machines)}× ${e.building}`, e.main, e.building)
+    nodes.get(rid)!.note = e.cyc.map(c => `↻ ${fmt(c.rate)} ${names.get(c.item) ?? c.item}`).join(', ')
     for (const [it, q] of e.ins) link(item(it), rid, it, q)
     for (const [it, q] of e.outs) link(rid, item(it), it, q)
   }
-  for (const l of plan.raw) link(node('raw:' + l.item, 'src', 'mined', '', undefined), item(l.item), l.item, l.rate)
-  for (const l of plan.supplied) link(node('sup:' + l.item, 'src', 'supplied', '', undefined), item(l.item), l.item, l.rate)
-  for (const l of plan.targets) link(item(l.item), node('out:' + l.item, 'sink', 'output', '', undefined), l.item, l.rate)
-  for (const l of plan.surplus) link(item(l.item), node('extra:' + l.item, 'sink', 'byproduct', '', undefined), l.item, l.rate)
+  for (const l of plan.raw) link(node('raw:' + l.item, 'src', 'mined'), item(l.item), l.item, l.rate)
+  for (const l of plan.supplied) link(node('sup:' + l.item, 'src', 'supplied'), item(l.item), l.item, l.rate)
+  for (const l of plan.targets) link(item(l.item), node('out:' + l.item, 'sink', 'output'), l.item, l.rate)
+  for (const l of plan.surplus) link(item(l.item), node('extra:' + l.item, 'sink', 'byproduct'), l.item, l.rate)
 
-  // --- loops: DFS from sources, an edge into a node on the stack is a back edge
+  markBackEdges(nodes, links)
   const out = new Map<string, L[]>()
   const inc = new Map<string, L[]>()
   for (const l of links) {
@@ -66,24 +127,8 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
     out.get(l.from)!.push(l)
     inc.get(l.to)!.push(l)
   }
-  const state = new Map<string, 1 | 2>() // 1 on stack, 2 done
-  const roots = [...nodes.values()].sort((a, b) => (inc.has(a.id) ? 1 : 0) - (inc.has(b.id) ? 1 : 0))
-  for (const r of roots) {
-    if (state.has(r.id)) continue
-    const stack: [string, number][] = [[r.id, 0]]
-    state.set(r.id, 1)
-    while (stack.length) {
-      const top = stack[stack.length - 1]
-      const es = out.get(top[0]) ?? []
-      if (top[1] >= es.length) { state.set(top[0], 2); stack.pop(); continue }
-      const e = es[top[1]++]
-      const s = state.get(e.to)
-      if (s === 1) e.back = true
-      else if (!s) { state.set(e.to, 1); stack.push([e.to, 0]) }
-    }
-  }
 
-  // --- layers: longest path over forward edges; sinks go to the last column
+  // --- layers: longest path over forward edges; sources just left of their item, sinks just right
   const indeg = new Map<string, number>()
   for (const n of nodes.values()) indeg.set(n.id, 0)
   for (const l of links) if (!l.back) indeg.set(l.to, indeg.get(l.to)! + 1)
@@ -98,13 +143,14 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
       if (indeg.get(l.to) === 0) queue.push(l.to)
     }
   }
-  const maxLayer = Math.max(0, ...[...nodes.values()].map(n => n.layer))
-  for (const n of nodes.values()) if (n.kind === 'sink') n.layer = maxLayer
-  // sources sit just left of their item
   for (const n of nodes.values()) {
-    if (n.kind !== 'src') continue
-    const t = nodes.get((out.get(n.id) ?? [])[0]?.to ?? '')
-    if (t) n.layer = Math.max(0, t.layer - 1)
+    if (n.kind === 'src') {
+      const t = nodes.get((out.get(n.id) ?? [])[0]?.to ?? '')
+      if (t) n.layer = Math.max(0, t.layer - 1)
+    } else if (n.kind === 'sink') {
+      const f = nodes.get((inc.get(n.id) ?? [])[0]?.from ?? '')
+      if (f) n.layer = f.layer + 1
+    }
   }
   for (const n of nodes.values()) {
     const i = (inc.get(n.id) ?? []).reduce((s, l) => s + l.rate, 0)
@@ -116,21 +162,46 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
     n.drawn = Math.max(fi, fo)
   }
 
-  // --- vertical order: barycentre sweeps
+  // --- dummy nodes: a forward link spanning several columns gets one per column it skips
+  const sOut = new Map<string, Seg[]>()
+  const sIn = new Map<string, Seg[]>()
+  const seg = (l: L, from: string, to: string) => {
+    const s: Seg = { from, to, rate: l.rate, link: l, sy: 0, ty: 0, w: 0 }
+    l.segs.push(s)
+    if (!sOut.has(from)) sOut.set(from, [])
+    if (!sIn.has(to)) sIn.set(to, [])
+    sOut.get(from)!.push(s)
+    sIn.get(to)!.push(s)
+  }
+  let dn = 0
+  for (const l of links) {
+    if (l.back) continue
+    const a = nodes.get(l.from)!, b = nodes.get(l.to)!
+    let prev = a.id
+    for (let layer = a.layer + 1; layer < b.layer; layer++) {
+      const id = 'd:' + dn++
+      nodes.set(id, { id, kind: 'dummy', label: '', sub: '', building: '', note: '', value: l.rate, drawn: l.rate, layer, y: 0, h: 0, order: 0 })
+      seg(l, prev, id)
+      prev = id
+    }
+    seg(l, prev, b.id)
+  }
+  const maxLayer = Math.max(0, ...[...nodes.values()].map(n => n.layer))
+
+  // --- vertical order: barycentre sweeps over segments (dummies included)
   const layers: N[][] = Array.from({ length: maxLayer + 1 }, () => [])
   for (const n of nodes.values()) layers[n.layer].push(n)
   layers.forEach(l => l.forEach((n, i) => (n.order = i)))
   const bary = (n: N, dir: 'in' | 'out') => {
-    const es = (dir === 'in' ? inc.get(n.id) : out.get(n.id)) ?? []
+    const es = (dir === 'in' ? sIn.get(n.id) : sOut.get(n.id)) ?? []
     let s = 0, w = 0
     for (const e of es) {
-      if (e.back) continue
       const o = nodes.get(dir === 'in' ? e.from : e.to)!
       s += o.order * e.rate; w += e.rate
     }
     return w ? s / w : n.order
   }
-  for (let it = 0; it < 6; it++) {
+  for (let it = 0; it < 8; it++) {
     const seq = it % 2 ? [...layers].reverse() : layers
     for (const l of seq) {
       const b = new Map(l.map(n => [n.id, bary(n, it % 2 ? 'out' : 'in')]))
@@ -139,34 +210,40 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
     }
   }
 
-  // --- sizes: one pixel scale for the whole chart
+  // --- sizes: one pixel scale for the whole chart; each real node gets room for its label
+  const labelH = (n: N) => n.kind === 'dummy' ? 0 : n.kind === 'recipe' ? (n.note ? 42 : 30) : n.kind === 'item' ? 22 : 16
   const biggest = Math.max(1, ...layers.map(l => l.reduce((s, n) => s + n.drawn, 0)))
-  const crowd = Math.max(...layers.map(l => l.length))
+  const crowd = Math.max(...layers.map(l => l.filter(n => n.kind !== 'dummy').length))
   const k = Math.min(scaleMax, Math.max(140, 34 * crowd)) / biggest
   let height = 0
   for (const l of layers) {
     let y = PAD
     for (const n of l) {
-      n.h = Math.max(3, n.drawn * k)
-      n.y = y
-      y += n.h + GAP
+      n.h = n.kind === 'dummy' ? Math.max(1, n.drawn * k) : Math.max(3, n.drawn * k)
+      const slot = Math.max(n.h, labelH(n))
+      n.y = y + (slot - n.h) / 2
+      y += slot + (n.kind === 'dummy' ? DUMMY_GAP : GAP)
     }
     height = Math.max(height, y)
   }
-  // link attachment points, sorted so bands do not cross at the node
+  // attachment points, sorted so bands do not cross at the node
   for (const n of nodes.values()) {
     let y = n.y
-    for (const l of [...(out.get(n.id) ?? [])].sort((a, b) => nodes.get(a.to)!.y - nodes.get(b.to)!.y)) {
-      if (l.back) { l.w = 2; l.sy = n.y + n.h - 1; continue }
-      l.w = Math.max(1, l.rate * k); l.sy = y + l.w / 2; y += l.rate * k
+    for (const s of [...(sOut.get(n.id) ?? [])].sort((a, b) => nodes.get(a.to)!.y - nodes.get(b.to)!.y)) {
+      s.w = Math.max(1, s.rate * k); s.sy = y + s.w / 2; y += s.rate * k
     }
     y = n.y
-    for (const l of [...(inc.get(n.id) ?? [])].sort((a, b) => nodes.get(a.from)!.y - nodes.get(b.from)!.y)) {
-      if (l.back) { l.ty = n.y + n.h - 1; continue }
-      l.ty = y + Math.max(1, l.rate * k) / 2; y += l.rate * k
+    for (const s of [...(sIn.get(n.id) ?? [])].sort((a, b) => nodes.get(a.from)!.y - nodes.get(b.from)!.y)) {
+      s.ty = y + Math.max(1, s.rate * k) / 2; y += s.rate * k
     }
   }
-  return { nodes: [...nodes.values()], links, height, width: (maxLayer + 1) * COL + 160, inc, out }
+  for (const l of links) {
+    if (l.back) {
+      l.w = 2; l.sy = nodes.get(l.from)!.y + nodes.get(l.from)!.h - 1; l.ty = nodes.get(l.to)!.y + nodes.get(l.to)!.h - 1
+    } else l.w = l.segs[0].w
+  }
+  const real = [...nodes.values()].filter(n => n.kind !== 'dummy')
+  return { nodes: real, all: nodes, links, height, width: (maxLayer + 1) * COL + 160 }
 }
 
 export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
@@ -177,34 +254,49 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
     for (const l of [...plan.raw, ...plan.supplied, ...plan.targets, ...plan.surplus]) m.set(l.item, l.name)
     return m
   }, [plan])
-  const g = useMemo(() => build(plan, names, 520), [plan, names])
-  const balance = useMemo(() => itemBalance(plan, names), [plan, names])
+  const flows = useMemo(() => recipeFlows(plan), [plan])
+  const g = useMemo(() => build(plan, names, flows, 520), [plan, names, flows])
+  const balance = useMemo(() => {
+    // "loop" in the table means the same thing as in the chart: a dashed return edge carries the item,
+    // or a recipe recycles it internally (↻)
+    const loops = new Map<string, string>()
+    for (const f of flows) for (const c of f.cyc) loops.set(c.item, `recycled inside ${f.name} (↻ on the recipe)`)
+    for (const l of g.links) if (l.back) loops.set(l.item, 'part of it returns upstream to the chain that makes it (dashed line in the chart)')
+    return itemBalance(plan, names, flows, loops)
+  }, [plan, names, flows, g])
   if (plan.status !== 'optimal') return <p className="muted">Nothing to draw.</p>
 
-  const x = (n: N) => 20 + n.layer * COL
+  const nx = (id: string) => 20 + g.all.get(id)!.layer * COL
   const backs = g.links.filter(l => l.back)
+  const noted = g.nodes.some(n => n.note)
   const H = g.height + (backs.length ? 30 + backs.length * 18 : 0)
   const near = (l: L) => !focus || l.from === focus || l.to === focus
   const pathOf = (l: L, i: number) => {
-    const s = g.nodes.find(n => n.id === l.from)!, t = g.nodes.find(n => n.id === l.to)!
-    const x0 = x(s) + NODE_W, x1 = x(t)
     if (!l.back) {
-      const m = (x0 + x1) / 2
-      return `M${x0},${l.sy} C${m},${l.sy} ${m},${l.ty} ${x1},${l.ty}`
+      let d = ''
+      l.segs.forEach((s, j) => {
+        const x0 = nx(s.from) + NODE_W, x1 = nx(s.to), m = (x0 + x1) / 2
+        d += `${j ? ' L' : 'M'}${x0},${s.sy} C${m},${s.sy} ${m},${s.ty} ${x1},${s.ty}`
+        if (j < l.segs.length - 1) d += ` L${x1 + NODE_W},${s.ty}`
+      })
+      return d
     }
+    const x0 = nx(l.from) + NODE_W, x1 = nx(l.to)
     const by = g.height + 20 + i * 18
     return `M${x0},${l.sy} C${x0 + 30},${l.sy} ${x0 + 30},${by} ${x0},${by} L${x1},${by} C${x1 - 30},${by} ${x1 - 30},${l.ty} ${x1},${l.ty}`
   }
   const nodeName = (id: string) => {
-    const n = g.nodes.find(m => m.id === id)
-    return n ? (n.kind === 'recipe' ? n.label : n.kind === 'item' ? n.label : n.label) : id
+    const n = g.all.get(id)
+    if (!n) return id
+    return n.kind === 'recipe' ? `${n.label} (${n.building})` : n.label
   }
   return (
     <div className="results">
       <p className="hint">
-        Band width is items per minute, and each item bar is as tall as its total rate. Hover a bar to follow it.
-        {backs.length > 0 && <> {backs.length === 1 ? 'One loop edge' : `${backs.length} loop edges`} (an item feeding back into its own chain) {backs.length === 1 ? 'is' : 'are'} drawn as thin dashed lines below the chart.</>}
-        {' '}↻ on a recipe marks what it makes and reuses itself; only the net amount is drawn.
+        Band width is items per minute; a bar is as tall as the flow passing through it. Hover a bar to follow it.
+        {backs.length === 1 && <> One loop edge (an item feeding back into its own chain) is drawn as a thin dashed line below the chart.</>}
+        {backs.length > 1 && <> {backs.length} loop edges (an item feeding back into its own chain) are drawn as thin dashed lines below the chart.</>}
+        {noted && <> ↻ on a recipe marks what it makes and reuses itself; only the net amount is drawn.</>}
       </p>
       <div className="sankeywrap">
         <svg width={g.width} height={H} className="sankey" onMouseLeave={() => setFocus(null)}>
@@ -217,9 +309,9 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
             </path>
           ))}
           {backs.map((l, i) => {
-            const s = g.nodes.find(n => n.id === l.from)!, t = g.nodes.find(n => n.id === l.to)!
+            const a = nx(l.from), b = nx(l.to)
             return (
-              <text key={'b' + i} className="backlabel" x={(Math.min(x(s), x(t)) + Math.max(x(s), x(t))) / 2 + NODE_W}
+              <text key={'b' + i} className="backlabel" x={(Math.min(a, b) + Math.max(a, b)) / 2 + NODE_W}
                 y={g.height + 16 + i * 18} textAnchor="middle" opacity={near(l) ? 1 : 0.3}>
                 ↺ {fmt(l.rate)}/min {names.get(l.item) ?? l.item}
               </text>
@@ -227,19 +319,20 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
           })}
           {g.nodes.map(n => (
             <g key={n.id} onMouseEnter={() => setFocus(n.id)} className={`snode snode-${n.kind}`}>
-              <rect x={x(n)} y={n.y} width={NODE_W} height={n.h} rx={2}
+              <rect x={nx(n.id)} y={n.y} width={NODE_W} height={n.h} rx={2}
                 style={{ fill: n.kind === 'item' ? `hsl(${hue(n.icon ?? '')} var(--sk-sat) var(--sk-node-l))` : n.kind === 'recipe' ? 'var(--fg)' : 'var(--muted)' }} />
-              <foreignObject x={x(n) + NODE_W + 4} y={n.y + n.h / 2 - 11} width={COL - NODE_W - 10} height={34}>
+              <foreignObject x={nx(n.id) + NODE_W + 4} y={n.y + n.h / 2 - 22} width={COL - NODE_W - 10} height={44}>
                 <div className={`slabel ${n.kind}`}>
                   {n.kind !== 'src' && n.kind !== 'sink' && <Icon id={n.icon} size={18} />}
-                  <span>
+                  <span className="slabeltext">
                     {n.kind === 'item' ? <><b>{n.label}</b> {fmt(n.value)}/min</>
-                      : n.kind === 'recipe' ? <>{n.sub}<br /><span className="muted">{n.label}</span></>
+                      : n.kind === 'recipe' ? <>{n.sub}<br /><span className="muted">{n.label}</span>
+                        {n.note && <><br /><span className="loopnote">{n.note}</span></>}</>
                       : <span className="muted">{n.label} {fmt(n.value)}</span>}
                   </span>
                 </div>
               </foreignObject>
-              <title>{n.kind === 'recipe' ? `${n.sub} — ${n.label}` : `${n.label}: ${fmt(n.value)}/min`}</title>
+              <title>{n.kind === 'recipe' ? `${n.sub} — ${n.label}${n.note ? `\n${n.note}` : ''}` : `${n.label}: ${fmt(n.value)}/min`}</title>
             </g>
           ))}
         </svg>
@@ -252,10 +345,10 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
           <tbody>
             {balance.map(b => (
               <tr key={b.item}>
-                <td><Icon id={b.item} />{b.name}{b.loop && <span className="tag" title="also consumed upstream of its own producer">loop</span>}</td>
+                <td><Icon id={b.item} />{b.name}{b.loop && <span className="tag" title={b.loop}>loop</span>}</td>
                 <td className="num">{fmt(b.total)}</td>
-                <td className="small">{b.made.map(m => <div key={m.who}>{fmt(m.rate)} · {m.who}</div>)}</td>
-                <td className="small">{b.used.map(m => <div key={m.who}>{fmt(m.rate)} · {m.who} <span className="muted">({fmt((100 * m.rate) / b.total, 0)}%)</span></div>)}</td>
+                <td className="small">{b.made.map(m => <div key={m.key}>{fmt(m.rate)} · {m.who}</div>)}</td>
+                <td className="small">{b.used.map(m => <div key={m.key}>{fmt(m.rate)} · {m.who} <span className="muted">({fmt((100 * m.rate) / b.total, 0)}%)</span></div>)}</td>
               </tr>
             ))}
           </tbody>
@@ -265,52 +358,31 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
   )
 }
 
-function itemBalance(plan: Plan, names: Map<string, string>) {
-  const made = new Map<string, Map<string, number>>()
-  const used = new Map<string, Map<string, number>>()
-  const add = (m: Map<string, Map<string, number>>, it: string, who: string, q: number) => {
+function itemBalance(plan: Plan, names: Map<string, string>, flows: RecipeFlow[], loops: Map<string, string>) {
+  type Row = { key: string; who: string; rate: number }
+  const made = new Map<string, Map<string, Row>>()
+  const used = new Map<string, Map<string, Row>>()
+  const add = (m: Map<string, Map<string, Row>>, it: string, key: string, who: string, q: number) => {
     if (q <= 1e-6) return
     if (!m.has(it)) m.set(it, new Map())
-    m.get(it)!.set(who, (m.get(it)!.get(who) ?? 0) + q)
+    const e = m.get(it)!.get(key)
+    if (e) e.rate += q
+    else m.get(it)!.set(key, { key, who, rate: q })
   }
-  for (const r of plan.recipes) {
-    const who = `${r.name} (${r.building})`
-    const ins = new Map<string, number>(), outs = new Map<string, number>()
-    for (const l of r.inputs) ins.set(l.item, (ins.get(l.item) ?? 0) + l.rate)
-    for (const l of r.outputs) outs.set(l.item, (outs.get(l.item) ?? 0) + l.rate)
-    netSelfLoops(ins, outs)
-    for (const [it, q] of outs) add(made, it, who, q)
-    for (const [it, q] of ins) add(used, it, who, q)
+  for (const f of flows) {
+    for (const [it, q] of f.outs) add(made, it, f.id, f.who, q)
+    for (const [it, q] of f.ins) add(used, it, f.id, f.who, q)
   }
-  for (const l of plan.raw) add(made, l.item, 'mined', l.rate)
-  for (const l of plan.supplied) add(made, l.item, 'supplied', l.rate)
-  for (const l of plan.targets) add(used, l.item, 'output', l.rate)
-  for (const l of plan.surplus) add(used, l.item, 'byproduct', l.rate)
-  // an item is in a loop when a recipe both makes it (directly or via its chain) and uses it;
-  // cheap check: some recipe that uses it also appears among the producers of one of its inputs' makers
-  const recipeOf = new Map(plan.recipes.map(r => [`${r.name} (${r.building})`, r]))
-  const reach = (from: string, target: string) => {
-    const seen = new Set<string>(); const st = [from]
-    while (st.length) {
-      const w = st.pop()!
-      if (seen.has(w)) continue
-      seen.add(w)
-      const r = recipeOf.get(w)
-      if (!r) continue
-      for (const o of r.outputs) {
-        if (o.item === target) return true
-        for (const u of used.get(o.item)?.keys() ?? []) st.push(u)
-      }
-    }
-    return false
-  }
+  for (const l of plan.raw) add(made, l.item, 'mined', 'mined', l.rate)
+  for (const l of plan.supplied) add(made, l.item, 'supplied', 'supplied', l.rate)
+  for (const l of plan.targets) add(used, l.item, 'output', 'output', l.rate)
+  for (const l of plan.surplus) add(used, l.item, 'byproduct', 'byproduct', l.rate)
   const items = [...new Set([...made.keys(), ...used.keys()])]
   return items.map(it => {
-    const m = [...(made.get(it) ?? [])].map(([who, rate]) => ({ who, rate })).sort((a, b) => b.rate - a.rate)
-    const u = [...(used.get(it) ?? [])].map(([who, rate]) => ({ who, rate })).sort((a, b) => b.rate - a.rate)
+    const m = [...(made.get(it)?.values() ?? [])].sort((a, b) => b.rate - a.rate)
+    const u = [...(used.get(it)?.values() ?? [])].sort((a, b) => b.rate - a.rate)
     const total = Math.max(m.reduce((s, x) => s + x.rate, 0), u.reduce((s, x) => s + x.rate, 0))
-    const loop = u.some(x => recipeOf.has(x.who) && reach(x.who, it))
-    return { item: it, name: names.get(it) ?? it, total, made: m, used: u, loop }
+    return { item: it, name: names.get(it) ?? it, total, made: m, used: u, loop: loops.get(it) }
   }).sort((a, b) => b.total - a.total)
 }
 
