@@ -1,0 +1,168 @@
+{
+ "meta": {
+  "F": 3490.0,
+  "acc_s": 30.0,
+  "base": "Sm3_0",
+  "belt_cap": 780,
+  "belt_oe_km": 23333.333333333336,
+  "belt_tier": 5,
+  "car_oe": 230.0,
+  "dock_s": 27.08,
+  "feed": 1560,
+  "fluid_car": 1600,
+  "fmult": 1.0,
+  "items": [
+   "Desc_Cement_C",
+   "Desc_Coal_C",
+   "Desc_IronIngot_C",
+   "Desc_IronPlateReinforced_C",
+   "Desc_IronPlate_C",
+   "Desc_IronRod_C",
+   "Desc_IronScrew_C",
+   "Desc_ModularFrameHeavy_C",
+   "Desc_ModularFrame_C",
+   "Desc_OreIron_C",
+   "Desc_SteelIngot_C",
+   "Desc_SteelPipe_C",
+   "Desc_SteelPlateReinforced_C",
+   "Desc_SteelPlate_C",
+   "Desc_Stone_C"
+  ],
+  "loco_oe": 720.0,
+  "mach_oe": {
+   "Recipe_Concrete_C": 32.0,
+   "Recipe_EncasedIndustrialBeam_C": 151.0,
+   "Recipe_IngotIron_C": 9.0,
+   "Recipe_IngotSteel_C": 412.5,
+   "Recipe_IronPlateReinforced_C": 151.0,
+   "Recipe_IronPlate_C": 32.0,
+   "Recipe_IronRod_C": 32.0,
+   "Recipe_ModularFrameHeavy_C": 1090.0,
+   "Recipe_ModularFrame_C": 151.0,
+   "Recipe_Screw_C": 32.0,
+   "Recipe_SteelBeam_C": 32.0,
+   "Recipe_SteelPipe_C": 32.0
+  },
+  "oe": {
+   "Desc_AluminumCasing_C": 3.0,
+   "Desc_AluminumPlate_C": 2.3333333333333335,
+   "Desc_Cable_C": 1.0,
+   "Desc_Cement_C": 3.0,
+   "Desc_Computer_C": 72.0,
+   "Desc_CopperSheet_C": 2.0,
+   "Desc_IronPlateReinforced_C": 12.0,
+   "Desc_IronPlate_C": 1.5,
+   "Desc_IronRod_C": 1.0,
+   "Desc_ModularFrameHeavy_C": 420.0,
+   "Desc_ModularFrame_C": 24.0,
+   "Desc_Motor_C": 48.5,
+   "Desc_Plastic_C": 1.5,
+   "Desc_Rotor_C": 11.25,
+   "Desc_Rubber_C": 1.5,
+   "Desc_SteelPipe_C": 3.0,
+   "Desc_SteelPlateReinforced_C": 42.0,
+   "Desc_SteelPlate_C": 8.0,
+   "Desc_Wire_C": 0.5
+  },
+  "p": 2,
+  "pipe_cap": 600,
+  "pipe_oe_km": 2750.0,
+  "platform_oe": 900.0,
+  "rail": true,
+  "recipes": [
+   "Recipe_Concrete_C",
+   "Recipe_EncasedIndustrialBeam_C",
+   "Recipe_IngotIron_C",
+   "Recipe_IngotSteel_C",
+   "Recipe_IronPlateReinforced_C",
+   "Recipe_IronPlate_C",
+   "Recipe_IronRod_C",
+   "Recipe_ModularFrameHeavy_C",
+   "Recipe_ModularFrame_C",
+   "Recipe_Screw_C",
+   "Recipe_SteelBeam_C",
+   "Recipe_SteelPipe_C"
+  ],
+  "slots": 32,
+  "station_oe": 745.0,
+  "targets": {
+   "Desc_ModularFrameHeavy_C": 10.0
+  },
+  "tier": 8,
+  "track_oe_km": 1826.0
+ },
+ "obj": 72681.06402956054,
+ "p": 2,
+ "summary": {
+  "belt_count": 0,
+  "belts": [],
+  "cost_parts": {
+   "b": -0.0,
+   "c": 2030.0,
+   "e": 51076.666667,
+   "f": 0.0,
+   "g": 0.0,
+   "h": 6980.0,
+   "u": 3693.341807,
+   "x": 8181.055556,
+   "z": 720.0
+  },
+  "extraction": {
+   "Sm2_m1": {
+    "Desc_Coal_C": 900.0,
+    "Desc_OreIron_C": 2400.0,
+    "Desc_Stone_C": 900.0
+   }
+  },
+  "hubs": [
+   "Sm2_m1",
+   "Sm3_0"
+  ],
+  "lines": [
+   {
+    "a": "Sm2_m1",
+    "b": "Sm3_0",
+    "dirs": {
+     "Sm2_m1->Sm3_0": {
+      "cars": 1,
+      "flow": {
+       "Desc_IronPlateReinforced_C": 18.046059,
+       "Desc_IronPlate_C": 341.723646,
+       "Desc_IronRod_C": 770.861823,
+       "Desc_SteelPipe_C": 200.0,
+       "Desc_SteelPlateReinforced_C": 50.0
+      },
+      "fluid_cars": 0
+     },
+     "Sm3_0->Sm2_m1": {
+      "cars": 0,
+      "flow": {},
+      "fluid_cars": 0
+     }
+    }
+   }
+  ],
+  "machines": {
+   "Sm2_m1": {
+    "Recipe_Concrete_C": 1.333333,
+    "Recipe_EncasedIndustrialBeam_C": 1.388889,
+    "Recipe_IngotIron_C": 1.666667,
+    "Recipe_IngotSteel_C": 1.333333,
+    "Recipe_IronPlateReinforced_C": 0.721842,
+    "Recipe_IronPlate_C": 2.25,
+    "Recipe_IronRod_C": 3.666667,
+    "Recipe_Screw_C": 0.541382,
+    "Recipe_SteelBeam_C": 0.666667,
+    "Recipe_SteelPipe_C": 1.0
+   },
+   "Sm3_0": {
+    "Recipe_IronPlateReinforced_C": 2.278158,
+    "Recipe_ModularFrameHeavy_C": 2.5,
+    "Recipe_ModularFrame_C": 25.0,
+    "Recipe_Screw_C": 4.708618
+   }
+  },
+  "pipes": [],
+  "rail_flow_items_per_min": 1380.631528
+ }
+}

@@ -1,0 +1,261 @@
+{
+ "targets": {
+  "Desc_ModularFrameHeavy_C": 10.0
+ },
+ "tier": 8,
+ "base": "Sm3_0",
+ "rows": [
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 0,
+   "obj": 106451.722222217,
+   "bound": 106451.722222217,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 7.91,
+   "envelope": 106451.722222217,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 1
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 1,
+   "obj": 106451.72222221931,
+   "bound": 106451.72222221931,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 11.13,
+   "envelope": 106451.722222217,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 1
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 2,
+   "obj": 72681.06402956054,
+   "bound": 72681.06402956054,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 24.1,
+   "envelope": 72681.06402956054,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 1380.631528,
+   "belts": 0
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 3,
+   "obj": 72681.06402955645,
+   "bound": 72681.06402955645,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 18.55,
+   "envelope": 72681.06402955645,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 925.0,
+   "belts": 0
+  },
+  {
+   "fmult": 1.0,
+   "F": 3490.0,
+   "p": 4,
+   "obj": 72681.06402955645,
+   "bound": 72681.06402955645,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 20.29,
+   "envelope": 72681.06402955645,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 925.0,
+   "belts": 0
+  },
+  {
+   "fmult": 0.5,
+   "F": 1745.0,
+   "p": 0,
+   "obj": 106451.722222217,
+   "bound": 106451.722222217,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 8.11,
+   "envelope": 106451.722222217,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 1
+  },
+  {
+   "fmult": 0.5,
+   "F": 1745.0,
+   "p": 1,
+   "obj": 106451.72222221931,
+   "bound": 106451.72222221931,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 11.54,
+   "envelope": 106451.722222217,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 1
+  },
+  {
+   "fmult": 0.5,
+   "F": 1745.0,
+   "p": 2,
+   "obj": 69191.06402955763,
+   "bound": 69191.06402955763,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 25.25,
+   "envelope": 69191.06402955763,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 1380.631528,
+   "belts": 0
+  },
+  {
+   "fmult": 0.5,
+   "F": 1745.0,
+   "p": 3,
+   "obj": 69191.06402955763,
+   "bound": 69191.06402955763,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 30.39,
+   "envelope": 69191.06402955763,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 1380.631528,
+   "belts": 0
+  },
+  {
+   "fmult": 0.5,
+   "F": 1745.0,
+   "p": 4,
+   "obj": 69191.06402955763,
+   "bound": 69191.06402955763,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 16.86,
+   "envelope": 69191.06402955763,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 1380.631528,
+   "belts": 0
+  },
+  {
+   "fmult": 2.0,
+   "F": 6980.0,
+   "p": 0,
+   "obj": 106451.722222217,
+   "bound": 106451.722222217,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 9.08,
+   "envelope": 106451.722222217,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 1
+  },
+  {
+   "fmult": 2.0,
+   "F": 6980.0,
+   "p": 1,
+   "obj": 106451.72222221931,
+   "bound": 106451.72222221931,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 12.14,
+   "envelope": 106451.722222217,
+   "hubs": [],
+   "n_lines": 0,
+   "rail_flow": 0.0,
+   "belts": 1
+  },
+  {
+   "fmult": 2.0,
+   "F": 6980.0,
+   "p": 2,
+   "obj": 79661.06402956213,
+   "bound": 79661.06402956213,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 40.15,
+   "envelope": 79661.06402956213,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 10.0,
+   "belts": 0
+  },
+  {
+   "fmult": 2.0,
+   "F": 6980.0,
+   "p": 3,
+   "obj": 79661.06402955942,
+   "bound": 79661.06402955942,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 28.9,
+   "envelope": 79661.06402955942,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 1380.631528,
+   "belts": 0
+  },
+  {
+   "fmult": 2.0,
+   "F": 6980.0,
+   "p": 4,
+   "obj": 79661.06402955869,
+   "bound": 79661.06402955869,
+   "gap": 0.0,
+   "status": "Optimal",
+   "time_s": 29.42,
+   "envelope": 79661.06402955869,
+   "hubs": [
+    "Sm2_m1",
+    "Sm3_0"
+   ],
+   "n_lines": 1,
+   "rail_flow": 10.0,
+   "belts": 0
+  }
+ ]
+}
