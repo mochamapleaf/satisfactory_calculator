@@ -1,14 +1,20 @@
 """Convert FactorioLab data (MIT, github.com/factoriolab/factoriolab) to our GameData JSON.
 
-Usage: python tools/convert_factoriolab.py dsp|factorio
-Reads data/raw/factoriolab-<dsp|2.0>.json (+ data/raw/factoriolab-dsp-zh.json for Chinese
-names), writes data/<dsp|factorio>.json.
+Usage: python tools/convert_factoriolab.py dsp | factorio [2.0|2x1|2q1|spa]
+Reads data/raw/factoriolab-<dsp|set>.json (+ data/raw/factoriolab-dsp-zh.json for Chinese
+names), writes data/dsp.json, data/factorio.json (base 2.0) or data/factorio-<set>.json.
+Factorio data sets: 2.0 = base 2.0.77 @a61e43fd; 2x1 = Space Age 2.1.25, 2q1 = base + quality +
+recycler 2.1.25, spa = Space Age 2.0.77 (all three @50d8e977).
 
 Conventions (same as data/game-data.json for Satisfactory):
 - recipe rates are per minute for one building at speed 1;
 - building power in MW (FactorioLab gives kW);
 - mining recipes become `resources` (raw items), not recipes;
-- recipes FactorioLab excludes by default (DSP "advanced" recipes) are marked alt.
+- recipes FactorioLab excludes by default (DSP "advanced" recipes) are marked alt;
+- quality (Factorio): `recycling` marks item recycling (reverse or self recycling; scrap recycling
+  is a normal recipe since nothing crafts scrap), `catalyst` (per minute), `quality_allowed`;
+  machines carry `base_productivity`; modules carry per-quality values `by_quality` (from
+  FactorioLab `qualityRecord`, never x1.3); top-level `qualities` lists the tier names.
 """
 import json
 import sys
@@ -17,6 +23,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SRC = {"dsp": "factoriolab-dsp.json", "factorio": "factoriolab-2.0.json"}
 COMMIT = "a61e43fdf9e969e13f3a0ef7f67f49886f9fe268"
+COMMIT_21 = "50d8e977256344ab0405e32910c26a5fe09c404a"  # 2x1 / 2q1 / spa, fetched 2026-11-21
+DATASETS = {"2.0": "Factorio 2.0.77 (base)", "2x1": "Factorio 2.1.25 Space Age",
+            "2q1": "Factorio 2.1.25 base + quality", "spa": "Factorio 2.0.77 Space Age"}
 # relative cost of one unit/min of a raw resource (default 1)
 RAW_WEIGHT = {"water": 0.01, "crude-oil": 0.2, "steam": 0.01}
 
@@ -25,8 +34,10 @@ def per_min(q, time):
     return q * 60.0 / time
 
 
-def main(game):
-    d = json.loads((ROOT / "data/raw" / SRC[game]).read_text(encoding="utf-8"))
+def main(game, dataset="2.0"):
+    src = SRC[game] if game == "dsp" else f"factoriolab-{dataset}.json"
+    d = json.loads((ROOT / "data/raw" / src).read_text(encoding="utf-8"))
+    tiers = [q["id"] for q in d.get("qualities", [])]
     zh, zh_r = {}, {}
     if game == "dsp":
         z = json.loads((ROOT / "data/raw/factoriolab-dsp-zh.json").read_text(encoding="utf-8"))
@@ -46,6 +57,7 @@ def main(game):
                 "speed": m.get("speed", 30.0 if i["id"] == "fractionator" else 1.0),
                 "modules": m.get("modules", 0),
                 "disallowed_effects": m.get("disallowedEffects", []),
+                "base_productivity": m.get("baseEffect", {}).get("productivity", 0.0),
             })
         if "module" in i:
             mo = i["module"]
@@ -57,10 +69,18 @@ def main(game):
                 "sprays": mo.get("sprays"), "item": mo.get("proliferator", i["id"]),
                 "products_only": mo.get("limitation") == "productivity",
             })
+            if tiers:
+                rec = mo.get("qualityRecord", {})
+                effects[-1]["by_quality"] = [
+                    {k: rec.get(t, {}).get(k, mo.get(k, 0.0))
+                     for k in ("speed", "productivity", "consumption", "quality")} for t in tiers]
         if "belt" in i:
             belts.append(i["belt"]["speed"] * 60.0)
     machine_ids = {b["id"] for b in buildings}
 
+    # items some non-recycling recipe crafts: their "-recycling" recipe is a reverse recipe
+    crafted = {x for r in d["recipes"] if r.get("in") and not {"recycling", "mining"} & set(r.get("flags", []))
+               for x in r.get("out", {})}
     recipes, resources, raw_items = [], [], set()
     for r in d["recipes"]:
         flags = set(r.get("flags", []))
@@ -95,6 +115,13 @@ def main(game):
             "out": [[k, per_min(v, r["time"])] for k, v in r["out"].items()],
             "power": None, "productivity_allowed": prod_ok,
         })
+        if tiers:
+            ins = list(r["in"])
+            recipes[-1]["recycling"] = "recycling" in flags and len(ins) == 1 and (
+                ins[0] in crafted or ins[0] in r["out"])
+            recipes[-1]["quality_allowed"] = "quality" not in r.get("disallowedEffects", [])
+        if r.get("catalyst"):
+            recipes[-1]["catalyst"] = [[k, per_min(v, r["time"])] for k, v in r["catalyst"].items()]
 
     # inputs nobody makes (DSP Dark Fog drops, ...) become raw with a high weight
     made = {x for r in recipes for x, _ in r["out"]} | raw_items
@@ -117,18 +144,24 @@ def main(game):
             "group": i.get("category", "other"), "row": i.get("row", 0), "order": n,
         })
     version = " ".join(f"{k} {v}" for k, v in d["version"].items())
+    commit = COMMIT if game == "dsp" or dataset == "2.0" else COMMIT_21
     out = {
         "game": game,
-        "version": ("Dyson Sphere Program " if game == "dsp" else "Factorio ") + version,
-        "source": f"FactorioLab public/data/{SRC[game][12:-5]}/data.json @{COMMIT[:8]} (MIT)",
+        "version": ("Dyson Sphere Program " + version) if game == "dsp" else DATASETS[dataset],
+        "source": f"FactorioLab public/data/{src[12:-5]}/data.json @{commit[:8]} (MIT): {version}",
         "items": items, "recipes": recipes, "buildings": buildings, "resources": resources,
         "belts": sorted(belts), "pipes": [], "effects": effects,
     }
-    dst = ROOT / "data" / f"{game}.json"
+    if tiers:
+        out["qualities"] = [q["name"] for q in d["qualities"]]
+    if game == "factorio":
+        out["dataset"] = dataset
+    name = game if game == "dsp" or dataset == "2.0" else f"{game}-{dataset}"
+    dst = ROOT / "data" / f"{name}.json"
     dst.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"{dst}: {len(items)} items, {len(recipes)} recipes ({sum(r['alt'] for r in recipes)} alt), "
           f"{len(buildings)} buildings, {len(resources)} resources, {len(effects)} effects")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], *(sys.argv[2:3]))

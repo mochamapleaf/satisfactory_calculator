@@ -41,3 +41,14 @@
   DSP/Factorio: FactorioLab `public/data/{dsp,2.0}/icons.webp` @a61e43fd. The art belongs to the games'
   developers (Coffee Stain, Youthcat, Wube), as in those fan tools.
 - `flat` is generated from the original (palette reduction + outline), not hand-drawn.
+
+## Factorio Space Age / quality data sets (2026-11-21)
+- FactorioLab @`50d8e977` (2026-11-21): `public/data/2x1` (Space Age 2.1.25), `2q1` (base + quality +
+  recycler 2.1.25, no Space Age), `spa` (Space Age 2.0.77). Raw copies `data/raw/factoriolab-{2x1,2q1,spa}.json`.
+- `python -I tools/convert_factoriolab.py factorio 2x1|2q1|spa` → `data/factorio-<set>.json`; base 2.0.77
+  stays `data/factorio.json` (default, `2.0`). Extra fields: recipe `recycling` (item recycling: reverse or
+  self recycling; `scrap-recycling` is a production recipe since nothing crafts scrap), `quality_allowed`,
+  `catalyst`; machine `base_productivity` (foundry / EM plant +50 %); module `by_quality` from
+  `qualityRecord` (2.1: Q3 2.5/3.25/4/4.75/6.25 %; 2.0: …/6.2 %); `qualities` (tier names).
+- Version differences (asteroid reprocessing without quality in 2.1, crushing returns, module values,
+  renamed ids) come from the data sets only; no patches in code.
