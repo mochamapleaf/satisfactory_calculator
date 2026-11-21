@@ -100,4 +100,5 @@ th { font-size: 12px; color: var(--muted); font-weight: 500; }
 .slabel { display: flex; align-items: center; gap: 2px; line-height: 1.15; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slabel .icon { margin-right: 3px; }
 .slabel.recipe { font-size: 10.5px; }
+.backlabel { font-size: 10.5px; fill: var(--muted); }
 .balance td { vertical-align: top; }

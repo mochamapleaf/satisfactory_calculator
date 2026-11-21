@@ -5,10 +5,12 @@ import { fmt, type GameData, type Plan } from './solver'
 // Sankey of item flow: sources (mined / supplied) → items → recipes → items → … → outputs.
 // Every item is a node whose size is its total rate, so "how much of X, and where does it go"
 // reads directly off the chart. Recipe loops (an item feeding back into its own chain) are
-// found with a DFS; those back edges are drawn as dashed return arcs under the chart.
+// found with a DFS; those back edges are drawn as thin dashed return lines under the chart,
+// labelled with their rate. A recipe that uses and makes the same item (DSP X-ray cracking,
+// Kovarex) is shown with its net amount; the part it recycles internally is noted on the recipe.
 
 type Kind = 'item' | 'recipe' | 'src' | 'sink'
-interface N { id: string; kind: Kind; label: string; sub: string; icon?: string; value: number; layer: number; y: number; h: number; order: number }
+interface N { id: string; kind: Kind; label: string; sub: string; icon?: string; value: number; drawn: number; layer: number; y: number; h: number; order: number }
 interface L { from: string; to: string; item: string; rate: number; back: boolean; sy: number; ty: number; w: number }
 
 const NODE_W = 12
@@ -26,7 +28,7 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
   const nodes = new Map<string, N>()
   const links: L[] = []
   const node = (id: string, kind: Kind, label: string, sub = '', icon?: string) => {
-    if (!nodes.has(id)) nodes.set(id, { id, kind, label, sub, icon, value: 0, layer: 0, y: 0, h: 0, order: 0 })
+    if (!nodes.has(id)) nodes.set(id, { id, kind, label, sub, icon, value: 0, drawn: 0, layer: 0, y: 0, h: 0, order: 0 })
     return id
   }
   const item = (it: string) => node('i:' + it, 'item', names.get(it) ?? it, '', it)
@@ -43,7 +45,10 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
     byRecipe.set(r.id, e)
   }
   for (const [id, e] of byRecipe) {
+    const cyc = netSelfLoops(e.ins, e.outs)
+    const note = cyc.map(c => `↻ ${fmt(c.rate)} ${names.get(c.item) ?? c.item}`).join(', ')
     const rid = node('r:' + id, 'recipe', e.name, `${fmt(e.machines)}× ${e.building}`, [...e.outs.keys()][0])
+    if (note) nodes.get(rid)!.label += ` · ${note}`
     for (const [it, q] of e.ins) link(item(it), rid, it, q)
     for (const [it, q] of e.outs) link(rid, item(it), it, q)
   }
@@ -105,6 +110,10 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
     const i = (inc.get(n.id) ?? []).reduce((s, l) => s + l.rate, 0)
     const o = (out.get(n.id) ?? []).reduce((s, l) => s + l.rate, 0)
     n.value = Math.max(i, o)
+    // drawn height counts forward bands only; loop edges are thin lines at the node's bottom edge
+    const fi = (inc.get(n.id) ?? []).reduce((s, l) => s + (l.back ? 0 : l.rate), 0)
+    const fo = (out.get(n.id) ?? []).reduce((s, l) => s + (l.back ? 0 : l.rate), 0)
+    n.drawn = Math.max(fi, fo)
   }
 
   // --- vertical order: barycentre sweeps
@@ -131,14 +140,14 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
   }
 
   // --- sizes: one pixel scale for the whole chart
-  const biggest = Math.max(1, ...layers.map(l => l.reduce((s, n) => s + n.value, 0)))
+  const biggest = Math.max(1, ...layers.map(l => l.reduce((s, n) => s + n.drawn, 0)))
   const crowd = Math.max(...layers.map(l => l.length))
   const k = Math.min(scaleMax, Math.max(140, 34 * crowd)) / biggest
   let height = 0
   for (const l of layers) {
     let y = PAD
     for (const n of l) {
-      n.h = Math.max(3, n.value * k)
+      n.h = Math.max(3, n.drawn * k)
       n.y = y
       y += n.h + GAP
     }
@@ -148,10 +157,12 @@ function build(plan: Plan, names: Map<string, string>, scaleMax: number) {
   for (const n of nodes.values()) {
     let y = n.y
     for (const l of [...(out.get(n.id) ?? [])].sort((a, b) => nodes.get(a.to)!.y - nodes.get(b.to)!.y)) {
+      if (l.back) { l.w = 2; l.sy = n.y + n.h - 1; continue }
       l.w = Math.max(1, l.rate * k); l.sy = y + l.w / 2; y += l.rate * k
     }
     y = n.y
     for (const l of [...(inc.get(n.id) ?? [])].sort((a, b) => nodes.get(a.from)!.y - nodes.get(b.from)!.y)) {
+      if (l.back) { l.ty = n.y + n.h - 1; continue }
       l.ty = y + Math.max(1, l.rate * k) / 2; y += l.rate * k
     }
   }
@@ -172,7 +183,7 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
 
   const x = (n: N) => 20 + n.layer * COL
   const backs = g.links.filter(l => l.back)
-  const H = g.height + (backs.length ? 30 + backs.length * 14 : 0)
+  const H = g.height + (backs.length ? 30 + backs.length * 18 : 0)
   const near = (l: L) => !focus || l.from === focus || l.to === focus
   const pathOf = (l: L, i: number) => {
     const s = g.nodes.find(n => n.id === l.from)!, t = g.nodes.find(n => n.id === l.to)!
@@ -181,8 +192,8 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
       const m = (x0 + x1) / 2
       return `M${x0},${l.sy} C${m},${l.sy} ${m},${l.ty} ${x1},${l.ty}`
     }
-    const by = g.height + 20 + i * 14
-    return `M${x0},${l.sy} C${x0 + 50},${l.sy} ${x0 + 50},${by} ${x0},${by} L${x1},${by} C${x1 - 50},${by} ${x1 - 50},${l.ty} ${x1},${l.ty}`
+    const by = g.height + 20 + i * 18
+    return `M${x0},${l.sy} C${x0 + 30},${l.sy} ${x0 + 30},${by} ${x0},${by} L${x1},${by} C${x1 - 30},${by} ${x1 - 30},${l.ty} ${x1},${l.ty}`
   }
   const nodeName = (id: string) => {
     const n = g.nodes.find(m => m.id === id)
@@ -192,7 +203,8 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
     <div className="results">
       <p className="hint">
         Band width = items per minute. Each item node's height is its total rate; hover a node to follow it.
-        {backs.length > 0 && <> <b>{backs.length}</b> loop edge(s) (an item feeding back into its own chain) are drawn dashed below.</>}
+        {backs.length > 0 && <> <b>{backs.length}</b> loop edge(s) (an item feeding back into its own chain) are drawn as thin dashed lines below, labelled with their rate.</>}
+        {' '}↻ on a recipe = amount it makes and immediately reuses itself; only the net is drawn.
       </p>
       <div className="sankeywrap">
         <svg width={g.width} height={H} className="sankey" onMouseLeave={() => setFocus(null)}>
@@ -204,6 +216,15 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
               <title>{`${fmt(l.rate)}/min ${names.get(l.item) ?? l.item}: ${nodeName(l.from)} → ${nodeName(l.to)}${l.back ? ' (loop)' : ''}`}</title>
             </path>
           ))}
+          {backs.map((l, i) => {
+            const s = g.nodes.find(n => n.id === l.from)!, t = g.nodes.find(n => n.id === l.to)!
+            return (
+              <text key={'b' + i} className="backlabel" x={(Math.min(x(s), x(t)) + Math.max(x(s), x(t))) / 2 + NODE_W}
+                y={g.height + 16 + i * 18} textAnchor="middle" opacity={near(l) ? 1 : 0.3}>
+                ↺ {fmt(l.rate)}/min {names.get(l.item) ?? l.item}
+              </text>
+            )
+          })}
           {g.nodes.map(n => (
             <g key={n.id} onMouseEnter={() => setFocus(n.id)} className={`snode snode-${n.kind}`}>
               <rect x={x(n)} y={n.y} width={NODE_W} height={n.h} rx={2}
@@ -254,8 +275,12 @@ function itemBalance(plan: Plan, names: Map<string, string>) {
   }
   for (const r of plan.recipes) {
     const who = `${r.name} (${r.building})`
-    for (const l of r.outputs) add(made, l.item, who, l.rate)
-    for (const l of r.inputs) add(used, l.item, who, l.rate)
+    const ins = new Map<string, number>(), outs = new Map<string, number>()
+    for (const l of r.inputs) ins.set(l.item, (ins.get(l.item) ?? 0) + l.rate)
+    for (const l of r.outputs) outs.set(l.item, (outs.get(l.item) ?? 0) + l.rate)
+    netSelfLoops(ins, outs)
+    for (const [it, q] of outs) add(made, it, who, q)
+    for (const [it, q] of ins) add(used, it, who, q)
   }
   for (const l of plan.raw) add(made, l.item, 'mined', l.rate)
   for (const l of plan.supplied) add(made, l.item, 'supplied', l.rate)
@@ -287,4 +312,18 @@ function itemBalance(plan: Plan, names: Map<string, string>) {
     const loop = u.some(x => recipeOf.has(x.who) && reach(x.who, it))
     return { item: it, name: names.get(it) ?? it, total, made: m, used: u, loop }
   }).sort((a, b) => b.total - a.total)
+}
+
+/** Cancel an item a recipe both consumes and produces; returns what it recycles internally. */
+function netSelfLoops(ins: Map<string, number>, outs: Map<string, number>) {
+  const cyc: { item: string; rate: number }[] = []
+  for (const [it, q] of ins) {
+    const o = outs.get(it)
+    if (o === undefined) continue
+    const c = Math.min(q, o)
+    cyc.push({ item: it, rate: c })
+    if (q - c > 1e-9) ins.set(it, q - c); else ins.delete(it)
+    if (o - c > 1e-9) outs.set(it, o - c); else outs.delete(it)
+  }
+  return cyc
 }
