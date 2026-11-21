@@ -26,6 +26,12 @@ export default function App() {
   }, [settings.game])
   const switchGame = (g: Game) => setSettings(() => loadGame(g))
   useEffect(() => saveSettings(settings), [settings])
+  // a plan link pasted into an open tab (saveSettings uses replaceState, which does not fire this)
+  useEffect(() => {
+    const onHash = () => { if (location.hash.length > 1) setSettings(loadSettings()) }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   const [plan, setPlan] = useState<Plan | null>(null)
   const [solving, setSolving] = useState(false)

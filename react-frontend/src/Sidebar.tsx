@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, RemoveMark } from './Icon'
 import ItemPicker from './ItemPicker'
 import { defaultSettings, dn, fmt, preset, scarcity, type CostWeights, type GameData, type ItemRate, type Objective, type Settings } from './solver'
@@ -16,30 +16,42 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
   const options = useMemo(() => data.items.filter(i => !producibleOnly || produced.has(i.id) || i.raw), [data, produced, producibleOnly])
   // which picker is open: a row index (replace that item) or 'add'
   const [open, setOpen] = useState<number | 'add' | null>(null)
+  const scope = useRef<HTMLDivElement>(null)
+  // after a pick or Esc, focus goes back to the button that opened the picker (it may have been re-rendered)
+  const refocus = useRef<number | 'add' | null>(null)
+  useEffect(() => {
+    if (refocus.current === null) return
+    scope.current?.querySelector<HTMLElement>(`[data-opener="${refocus.current}"]`)?.focus()
+    refocus.current = null
+  })
+  const taken = useMemo(() => new Set(list.map(t => t.item)), [list])
   const name = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)
   const pick = (id: string) => {
+    // items already in the list are disabled in the picker, so a pick never duplicates or drops a row
     if (open === 'add') {
-      if (!list.some(t => t.item === id)) onChange([...list, { item: id, rate: 10 }])
-    } else if (open !== null) {
-      const dup = list.findIndex(t => t.item === id)
-      onChange(dup >= 0 && dup !== open ? list.filter((_, j) => j !== open)
-        : list.map((t, j) => (j === open ? { ...t, item: id } : t)))
+      if (!taken.has(id)) onChange([...list, { item: id, rate: 10 }])
+    } else if (open !== null && (!taken.has(id) || list[open].item === id)) {
+      onChange(list.map((t, j) => (j === open ? { ...t, item: id } : t)))
     }
+    refocus.current = open
     setOpen(null)
   }
+  const close = useCallback((how: 'esc' | 'away') => {
+    setOpen(o => { if (how === 'esc') refocus.current = o; return null })
+  }, [])
   const picker = (current?: string) => (
-    <ItemPicker data={data} items={options} current={current} onPick={pick} onClose={() => setOpen(null)} />
+    <ItemPicker data={data} items={options} current={current} taken={taken} scope={scope} onPick={pick} onClose={close} />
   )
   return (
-    <div>
+    <div ref={scope}>
       {list.map((t, i) => (
         <div key={t.item}>
           <div className="row">
-            <button type="button" className="swap grow" title={`Change ${name(t.item)}`}
+            <button type="button" className="swap grow" title={`Change ${name(t.item)}`} data-opener={i}
               aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>
               <Icon id={t.item} />{name(t.item)}
             </button>
-            <input type="number" min={0} step="any" value={t.rate}
+            <input type="number" min={0} step="any" value={t.rate} aria-label={`${name(t.item)} per minute`}
               onChange={e => onChange(list.map((x, j) => j === i ? { ...x, rate: Math.max(0, +e.target.value) } : x))} />
             <span className="muted">/min</span>
             <button className="x" title={`Remove ${name(t.item)}`} aria-label={`Remove ${name(t.item)}`} onClick={() => onChange(list.filter((_, j) => j !== i))}><RemoveMark /></button>
@@ -47,7 +59,7 @@ function ItemRates({ data, list, onChange, producibleOnly }: {
           {open === i && picker(t.item)}
         </div>
       ))}
-      <button type="button" className="addpick" aria-expanded={open === 'add'}
+      <button type="button" className="addpick" aria-expanded={open === 'add'} data-opener="add"
         onClick={() => setOpen(open === 'add' ? null : 'add')}>+ Add an item</button>
       {open === 'add' && picker()}
     </div>

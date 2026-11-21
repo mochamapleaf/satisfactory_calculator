@@ -61,7 +61,7 @@ export function Icon({ id, size = 20, title }: { id: string | undefined; size?: 
   const y = Math.floor(n / meta.cols) * size
   return (
     <span
-      className="icon"
+      className={`icon icon-${style}`}
       title={title}
       style={{
         width: size,
