@@ -593,3 +593,31 @@ fn planet_filter_space_age() {
     let p = plan(&d, &s);
     assert!(p.raw.iter().all(|l| !l.item.contains("asteroid")));
 }
+
+#[test]
+fn research_productivity_families() {
+    let d = GameData::for_set("factorio", "2x1");
+    let fam = d.research.iter().find(|f| f.id == "steel-plate-productivity").unwrap();
+    assert_eq!(fam.recipes, vec!["steel-plate".to_string(), "casting-steel".to_string()]);
+    assert!(close(fam.step, 0.1));
+    assert_eq!(d.research.len(), 8);
+    // 60 steel/min, furnaces only (no foundry casting): 5 iron plates per steel, +50 % at level 5
+    let mut s = settings(&[("steel-plate", 60.0)]);
+    s.game = "factorio".into();
+    s.dataset = "2x1".into();
+    s.integer = false;
+    s.disabled_recipes = vec!["casting-steel".into(), "casting-iron".into()];
+    let base = plan(&d, &s);
+    let plates = |p: &Plan| p.recipes.iter().find(|r| r.id == "steel-plate").unwrap().inputs[0].rate;
+    assert!(close(plates(&base), 300.0), "{}", plates(&base));
+    for r in &fam.recipes {
+        s.research_productivity.insert(r.clone(), 5.0 * fam.step);
+    }
+    let p = plan(&d, &s);
+    assert!(close(plates(&p), 200.0), "{}", plates(&p));
+    // capped at +300 %: level 40 counts as 30
+    for r in &fam.recipes {
+        s.research_productivity.insert(r.clone(), 40.0 * fam.step);
+    }
+    assert!(close(plates(&plan(&d, &s)), 75.0));
+}

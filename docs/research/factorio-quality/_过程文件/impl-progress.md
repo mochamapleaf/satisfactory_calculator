@@ -75,3 +75,12 @@ Spec: `../00-最终报告.md` §5. Branch `refactor`, not pushed.
   Nauvis → coal liquefaction plan; +Gleba → bioplastic from agricultural towers, no raw input.
 - Seen, not changed: heat exchanger runs without a heat input (heat dropped as an unused resource in step L9).
 - Next: research productivity UI.
+
+## Step 5 — research productivity UI (done)
+- Data: `research` families from FactorioLab technology.recipeProductivity (2x1/spa: steel, LDS, plastic,
+  rocket fuel, processing unit, scrap recycling, rocket part, asteroid crushing; base sets have none).
+- UI: Sidebar "Research productivity" (Space Age sets): level per family → `research_productivity` for each
+  of its recipes (level × 0.1); tooltip lists the recipes.
+- Test `research_productivity_families`: 60 steel/min furnace-only = 300 plates; level 5 → 200; level 40 is
+  capped (+300 %) → 75. Browser (2x1 steel 60/min, casting off): level 5 → 200 iron ore (was 300).
+- Next: beacons.
