@@ -150,6 +150,17 @@ def main(game, dataset="2.0"):
                 raw_items.add(x)
                 resources.append({"item": x, "limit": None, "extractor": "drop / external",
                                   "extractor_rate": 60.0, "extractor_power": 0.0, "weight": 10.0})
+    # resources nothing consumes (Space Age `heat` from the heating tower's input-less recipe)
+    # and machines that run no recipe (the heating tower) only clutter the pickers
+    consumed = {x for r in recipes for x, _ in r["in"]}
+    dropped = [x["item"] for x in resources if x["item"] not in consumed]
+    resources = [x for x in resources if x["item"] in consumed]
+    raw_items -= set(dropped)
+    running = {p for r in recipes for p in r["producers"]}
+    idle = [b["id"] for b in buildings if b["id"] not in running]
+    buildings = [b for b in buildings if b["id"] in running]
+    if dropped or idle:
+        print(f"skipped unused resources {dropped}, machines without recipes {idle}")
     used = {x for r in recipes for k in ("in", "out") for x, _ in r[k]} | raw_items
     items = []
     for n, i in enumerate(d["items"]):
