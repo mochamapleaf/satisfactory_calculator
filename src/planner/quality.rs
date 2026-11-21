@@ -226,11 +226,10 @@ fn loadout_modes(
             let qv = qm.as_ref().map(|x| x.v).unwrap_or(zero);
             let pv = pm.as_ref().map(|x| x.v).unwrap_or(zero);
             let qchance = (kq * qv.quality + km * pv.quality).max(0.0);
-            let p = if r.productivity_allowed {
-                (b.base_productivity + research + km * pv.productivity).min(MAX_PRODUCTIVITY)
-            } else {
-                0.0
-            };
+            // built-in machine productivity applies to every recipe; research and productivity
+            // modules only where the recipe allows them (km is 0 otherwise)
+            let research_p = if r.productivity_allowed { research } else { 0.0 };
+            let p = (b.base_productivity + research_p + km * pv.productivity).min(MAX_PRODUCTIVITY);
             let speed = b.speed * (1.0 + kq * qv.speed + km * pv.speed).max(0.2);
             let power = b.power * (1.0 + kq * qv.consumption + km * pv.consumption).max(0.2);
             let row = qrow(qchance, i);

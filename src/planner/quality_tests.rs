@@ -283,25 +283,68 @@ fn oracle_lds_shuffle() {
     assert!((y - 0.048).abs() < 0.0015, "{y}");
 }
 
-/// Recycling scope: by default only the targets' own chain is recycled, so a legendary gear
-/// needs gears, plates and ore only; "all" lets every iron-bearing item's recycling in.
+/// Recycling scope on full 2x1 data, "chain" (default): only the targets' own chain is
+/// recycled, so a legendary gear recycles gears, plates and ore only.
 #[test]
-fn recycling_scope_and_full_data() {
+fn recycling_scope_chain_full_data() {
     let d = GameData::for_set("factorio", "2x1");
-    let mut s = lp_settings("2x1", "iron-gear-wheel@4", 30.0);
-    let p = plan(&d, &s);
+    let p = plan(&d, &lp_settings("2x1", "iron-gear-wheel@4", 30.0));
     assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
     assert_balanced(&p);
     let recycled: Vec<&str> = p.recipes.iter().filter(|r| r.id.contains("recycling")).map(|r| r.id.as_str()).collect();
+    assert!(!recycled.is_empty());
     assert!(recycled.iter().all(|r| r.starts_with("iron-gear-wheel-recycling") || r.starts_with("iron-plate-recycling") || r.starts_with("iron-ore-recycling")), "{recycled:?}");
-    let chain_cols = p.columns;
-    // all recipes available: never worse than the restricted 79.88 sets (in iron ore)
-    let ore = raw(&p, "iron-ore") / 2.0 / 30.0;
-    assert!(ore <= 79.8786, "{ore}");
+}
+
+/// Scope semantics on a small iron subset: "chain" = the target's chain, "all" = every
+/// recycling recipe, "list" = only `recycle_allow`; and "all" never plans worse than "chain".
+#[test]
+fn recycling_scopes() {
+    let mut d = GameData::for_set("factorio", "2x1");
+    keep(
+        &mut d,
+        &["iron-gear-wheel", "iron-gear-wheel-recycling", "pipe", "pipe-recycling", "iron-chest", "iron-chest-recycling"],
+    );
+    add_resource(&mut d, "iron-plate", 1.0);
+    let mut s = lp_settings("2x1", "iron-gear-wheel@4", 30.0);
+    s.disabled_buildings = vec!["assembling-machine-1".into(), "assembling-machine-2".into()];
+    let allowed: Vec<&Recipe> = d.recipes.iter().collect();
+    let targets: std::collections::BTreeSet<String> = ["iron-gear-wheel".to_string()].into();
+    let ids = |s: &PlanSettings| {
+        let mut v: Vec<String> = quality::recycling_allowed(s, &allowed, &targets).iter().map(|r| r.id.clone()).collect();
+        v.sort();
+        v
+    };
+    assert_eq!(ids(&s), vec!["iron-gear-wheel-recycling"]);
+    let chain = plan(&d, &s);
+    assert_eq!(chain.status, Status::Optimal, "{:?}", chain.warnings);
+    s.recycling = "all".into();
+    assert_eq!(ids(&s), vec!["iron-chest-recycling", "iron-gear-wheel-recycling", "pipe-recycling"]);
+    let all = plan(&d, &s);
+    assert_eq!(all.status, Status::Optimal, "{:?}", all.warnings);
+    assert_balanced(&all);
+    assert!(all.columns > chain.columns, "{} vs {}", all.columns, chain.columns);
+    assert!(all.objective <= chain.objective + 1e-6);
+    s.recycling = "list".into();
+    s.recycle_allow = vec!["pipe".into()];
+    assert_eq!(ids(&s), vec!["pipe-recycling"]);
+    // chain scope plus an extra allowed item
+    s.recycling = "chain".into();
+    assert_eq!(ids(&s), vec!["iron-gear-wheel-recycling", "pipe-recycling"]);
+}
+
+/// The "all" scope on full data (16 578 columns, minutes in debug):
+/// `cargo test --release -- --ignored all_scope_full_data`.
+#[test]
+#[ignore]
+fn all_scope_full_data() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = lp_settings("2x1", "iron-gear-wheel@4", 30.0);
+    let p = plan(&d, &s);
     s.recycling = "all".into();
     let all = plan(&d, &s);
     assert_eq!(all.status, Status::Optimal, "{:?}", all.warnings);
-    assert!(all.columns > 3 * chain_cols, "{} vs {}", all.columns, chain_cols);
+    assert!(all.columns > 3 * p.columns, "{} vs {}", all.columns, p.columns);
     assert!(all.objective <= p.objective + 1e-6);
 }
 
@@ -345,4 +388,52 @@ fn quality_scale_report() {
             p.recipes.len()
         );
     }
+}
+
+/// Built-in machine productivity applies to every recipe the machine runs, also those that
+/// forbid productivity modules (spec §3.3, §5 step 2): EM plant / foundry +50 %, research and
+/// modules only where allowed.
+#[test]
+fn builtin_productivity_on_all_recipes() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = lp_settings("2x1", "transport-belt", 120.0);
+    s.effects = vec!["productivity-module-3".into()];
+    s.research_productivity.insert("transport-belt".into(), 0.3);
+    s.research_productivity.insert("electronic-circuit".into(), 0.2);
+    let mult = |rid: &str, key: &str| {
+        let r = d.recipe(rid).unwrap();
+        rules::modes(&d, r, &s).iter().find(|m| m.key == key).map(|m| m.out_mult)
+    };
+    // EM plant empty mode on an allowed recipe: 1 + 0.5 built-in + 0.2 research
+    assert!((mult("electronic-circuit", "electromagnetic-plant").unwrap() - 1.7).abs() < 1e-9);
+    // productivity-disallowed recipes: built-in only, no research, no productivity-module mode
+    assert!((mult("transport-belt", "foundry").unwrap() - 1.5).abs() < 1e-9);
+    assert!((mult("productivity-module", "electromagnetic-plant").unwrap() - 1.5).abs() < 1e-9);
+    assert!((mult("transport-belt", "assembling-machine-3").unwrap() - 1.0).abs() < 1e-9);
+    assert!(mult("transport-belt", "foundry|productivity-module-3").is_none());
+
+    // plan: 120 belts/min from the foundry need 40 plates + 40 gears, not 60 + 60
+    let mut d2 = d.clone();
+    keep(&mut d2, &["transport-belt"]);
+    add_resource(&mut d2, "iron-plate", 1.0);
+    add_resource(&mut d2, "iron-gear-wheel", 1.0);
+    let mut s2 = lp_settings("2x1", "transport-belt", 120.0);
+    s2.disabled_buildings = (1..=3).map(|k| format!("assembling-machine-{k}")).collect();
+    let p = plan(&d2, &s2);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert!((raw(&p, "iron-plate") - 40.0).abs() < 1e-6, "{}", raw(&p, "iron-plate"));
+
+    // quality path: the plain and quality loadouts in the foundry keep the +50 %
+    let mut sq = lp_settings("2x1", "transport-belt@4", 10.0);
+    sq.quality_module = "quality-module-3".into();
+    sq.prod_module = "productivity-module-3".into();
+    sq.research_productivity.insert("transport-belt".into(), 0.3);
+    let recipes = vec![d.recipe("transport-belt").unwrap()];
+    let ex = quality::expand(&d, &sq, &recipes, &["transport-belt@4".to_string()]);
+    let (_, modes) = ex.iter().find(|(r, _)| r.id == "transport-belt").expect("normal tier");
+    for m in modes.iter().filter(|m| m.building == "foundry") {
+        assert!((m.out_mult - 1.5).abs() < 1e-9, "{} {}", m.key, m.out_mult);
+        assert!(!m.key.contains('p') || m.key.ends_with("p0"), "no prod modules: {}", m.key);
+    }
+    assert!(modes.iter().any(|m| m.key == "foundry|q4p0"));
 }

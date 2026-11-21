@@ -81,8 +81,9 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
         }
         let Some(b) = data.building(pid) else { continue };
         let tier_label = if r.producers.len() > 1 { data.pick(&b.name, &b.name_zh).to_string() } else { String::new() };
-        // built-in + researched productivity (Factorio; 0 for DSP), only where productivity is allowed
-        let base_p = if r.productivity_allowed { b.base_productivity + research } else { 0.0 };
+        // Built-in machine productivity (foundry / EM plant / biochamber +50 %; 0 for DSP) applies to
+        // every recipe the machine runs; the recipe flag only forbids productivity modules and research.
+        let base_p = b.base_productivity + if r.productivity_allowed { research } else { 0.0 };
         out.push(Mode {
             key: b.id.clone(),
             label: String::new(),
