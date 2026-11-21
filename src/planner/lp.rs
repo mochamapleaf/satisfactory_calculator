@@ -92,6 +92,46 @@ fn relevant<'a>(units: &[Unit<'a>], targets: &[String]) -> Vec<Unit<'a>> {
     units.iter().zip(&chosen).filter(|(_, c)| **c).map(|(u, _)| u.clone()).collect()
 }
 
+/// Items that block an infeasible plan: unobtainable leaves (no unit makes them, not supplied, no
+/// resource on the chosen planets) reached from the targets through items that cannot be made.
+/// An item counts as obtainable when supplied, mined on a chosen planet, or made by a unit whose
+/// inputs are all obtainable (forward fixed point); limits are ignored.
+fn blocking_items(data: &GameData, s: &PlanSettings, inp: &Inputs) -> Vec<String> {
+    let mined = |it: &str| {
+        data.resource(quality::split(it).0).is_some_and(|r| data.located(&r.locations, &s.planets))
+    };
+    let mut ok: BTreeSet<&str> =
+        inp.items.iter().map(|i| i.as_str()).filter(|i| inp.supplies.contains_key(*i) || mined(i)).collect();
+    loop {
+        let before = ok.len();
+        for u in &inp.units {
+            if u.ins.iter().all(|(i, _)| ok.contains(i.as_str())) {
+                ok.extend(u.outs.iter().filter(|o| o.1 > 0.0).map(|o| o.0.as_str()));
+            }
+        }
+        if ok.len() == before {
+            break;
+        }
+    }
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    let mut queue: Vec<&str> = inp.targets.keys().map(|t| t.as_str()).filter(|t| !ok.contains(t)).collect();
+    let mut leaves = Vec::new();
+    while let Some(it) = queue.pop() {
+        if !seen.insert(it) {
+            continue;
+        }
+        let makers: Vec<&Unit> = inp.units.iter().filter(|u| u.outs.iter().any(|o| o.0 == it && o.1 > 0.0)).collect();
+        if makers.is_empty() {
+            leaves.push(it.to_string());
+        }
+        for u in makers {
+            queue.extend(u.ins.iter().map(|i| i.0.as_str()).filter(|i| !ok.contains(i)));
+        }
+    }
+    leaves.sort();
+    leaves
+}
+
 /// Every item a set of units touches, plus targets and supplies.
 fn items_of(
     units: &[Unit],
@@ -172,7 +212,8 @@ struct Unit<'a> {
 impl<'a> Unit<'a> {
     fn new(recipe: &'a Recipe, mode: Mode) -> Self {
         let ins = recipe.inputs.iter().chain(&mode.extra_inputs).cloned().collect();
-        let outs = rules::outputs(recipe, &mode);
+        let mut outs = rules::outputs(recipe, &mode);
+        outs.extend(mode.extra_outputs.iter().cloned());
         Unit { recipe, key: format!("{}#{}", recipe.id, mode.key), mode, ins, outs }
     }
 }
@@ -240,12 +281,12 @@ fn build_scaled(
             None
         };
         let segs = power_segments(f.power_exp, c_max);
-        let pv = if w.power > 0.0 && f.power_base > 0.0 {
+        let pv = if w.power > 0.0 && (f.power_base > 0.0 || f.beacon_power > 0.0) {
             let pv = p.add_var(w.power, (0.0, f64::INFINITY));
             for (a, b) in &segs {
-                // p ≥ P·(a·x + b·n)
+                // p ≥ P·(a·x + b·n) + beacons·n (beacons draw full power whatever the clock)
                 p.add_constraint(
-                    &[(pv, 1.0), (x, -f.power_base * a / f.speed), (n, -f.power_base * b)],
+                    &[(pv, 1.0), (x, -f.power_base * a / f.speed), (n, -f.power_base * b - f.beacon_power)],
                     ComparisonOp::Ge,
                     0.0,
                 );
@@ -371,7 +412,8 @@ fn hint_of(m: &Model, inp: &Inputs, pt: &Point, c_max: f64, round_up: bool) -> V
             hint.push((s, sh));
         }
         if let Some(p) = v.p {
-            let pw = segs.iter().map(|(a, b)| f.power_base * (a * x / f.speed + b * n)).fold(0.0, f64::max);
+            let pw = segs.iter().map(|(a, b)| f.power_base * (a * x / f.speed + b * n)).fold(0.0, f64::max)
+                + f.beacon_power * n;
             hint.push((p, pw));
         }
     }
@@ -462,7 +504,8 @@ fn finish(
         let power: f64 = groups
             .iter()
             .map(|g| g.count * f.power_base * (g.clock_percent / 100.0).powf(f.power_exp))
-            .sum();
+            .sum::<f64>()
+            + f.beacon_power * n;
         let shards = if integer { sh } else { groups.iter().map(|g| g.count * g.shards as f64).sum() };
         let b = data.building(&f.building);
         plan.recipes.push(PlanRecipe {
@@ -666,19 +709,36 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
             plan.warnings.push(
                 "No feasible plan: targets exceed resource limits or need a disabled recipe.".into(),
             );
-            let off: Vec<String> = inp
-                .items
+            // items with no source left in the model whose recipes or resource the planet filter
+            // removed, with the planets that would provide them (review 3 M2)
+            let loc_name = |l: &String| data.locations.iter().find(|x| x.id == *l).map(|x| x.name.clone()).unwrap_or(l.clone());
+            let blocking = blocking_items(data, s, &inp);
+            let off: Vec<String> = blocking
                 .iter()
-                .filter(|it| data.resource(it).is_some_and(|r| !data.located(&r.locations, &s.planets)))
-                .filter(|it| !inp.supplies.contains_key(*it))
-                .map(|it| {
-                    let r = data.resource(it).unwrap();
-                    let at: Vec<&str> = r
-                        .locations
-                        .iter()
-                        .map(|l| data.locations.iter().find(|x| x.id == *l).map(|x| x.name.as_str()).unwrap_or(l))
-                        .collect();
-                    format!("{} ({})", name(it), at.join(", "))
+                .filter_map(|it| {
+                    let base = quality::split(it).0;
+                    let mut at: BTreeSet<String> = BTreeSet::new();
+                    if let Some(r) = data.resource(base) {
+                        if data.located(&r.locations, &s.planets) {
+                            return None; // mined here: limited, not missing
+                        }
+                        at.extend(r.locations.iter().cloned());
+                    }
+                    for r in data.recipes.iter().filter(|r| !r.recycling && r.outputs.iter().any(|o| o.0 == base)) {
+                        if s.disabled_recipes.contains(&r.id) || data.recipe_located(r, &s.planets, &s.disabled_buildings) {
+                            continue;
+                        }
+                        if !r.locations.is_empty() {
+                            at.extend(r.locations.iter().cloned());
+                        } else {
+                            for p in r.producers.iter().chain(std::iter::once(&r.building)) {
+                                at.extend(data.building(p).map(|b| b.locations.clone()).unwrap_or_default());
+                            }
+                        }
+                    }
+                    at.retain(|l| !s.planets.contains(l));
+                    (!at.is_empty() && !data.locations.is_empty())
+                        .then(|| format!("{} ({})", name(it), at.iter().map(loc_name).collect::<Vec<_>>().join(", ")))
                 })
                 .collect();
             if !off.is_empty() {

@@ -5,7 +5,7 @@
 //! work (e.g. DSP proliferator), boost items each building holds (Somersloops, modules;
 //! these can be budgeted) and the power curve. Satisfactory overclocking (clock + shards)
 //! is the one non-mode mechanic and is switched on per mode with `overclock`.
-use super::data::{GameData, Recipe};
+use super::data::{Building, GameData, Recipe};
 use super::PlanSettings;
 
 /// Boost item id used for Somersloop budgets.
@@ -21,12 +21,16 @@ pub struct Mode {
     /// Crafting speed relative to the recipe's per-minute rates.
     pub speed: f64,
     pub out_mult: f64,
-    /// MW of one building at 100 % clock.
+    /// MW of one building at 100 % clock (the machine itself).
     pub power_base: f64,
+    /// MW of the beacons charged to one building: drawn whatever the machine's utilisation.
+    pub beacon_power: f64,
     pub power_exp: f64,
     pub overclock: bool,
     /// Extra inputs per unit of work (work = buildings × speed × clock).
     pub extra_inputs: Vec<(String, f64)>,
+    /// Extra products per unit of work (spent fuel), added to the recipe's products.
+    pub extra_outputs: Vec<(String, f64)>,
     /// Boost items held by each building of this mode.
     pub held: Vec<(String, f64)>,
     pub somersloops: u32,
@@ -118,6 +122,19 @@ pub fn beacon_options(data: &GameData, s: &PlanSettings) -> Vec<BeaconOption> {
     out
 }
 
+/// Fuel burnt by building `b` per unit of work in a mode of crafting speed `speed` whose
+/// consumption multiplier (modules, beacons, at least 20 %) is `consumption`: (inputs, spent
+/// outputs). Fuel is drawn per building, so a faster machine burns less per item.
+pub fn fuel_io(b: &Building, consumption: f64, speed: f64) -> (Vec<(String, f64)>, Vec<(String, f64)>) {
+    match &b.fuel {
+        Some(f) if f.rate > 0.0 && speed > 0.0 => {
+            let q = f.rate * consumption / speed;
+            (vec![(f.item.clone(), q)], f.result.iter().map(|r| (r.clone(), q)).collect())
+        }
+        _ => (vec![], vec![]),
+    }
+}
+
 /// Products per unit of work of `r` run in mode `m`. Productivity (`out_mult`) only
 /// multiplies the non-catalyst part of a product (Kovarex: 40 of the 41 U-235 are catalyst).
 pub fn outputs(r: &Recipe, m: &Mode) -> Vec<(String, f64)> {
@@ -178,14 +195,17 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
             continue;
         }
         let Some(b) = data.building(pid) else { continue };
+        if !data.located(&b.locations, &s.planets) {
+            continue; // Space Age: the machine cannot be placed on the chosen planets
+        }
         let tier_label = if r.producers.len() > 1 { data.pick(&b.name, &b.name_zh).to_string() } else { String::new() };
         // Built-in machine productivity (foundry / EM plant / biochamber +50 %; 0 for DSP) and
         // researched productivity apply to every recipe the machine runs; the recipe flag only
         // forbids productivity modules.
         let base_p = b.base_productivity + research;
-        // module fills: (key, label, speed, productivity, consumption sums, held modules); plain first
-        let mut fills: Vec<(String, String, f64, f64, f64, Vec<(String, f64)>)> =
-            vec![(b.id.clone(), String::new(), 0.0, 0.0, 0.0, vec![])];
+        // per machine, in the LP column order of b34e62c: plain, then each enabled boost in
+        // `s.effects` order; module fills also come with every beacon option
+        let mut fills: Vec<Fill> = vec![Fill { key: b.id.clone(), ..Default::default() }];
         if b.modules > 0 {
             for eid in &s.effects {
                 let Some(e) = data.effect(eid) else { continue };
@@ -203,21 +223,11 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                 if e.kind == "proliferator" {
                     let sprays = e.sprays.unwrap_or(1.0).max(1e-9);
                     let per_work: f64 = r.inputs.iter().map(|(_, q)| q).sum::<f64>() / sprays;
-                    out.push(Mode {
+                    fills.push(Fill {
                         key: format!("{}|{}", b.id, e.id),
                         label,
-                        building: b.id.clone(),
-                        speed: b.speed * (1.0 + e.speed),
-                        out_mult: 1.0 + e.productivity + base_p,
-                        power_base: b.power * (1.0 + e.consumption),
-                        power_exp: 1.0,
-                        overclock: false,
-                        extra_inputs: vec![(e.item.clone(), per_work)],
-                        held: vec![],
-                        somersloops: 0,
-                        sprayed: true,
-                        outputs: None,
-                        beacons: 0.0,
+                        prolif: Some((e.item.clone(), per_work, e.speed, e.productivity, e.consumption)),
+                        ..Default::default()
                     });
                     continue;
                 }
@@ -229,37 +239,68 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                 } else {
                     String::new()
                 };
-                fills.push((
-                    format!("{}|{}", b.id, e.id),
-                    format!("{label}{qname} \u{d7}{}", b.modules),
-                    n * v.speed,
-                    n * v.productivity,
-                    n * v.consumption,
-                    vec![(super::quality::qid(&e.item, mq), n)],
-                ));
+                fills.push(Fill {
+                    key: format!("{}|{}", b.id, e.id),
+                    label: format!("{label}{qname} \u{d7}{}", b.modules),
+                    speed: n * v.speed,
+                    productivity: n * v.productivity,
+                    consumption: n * v.consumption,
+                    held: vec![(super::quality::qid(&e.item, mq), n)],
+                    prolif: None,
+                });
             }
         }
-        for (key, label, sp, pr, co, held) in fills {
+        for f in fills {
+            if let Some((item, per_work, sp, pr, co)) = &f.prolif {
+                // DSP proliferator: no beacons, no cap, power not floored
+                let speed = b.speed * (1.0 + sp);
+                let (mut fuel_in, fuel_out) = fuel_io(b, 1.0 + co, speed);
+                fuel_in.insert(0, (item.clone(), *per_work));
+                out.push(Mode {
+                    key: f.key.clone(),
+                    label: f.label.clone(),
+                    building: b.id.clone(),
+                    speed,
+                    out_mult: 1.0 + pr + base_p,
+                    power_base: b.power * (1.0 + co),
+                    beacon_power: 0.0,
+                    power_exp: 1.0,
+                    overclock: false,
+                    extra_inputs: fuel_in,
+                    extra_outputs: fuel_out,
+                    held: vec![],
+                    somersloops: 0,
+                    sprayed: true,
+                    outputs: None,
+                    beacons: 0.0,
+                });
+                continue;
+            }
             for bo in &beacons {
                 if bo.count > 0 && b.modules == 0 {
                     continue;
                 }
-                let mut held = held.clone();
+                let mut held = f.held.clone();
                 if bo.count > 0 {
                     held.push((bo.module.clone(), bo.modules_per_machine));
                 }
                 let bl = bo.label();
-                let label = [label.as_str(), bl.as_str()].iter().filter(|x| !x.is_empty()).cloned().collect::<Vec<_>>().join(" \u{b7} ");
+                let label = [f.label.as_str(), bl.as_str()].iter().filter(|x| !x.is_empty()).cloned().collect::<Vec<_>>().join(" \u{b7} ");
+                let speed = b.speed * (1.0 + f.speed + bo.speed).max(0.2);
+                let consumption = (1.0 + f.consumption + bo.consumption).max(0.2);
+                let (fuel_in, fuel_out) = fuel_io(b, consumption, speed);
                 out.push(Mode {
-                    key: if bo.count == 0 { key.clone() } else { format!("{key}|b{}", bo.count) },
+                    key: if bo.count == 0 { f.key.clone() } else { format!("{}|b{}", f.key, bo.count) },
                     label,
                     building: b.id.clone(),
-                    speed: b.speed * (1.0 + sp + bo.speed).max(0.2),
-                    out_mult: 1.0 + (base_p + pr).min(MAX_PRODUCTIVITY),
-                    power_base: b.power * (1.0 + co + bo.consumption).max(0.2) + bo.power,
+                    speed,
+                    out_mult: 1.0 + (base_p + f.productivity).min(MAX_PRODUCTIVITY),
+                    power_base: b.power * consumption,
+                    beacon_power: bo.power,
                     power_exp: 1.0,
                     overclock: false,
-                    extra_inputs: vec![],
+                    extra_inputs: fuel_in,
+                    extra_outputs: fuel_out,
                     held,
                     somersloops: 0,
                     sprayed: false,
@@ -270,6 +311,19 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
         }
     }
     out
+}
+
+/// One machine loadout before beacons: summed module effects and held modules, or a DSP
+/// proliferator (item, per unit of work, speed, extra products, consumption).
+#[derive(Default)]
+struct Fill {
+    key: String,
+    label: String,
+    speed: f64,
+    productivity: f64,
+    consumption: f64,
+    held: Vec<(String, f64)>,
+    prolif: Option<(String, f64, f64, f64, f64)>,
 }
 
 fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
@@ -293,9 +347,11 @@ fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode
                 speed: 1.0,
                 out_mult: 1.0 + frac,
                 power_base: base * (1.0 + frac).powi(2),
+                beacon_power: 0.0,
                 power_exp: exp,
                 overclock: true,
                 extra_inputs: vec![],
+                extra_outputs: vec![],
                 held: if k == 0 { vec![] } else { vec![(SOMERSLOOP.into(), k as f64)] },
                 somersloops: k,
                 sprayed: false,

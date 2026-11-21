@@ -52,6 +52,15 @@
   `qualityRecord` (2.1: Q3 2.5/3.25/4/4.75/6.25 %; 2.0: …/6.2 %); `qualities` (tier names).
 - Version differences (asteroid reprocessing without quality in 2.1, crushing returns, module values,
   renamed ids) come from the data sets only; no patches in code.
+- Energy (2026-11-21, review 3 H4), all Factorio sets: machine `power` is electric only; burner machines
+  carry `fuel` (item, per minute per machine at 100 %, spent result): boiler / stone / steel furnace / heating
+  tower coal (`defaults.fuelRank`), nuclear reactor uranium fuel cell (0.3/min, returns the depleted cell),
+  biochamber nutrients (15/min), captive biter spawner bioflux, fusion reactor fusion power cell. The heat
+  exchanger burns `heat` (600 MJ/min; the item is kept, in MJ, no quality); reactor / heating tower recipes
+  make it (synthesised for 2.0.77; no neighbour bonus). The 2.0.77 heating tower is given the 2.1 values
+  (16 MW of fuel at 250 % = 40 MW of heat): the 2.0.77 data lists its 40 MW without the efficiency.
+  Generators (steam engine / turbine, fusion generator) are dropped until power balance is modelled.
+  Machine `locations` (crusher: space platform; captive spawner: Nauvis) restrict where recipes run.
 
 ## satisfactory-geo/nodes.json (resource node coordinates, 2026-11-21)
 - **Source:** `rockfactory/satisfactory-logistics` @`bb997b42` (2026-04-18), `src/recipes/WorldResourceNodes.json`,

@@ -92,6 +92,24 @@ pub struct Building {
     /// Built-in productivity (Factorio foundry / EM plant +50 %).
     #[serde(default)]
     pub base_productivity: f64,
+    /// Factorio: fuel or heat the building burns (boilers, furnaces, reactors, biochamber
+    /// nutrients, heat exchanger heat); none = electric only.
+    #[serde(default)]
+    pub fuel: Option<Fuel>,
+    /// Space Age: where the building can be placed (crusher: space platform; empty = anywhere).
+    #[serde(default)]
+    pub locations: Vec<String>,
+}
+
+/// What a burner building consumes per minute, per building at 100 % consumption (consumption
+/// modules and beacons scale it like electric power); `result` comes back one for one (spent
+/// uranium fuel cells).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Fuel {
+    pub item: String,
+    pub rate: f64,
+    #[serde(default)]
+    pub result: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -326,6 +344,17 @@ impl GameData {
     /// Available under the planet filter: data without locations, untagged, or on a chosen planet.
     pub fn located(&self, locations: &[String], planets: &[String]) -> bool {
         self.locations.is_empty() || locations.is_empty() || locations.iter().any(|l| planets.contains(l))
+    }
+    /// Recipe `r` can run under the planet filter: the recipe is located and some machine that
+    /// runs it (not disabled) can be placed on a chosen planet.
+    pub fn recipe_located(&self, r: &Recipe, planets: &[String], disabled_buildings: &[String]) -> bool {
+        if !self.located(&r.locations, planets) {
+            return false;
+        }
+        let producers: Vec<&String> = if r.producers.is_empty() { vec![&r.building] } else { r.producers.iter().collect() };
+        producers.iter().any(|p| {
+            !disabled_buildings.contains(p) && self.building(p).map(|b| self.located(&b.locations, planets)).unwrap_or(true)
+        })
     }
     pub fn beacon(&self, id: &str) -> Option<&Beacon> {
         self.beacons.iter().find(|b| b.id == id)

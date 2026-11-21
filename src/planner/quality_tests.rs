@@ -406,8 +406,9 @@ fn quality_scale_report() {
 }
 
 /// Built-in machine productivity applies to every recipe the machine runs, also those that
-/// forbid productivity modules (spec §3.3, §5 step 2): EM plant / foundry +50 %, research and
-/// modules only where allowed.
+/// forbid productivity modules (spec §3.3, §5 step 2): EM plant / foundry +50 %; productivity
+/// modules only where allowed; research only on recipes a technology of the data set names
+/// (review 3 M1: transport belt and electronic circuit have none, so their values are ignored).
 #[test]
 fn builtin_productivity_on_all_recipes() {
     let d = GameData::for_set("factorio", "2x1");
@@ -415,13 +416,16 @@ fn builtin_productivity_on_all_recipes() {
     s.effects = vec!["productivity-module-3".into()];
     s.research_productivity.insert("transport-belt".into(), 0.3);
     s.research_productivity.insert("electronic-circuit".into(), 0.2);
+    s.research_productivity.insert("processing-unit".into(), 0.2);
     let mult = |rid: &str, key: &str| {
         let r = d.recipe(rid).unwrap();
         rules::modes(&d, r, &s).iter().find(|m| m.key == key).map(|m| m.out_mult)
     };
-    // EM plant empty mode on an allowed recipe: 1 + 0.5 built-in + 0.2 research
-    assert!((mult("electronic-circuit", "electromagnetic-plant").unwrap() - 1.7).abs() < 1e-9);
-    // productivity-disallowed recipes: built-in only, no research, no productivity-module mode
+    // EM plant empty mode: 1 + 0.5 built-in + 0.2 research (processing unit productivity)
+    assert!((mult("processing-unit", "electromagnetic-plant").unwrap() - 1.7).abs() < 1e-9);
+    // no technology for electronic circuits: built-in only
+    assert!((mult("electronic-circuit", "electromagnetic-plant").unwrap() - 1.5).abs() < 1e-9);
+    // productivity-disallowed recipes: built-in only, no productivity-module mode
     assert!((mult("transport-belt", "foundry").unwrap() - 1.5).abs() < 1e-9);
     assert!((mult("productivity-module", "electromagnetic-plant").unwrap() - 1.5).abs() < 1e-9);
     assert!((mult("transport-belt", "assembling-machine-3").unwrap() - 1.0).abs() < 1e-9);
@@ -571,7 +575,8 @@ fn quality_paths_catalyst_flags_module_tier() {
     let d = GameData::for_set("factorio", "2x1");
     let r = d.recipe("metallic-asteroid-reprocessing").unwrap();
     assert!(!r.quality_allowed);
-    let s = lp_settings("2x1", "carbonic-asteroid-chunk@4", 1.0);
+    let mut s = lp_settings("2x1", "carbonic-asteroid-chunk@4", 1.0);
+    s.planets = vec!["space-platform".into()]; // the crusher is placed on space platforms only
     let ex = quality::expand(&d, &s, &[r], &["carbonic-asteroid-chunk@4".to_string()]);
     assert!(!ex.is_empty());
     for (_, modes) in &ex {
@@ -622,7 +627,8 @@ fn beacon_mode_values_by_hand() {
     let m = modes.iter().find(|m| m.key == "assembling-machine-3|productivity-module-3|b8").unwrap();
     assert!(close(m.speed, 5.8025, 1e-9), "{}", m.speed);
     assert!(close(m.out_mult, 1.4, 1e-12));
-    assert!(close(m.power_base, 7.64205, 1e-9), "{}", m.power_base);
+    assert!(close(m.power_base + m.beacon_power, 7.64205, 1e-9), "{}", m.power_base);
+    assert!(close(m.beacon_power, 3.84, 1e-12));
     assert_eq!(m.beacons, 8.0);
     assert!(m.label.contains("8 beacons"));
     assert!(m.held.iter().any(|(i, q)| i == "speed-module-3" && *q == 16.0));
@@ -645,7 +651,7 @@ fn beacon_mode_values_by_hand() {
     let mut s2 = s.clone();
     s2.beacon_share = 2.0;
     let m2 = rules::modes(&d, r, &s2).into_iter().find(|m| m.key.ends_with("productivity-module-3|b8")).unwrap();
-    assert!(close(m2.power_base, 3.80205 + 1.92, 1e-9) && m2.beacons == 4.0);
+    assert!(close(m2.power_base, 3.80205, 1e-9) && close(m2.beacon_power, 1.92, 1e-12) && m2.beacons == 4.0);
     // no beacon module: no beacon modes
     let mut s3 = s.clone();
     s3.beacon_module.clear();

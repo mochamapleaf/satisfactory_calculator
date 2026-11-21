@@ -670,3 +670,125 @@ fn scrap_recycling_research() {
         assert_balanced(&p);
     }
 }
+
+fn factorio_set(set: &str, targets: &[(&str, f64)], planets: &[&str]) -> (GameData, PlanSettings) {
+    let d = GameData::for_set("factorio", set);
+    let mut s = settings(targets);
+    s.game = "factorio".into();
+    s.dataset = set.into();
+    s.integer = false;
+    s.planets = planets.iter().map(|p| p.to_string()).collect();
+    (d, s)
+}
+
+fn input_of(p: &Plan, recipe: &str, item: &str) -> f64 {
+    p.recipes.iter().filter(|r| r.id == recipe).flat_map(|r| &r.inputs).filter(|l| l.item == item).map(|l| l.rate).sum()
+}
+
+fn output_of(p: &Plan, recipe: &str, item: &str) -> f64 {
+    p.recipes.iter().filter(|r| r.id == recipe).flat_map(|r| &r.outputs).filter(|l| l.item == item).map(|l| l.rate).sum()
+}
+
+fn machines_of(p: &Plan, recipe: &str) -> f64 {
+    p.recipes.iter().filter(|r| r.id == recipe).map(|r| r.machines).sum()
+}
+
+/// Review 3 H4: heat exchangers burn heat (600 MJ/min each), reactors and heating towers burn fuel,
+/// boilers and burner furnaces burn coal, the biochamber burns nutrients; generators are gone.
+#[test]
+fn heat_and_fuel() {
+    // one heat exchanger (6 185.567 steam/min) = 600 MJ/min of heat = 0.25 reactor (40 MW, no
+    // neighbour bonus) = 0.075 uranium cells/min (8 GJ each), returned as spent cells
+    let rate = 6000.0 * 60.0 / 58.2;
+    for set in ["2x1", "2q1", "spa"] {
+        // the exchanger's 500 °C steam is "steam" or "steam-500" depending on the set
+        let d = GameData::for_set("factorio", set);
+        let steam = d.recipe("heat-exchanger-steam-boil").map(|r| r.outputs[0].0.clone()).unwrap_or("steam".into());
+        let (d, mut s) = factorio_set(set, &[(steam.as_str(), rate)], &["nauvis"]);
+        assert!(d.buildings.iter().all(|b| b.power >= 0.0), "{set}: generators dropped");
+        assert!(d.building("steam-turbine").is_none());
+        let hx = d.building("heat-exchanger").unwrap();
+        assert_eq!(hx.power, 0.0, "{set}");
+        s.disabled_buildings = vec!["heating-tower".into()];
+        let p = plan(&d, &s);
+        assert_eq!(p.status, Status::Optimal, "{set} {:?}", p.warnings);
+        assert_balanced(&p);
+        assert!(close(machines_of(&p, "heat-exchanger-steam-boil"), 1.0), "{set}");
+        assert!(close(input_of(&p, "heat-exchanger-steam-boil", "heat"), 600.0), "{set}");
+        assert!(close(machines_of(&p, "nuclear-reactor-reactor"), 0.25), "{set} {}", machines_of(&p, "nuclear-reactor-reactor"));
+        assert!(close(input_of(&p, "nuclear-reactor-reactor", "uranium-fuel-cell"), 0.075), "{set}");
+        assert!(close(output_of(&p, "nuclear-reactor-reactor", "depleted-uranium-fuel-cell"), 0.075), "{set}");
+        assert!(p.production_power < 0.1, "{set}: exchanger draws no electricity ({})", p.production_power);
+        // heating tower (Space Age): 16 MW of coal at 250 % → 40 MW of heat, 0.25 tower = 60 coal/min
+        if set != "2q1" {
+            s.disabled_buildings = vec!["nuclear-reactor".into()];
+            let p = plan(&d, &s);
+            assert_eq!(p.status, Status::Optimal, "{set} {:?}", p.warnings);
+            assert!(close(machines_of(&p, "heating-tower-reactor"), 0.25), "{set}");
+            assert!(close(input_of(&p, "heating-tower-reactor", "coal"), 60.0), "{set}");
+        }
+    }
+    // base 2.0: a boiler (1.8 MW of coal, 3 600 steam/min) burns 27 coal/min and no electricity
+    let (d, s) = factorio_set("2.0", &[("steam", 6000.0)], &[]);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    assert!(close(input_of(&p, "steam", "coal"), 45.0), "{}", input_of(&p, "steam", "coal"));
+    assert!(close(p.production_power, 0.0));
+    // stone furnace (90 kW of coal): 60 plates/min = 3.2 furnaces = 4.32 coal/min
+    let (d, mut s) = factorio_set("2.0", &[("iron-plate", 60.0)], &[]);
+    s.disabled_buildings = vec!["steel-furnace".into(), "electric-furnace".into()];
+    let p = plan(&d, &s);
+    assert!(close(machines_of(&p, "iron-plate"), 3.2));
+    assert!(close(input_of(&p, "iron-plate", "coal"), 4.32), "{}", input_of(&p, "iron-plate", "coal"));
+    // the steel furnace is twice as fast for the same fuel: half the coal per plate
+    s.disabled_buildings = vec!["stone-furnace".into(), "electric-furnace".into()];
+    assert!(close(input_of(&plan(&d, &s), "iron-plate", "coal"), 2.16));
+    // biochamber: 500 kW of nutrients (2 MJ) = 15/min per machine; efficiency modules scale it down
+    // to the 20 % floor like electric power: 4 × efficiency 3 → 3/min per machine
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = factorio_set("2x1", &[], &["gleba"]).1;
+    s.effects = vec!["efficiency-module-3".into()];
+    let r = d.recipe("bioflux").unwrap();
+    let modes = rules::modes(&d, r, &s);
+    let nutrients = |key: &str| {
+        let m = modes.iter().find(|m| m.key == key).unwrap();
+        m.extra_inputs.iter().find(|x| x.0 == "nutrients").unwrap().1 * m.speed
+    };
+    assert!(close(nutrients("biochamber"), 15.0));
+    assert!(close(nutrients("biochamber|efficiency-module-3"), 3.0), "{}", nutrients("biochamber|efficiency-module-3"));
+}
+
+/// Review 3 M2: machine locations (crusher on the space platform, captive biter spawner on Nauvis)
+/// and a hint naming the target whose recipes the planet filter removed.
+#[test]
+fn planet_filter_machines_and_hint() {
+    // Nauvis with carbonic chunks supplied: no crusher on Nauvis
+    let (d, mut s) = factorio_set("2x1", &[("carbon", 60.0)], &["nauvis"]);
+    s.supplies = vec![ItemRate { item: "carbonic-asteroid-chunk".into(), rate: 1e6 }];
+    let p = plan(&d, &s);
+    assert!(!p.recipes.iter().any(|r| r.id.contains("asteroid-crushing")), "{:?}", p.recipes.iter().map(|r| &r.id).collect::<Vec<_>>());
+    s.planets.push("space-platform".into());
+    assert!(plan(&d, &s).recipes.iter().any(|r| r.id == "carbonic-asteroid-crushing"));
+    // biter eggs come from the captive spawner on Nauvis (burning bioflux), not from nowhere
+    let (d, s) = factorio_set("2x1", &[("biter-egg", 60.0)], &["gleba"]);
+    assert!(d.resource("biter-egg").is_none());
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Infeasible);
+    assert!(p.warnings.iter().any(|w| w.contains("Biter egg (Nauvis)")), "{:?}", p.warnings);
+    let (d, s) = factorio_set("2x1", &[("biter-egg", 60.0)], &["nauvis", "gleba"]);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert!(input_of(&p, "biter-egg", "bioflux") > 0.0);
+    // a Vulcanus-only target on Nauvis names the target and its planet
+    let (d, s) = factorio_set("2x1", &[("metallurgic-science-pack", 1.0)], &["nauvis"]);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Infeasible);
+    assert!(p.warnings.iter().any(|w| w.contains("Metallurgic science pack (Vulcanus)")), "{:?}", p.warnings);
+    // only items without a source: steel on Nauvis is fine, so an impossible extra target is the only one named
+    let (d, s) = factorio_set("2x1", &[("steel-plate", 60.0), ("tungsten-plate", 1.0)], &["nauvis"]);
+    let p = plan(&d, &s);
+    let w = p.warnings.iter().find(|w| w.starts_with("Not on the chosen planets")).expect("hint");
+    // tungsten plate is cast from tungsten ore and molten iron (calcite or lava); nothing else is named
+    assert!(w.contains("Tungsten ore") && w.contains("Calcite"), "{w}");
+    assert!(!w.contains("Scrap") && !w.contains("chunk") && !w.contains("Jellynut") && !w.contains("Yumako"), "{w}");
+}

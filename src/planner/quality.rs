@@ -85,8 +85,9 @@ fn module(data: &GameData, id: &str, tier: u8) -> Option<Module> {
     data.effect(id).filter(|e| e.kind == "module").map(|e| Module { item: qid(&e.item, tier.min(LEGENDARY)), v: e.tier(tier) })
 }
 
-/// Upstream closure (base ids) over `recipes`: items needed for `targets` and the recipes making them.
-fn closure<'a>(recipes: &[&'a Recipe], targets: &BTreeSet<String>) -> (BTreeSet<String>, Vec<&'a Recipe>) {
+/// Upstream closure (base ids) over `recipes`: items needed for `targets` and the recipes making
+/// them; with `fuel_of`, the fuel of a recipe's machines counts as an input (nutrients, fuel cells).
+fn closure<'a>(fuel_of: Option<&GameData>, recipes: &[&'a Recipe], targets: &BTreeSet<String>) -> (BTreeSet<String>, Vec<&'a Recipe>) {
     let mut by_out: HashMap<&str, Vec<usize>> = HashMap::new();
     for (k, r) in recipes.iter().enumerate() {
         for (o, _) in &r.outputs {
@@ -102,7 +103,16 @@ fn closure<'a>(recipes: &[&'a Recipe], targets: &BTreeSet<String>) -> (BTreeSet<
                 continue;
             }
             chosen[k] = true;
-            for (i, _) in &recipes[k].inputs {
+            let r = recipes[k];
+            // fuel is burnt at normal quality: a fuel that is also a raw resource (coal) is mined,
+            // so its recipes (coal synthesis and its oil chain) would only add loadout columns
+            let fuels = r
+                .producers
+                .iter()
+                .chain(std::iter::once(&r.building))
+                .filter_map(|p| fuel_of?.building(p)?.fuel.as_ref())
+                .filter(|f| fuel_of.is_some_and(|d| d.resource(&f.item).is_none()));
+            for i in r.inputs.iter().map(|(i, _)| i).chain(fuels.map(|f| &f.item)) {
                 if needed.insert(i.clone()) {
                     queue.push(i.clone());
                 }
@@ -124,7 +134,7 @@ pub fn recycling_allowed<'a>(
     let crafting: Vec<&Recipe> = allowed.iter().copied().filter(|r| !r.recycling).collect();
     let chain = match s.recycling.as_str() {
         "all" | "list" => BTreeSet::new(),
-        _ => closure(&crafting, target_bases).0,
+        _ => closure(None, &crafting, target_bases).0,
     };
     allowed
         .iter()
@@ -145,7 +155,7 @@ pub fn expand(data: &GameData, s: &PlanSettings, allowed: &[&Recipe], target_ids
     let target_bases: BTreeSet<String> = target_ids.iter().map(|t| split(t).0.to_string()).collect();
     let mut pool: Vec<&Recipe> = allowed.iter().copied().filter(|r| !r.recycling).collect();
     pool.extend(recycling_allowed(s, allowed, &target_bases));
-    let (_, chain) = closure(&pool, &target_bases);
+    let (_, chain) = closure(Some(data), &pool, &target_bases);
     let liquid: HashSet<&str> = data.items.iter().filter(|i| i.liquid).map(|i| i.id.as_str()).collect();
     let solid = |it: &str| !liquid.contains(it);
     let qm = module(data, &s.quality_module, s.module_quality).filter(|m| m.v.quality > 0.0);
@@ -203,6 +213,9 @@ fn loadout_modes(
             continue;
         }
         let Some(b) = data.building(pid) else { continue };
+        if !data.located(&b.locations, &s.planets) {
+            continue;
+        }
         let n = b.modules;
         let prod_ok = r.productivity_allowed && !b.disallowed_effects.iter().any(|x| x == "productivity");
         let q_ok = qm.is_some()
@@ -238,7 +251,10 @@ fn loadout_modes(
             // modules only where the recipe allows them (km is 0 otherwise)
             let p = (b.base_productivity + research + km * pv.productivity).min(MAX_PRODUCTIVITY);
             let speed = b.speed * (1.0 + kq * qv.speed + km * pv.speed + bo.speed).max(0.2);
-            let power = b.power * (1.0 + kq * qv.consumption + km * pv.consumption + bo.consumption).max(0.2) + bo.power;
+            let consumption = (1.0 + kq * qv.consumption + km * pv.consumption + bo.consumption).max(0.2);
+            let power = b.power * consumption;
+            // fuel and spent fuel stay at normal quality (fluids and heat have none)
+            let (fuel_in, fuel_out) = super::rules::fuel_io(b, consumption, speed);
             let row = qrow(qchance, i);
             let mut outs: Vec<(String, f64)> = Vec::new();
             // Open question (report §1.1, §7): whether the catalyst part rolls quality in game.
@@ -283,9 +299,11 @@ fn loadout_modes(
                 speed,
                 out_mult: 1.0 + p,
                 power_base: power,
+                beacon_power: bo.power,
                 power_exp: 1.0,
                 overclock: false,
-                extra_inputs: vec![],
+                extra_inputs: fuel_in,
+                extra_outputs: fuel_out,
                 held,
                 somersloops: 0,
                 sprayed: false,
