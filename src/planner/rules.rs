@@ -365,3 +365,42 @@ fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode
         })
         .collect()
 }
+
+/// DSP: hint when a plan sprays some recipes with a lower proliferator tier than the best one
+/// enabled (Xinyu 2026-11-21: 「为何生产1级2级增产剂不用3级的？」). The LP is already the
+/// steady state, so this is the optimum under the objective, not a build-order artefact: a
+/// Mk.I spray costs far fewer upstream buildings than a Mk.III one (Mk.III = Mk.II + Mk.I +
+/// carbon nanotube), and on cheap recipes that outweighs the larger bonus. Unticking the lower
+/// tiers forces the best one (on 60 universe matrix/min it costs ~0.6 % more buildings).
+pub fn proliferator_tier_hint(data: &GameData, s: &PlanSettings, recipes: &[super::PlanRecipe]) -> Option<String> {
+    let prolif = |eid: &str| data.effect(eid).filter(|e| e.kind == "proliferator");
+    let best = s.effects.iter().filter_map(|e| prolif(e)).max_by(|a, b| {
+        a.sprays.unwrap_or(0.0).partial_cmp(&b.sprays.unwrap_or(0.0)).unwrap_or(std::cmp::Ordering::Equal)
+    })?;
+    let mut lower: Vec<String> = vec![];
+    let mut tiers: Vec<String> = vec![];
+    for r in recipes {
+        let Some(e) = r.mode.rsplit('|').next().and_then(prolif) else { continue };
+        if e.item != best.item && e.sprays.unwrap_or(0.0) < best.sprays.unwrap_or(0.0) {
+            lower.push(r.name.clone());
+            let t = data.item_name(&e.item);
+            if !tiers.contains(&t) {
+                tiers.push(t);
+            }
+        }
+    }
+    if lower.is_empty() {
+        return None;
+    }
+    let shown: Vec<&str> = lower.iter().take(4).map(|x| x.as_str()).collect();
+    let more = if lower.len() > 4 { format!(" and {} more", lower.len() - 4) } else { String::new() };
+    Some(format!(
+        "{} recipe(s) are sprayed with {} although {} is enabled ({}{more}). This is the steady-state optimum for this objective, not a build-order effect: a lower-tier spray needs far fewer upstream buildings ({} is made from the lower tiers plus extra ingredients), and on these recipes that outweighs its smaller bonus. To spray everything with {}, untick the lower-tier proliferator modes (in tests this costs about 0.5–1 % more by the objective).",
+        lower.len(),
+        tiers.join(" / "),
+        data.item_name(&best.item),
+        shown.join(", "),
+        data.item_name(&best.item),
+        data.item_name(&best.item),
+    ))
+}

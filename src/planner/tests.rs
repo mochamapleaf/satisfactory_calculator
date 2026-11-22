@@ -832,3 +832,33 @@ fn beacon_power_and_mode_order() {
     assert_eq!(keys[1], format!("{b}|proliferator-3-speed"));
     assert_eq!(keys[2], format!("{b}|proliferator-3-products"));
 }
+
+/// Xinyu 2026-11-21 「为何生产1级2级增产剂不用3级的？」: with all tiers enabled the steady-state
+/// optimum (Buildings / Compute) still sprays a few cheap recipes (Mk.I / Mk.II making, circuit
+/// boards…) with Mk.I, because a Mk.I spray costs far fewer upstream buildings. The plan says so,
+/// and unticking the lower tiers gives an all-Mk.III plan that costs slightly more.
+#[test]
+fn dsp_proliferator_tier_mix_is_optimal_and_explained() {
+    let all: Vec<String> =
+        ["1", "2", "3"].iter().flat_map(|t| [format!("proliferator-{t}-speed"), format!("proliferator-{t}-products")]).collect();
+    let (d, mut s) = dsp_compute(&[("universe-matrix", 60.0)]);
+    s.integer = false;
+    s.objective = Objective::Buildings;
+    s.effects = all.clone();
+    let mix = plan(&d, &s);
+    assert_eq!(mix.status, Status::Optimal);
+    let modes = sprayed_modes(&mix);
+    assert!(modes["proliferator-2"].contains("proliferator-1-"), "{modes:?}");
+    assert!(mix.warnings.iter().any(|w| w.contains("steady-state optimum")), "{:?}", mix.warnings);
+    // Mk.III only: every sprayed recipe uses Mk.III, no hint, and the objective is not better
+    s.effects = all[4..].to_vec();
+    let top = plan(&d, &s);
+    assert!(top.recipes.iter().filter(|r| r.mode.contains("proliferator")).all(|r| r.mode.contains("proliferator-3-")));
+    assert!(!top.warnings.iter().any(|w| w.contains("steady-state optimum")), "{:?}", top.warnings);
+    assert!(mix.objective <= top.objective + 1e-9 && top.objective < 1.01 * mix.objective, "{} vs {}", mix.objective, top.objective);
+    // Raw-resource objective: Mk.III everywhere already, no hint
+    s.effects = all;
+    s.objective = Objective::Resources;
+    let raw = plan(&d, &s);
+    assert!(!raw.warnings.iter().any(|w| w.contains("steady-state optimum")), "{:?}", raw.warnings);
+}

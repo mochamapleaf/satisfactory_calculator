@@ -604,6 +604,9 @@ fn finish(
     plan.shards = plan.recipes.iter().map(|r| r.shards).sum();
     plan.somersloops = plan.recipes.iter().map(|r| r.machines * r.somersloops as f64).sum();
     plan.flows = super::flows::allocate(plan);
+    if let Some(h) = rules::proliferator_tier_hint(data, s, &plan.recipes) {
+        plan.warnings.push(h);
+    }
     if let Some(w) = &cw {
         let mut c = summary.unwrap_or_default();
         let model = compute::model();
