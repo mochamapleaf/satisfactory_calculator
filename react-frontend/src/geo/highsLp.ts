@@ -45,7 +45,7 @@ export function highsSolver(highs: Highs): LpSolve {
       ...(mip ? { integrality: Int32Array.from(m.integ, t => (t ? 1 : 0)) } : {}),
     })
     try {
-      const o: Record<string, unknown> = { output_flag: false, random_seed: 0, mip_rel_gap: opts.gap ?? 1e-4 }
+      const o: Record<string, number | boolean> = { output_flag: false, random_seed: 0, mip_rel_gap: opts.gap ?? 1e-4 }
       if (opts.timeLimit) o.time_limit = opts.timeLimit
       model.options.set(o)
       if (mip && opts.warm) {

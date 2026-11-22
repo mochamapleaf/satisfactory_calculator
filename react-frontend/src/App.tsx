@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { AUTO_SOLVE_COLUMNS, cancelSolve, keepSolving, MAX_TIME_MS, fmt, GAMES, loadSolver, solveStream, type Game, type GameData, type Plan, type Settings, type SolveUpdate } from './solver'
 import { loadGame, loadSettings, saveSettings } from './urlState'
 import Sidebar from './Sidebar'
@@ -9,8 +9,11 @@ import ItemValues from './ItemValues'
 import ItemFlow from './ItemFlow'
 import { ICON_STYLES, IconProvider, loadIconStyle, saveIconStyle, type IconStyle } from './Icon'
 
-type Tab = 'table' | 'flow' | 'graph' | 'values'
-const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values']]
+// the map view (Satisfactory only) and its geo data load on first use
+const MapView = lazy(() => import('./MapView'))
+
+type Tab = 'table' | 'flow' | 'graph' | 'values' | 'map'
+const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values'], ['map', 'Map']]
 
 export default function App() {
   const [data, setData] = useState<GameData | null>(null)
@@ -166,7 +169,7 @@ export default function App() {
         <Sidebar data={data} settings={settings} setSettings={setSettings} />
         <main>
           <div className="tabs" role="tablist">
-            {TABS.map(([id, name]) => (
+            {TABS.filter(([id]) => id !== 'map' || settings.game === 'satisfactory').map(([id, name]) => (
               <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{name}</button>
             ))}
             {solving && <span className="solving" role="status">Solving{elapsed >= 1 ? ` ${elapsed} s` : ''}{settings.integer && !bigRun ? ` of ≤ ${fmt((progress?.deadline_ms ?? settings.time_limit_ms) / 1000, 1)} s` : ''}{unproven && plan ? ` · best plan so far, within ${gapPct(plan.gap)} % of the bound` : ''}</span>}
@@ -216,6 +219,7 @@ export default function App() {
           {plan && tab === 'flow' && <ItemFlow data={data} plan={plan} />}
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}
           {plan && tab === 'values' && <ItemValues plan={plan} settings={settings} />}
+          {plan && tab === 'map' && settings.game === 'satisfactory' && <Suspense fallback={<p className="muted">Loading the map…</p>}><MapView data={data} plan={plan} /></Suspense>}
         </main>
       </div>
     </div>
