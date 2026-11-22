@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "build:all": "npm run build:wasm && npm run build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:geo": "node --test src/geo/geo.test.ts"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",
