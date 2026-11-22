@@ -919,6 +919,8 @@ pub struct Run<'a> {
     phase: Phase,
     failure: Option<String>,
     nodes: u64,
+    /// `version` right after the budget fallback became the best plan (it still is while equal)
+    fallback_version: Option<u32>,
 }
 
 impl<'a> Run<'a> {
@@ -988,8 +990,6 @@ impl<'a> Run<'a> {
                 for shards in [true, false] {
                     let r = rounded(&self.inp, &p, self.c_max, shards);
                     if within_budgets(&self.s, &self.inp, &r) {
-                        // every candidate's recipes join the restricted MILP's neighbourhood
-                        self.support.extend(r.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()));
                         let obj = objective_of(&self.m, &values_of(&self.m, &self.inp, &r));
                         if best.as_ref().is_none_or(|b| obj < b.0) {
                             best = Some((obj, r));
@@ -1071,7 +1071,9 @@ impl<'a> Run<'a> {
             }
             None => {
                 let mut keep = self.support.clone();
-                if let Some((_, b)) = &self.best {
+                // (not the budget fallback's: a feasible restricted MILP around it only spends time,
+                // the plan is already in hand)
+                if let Some((_, b)) = self.best.as_ref().filter(|_| self.fallback_version != Some(self.version)) {
                     keep.extend(b.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()));
                 }
                 if keep.len() >= self.inp.units.len() || now >= self.deadline {
@@ -1124,7 +1126,11 @@ impl<'a> Run<'a> {
                     return;
                 }
                 let from = self.best.as_ref().map(|b| b.1.clone()).unwrap_or_else(|| rounded(&self.inp, &self.lp_pt, self.c_max, true));
-                self.m.p.solve_with(milp_root(int_hint(&self.m, &self.inp, &from)))
+                // A budget-fallback plan is kept in hand but not given as warm start: it is far from
+                // optimal, and searching from it found worse plans in 4 s than searching without a
+                // start (Somersloop budget, Resources: 5725 vs 5275, as the code before the fallback).
+                let hint = if self.fallback_version == Some(self.version) { vec![] } else { int_hint(&self.m, &self.inp, &from) };
+                self.m.p.solve_with(milp_root(hint))
             }
         };
         match res {
@@ -1569,12 +1575,14 @@ fn start_units<'b>(
         phase: Phase::Reweight(0),
         failure: None,
         nodes: 0,
+        fallback_version: None,
     };
     let first = rounded(&run.inp, &run.lp_pt, c_max, true);
     if within_budgets(s, &run.inp, &first) {
         run.offer(first);
     } else if let Some(pt) = run.budget_fallback() {
         run.offer(pt);
+        run.fallback_version = Some(run.version);
     }
     if run.gap().is_some_and(|g| g <= MIP_GAP) {
         run.proven = true;

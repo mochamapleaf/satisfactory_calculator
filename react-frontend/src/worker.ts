@@ -12,8 +12,6 @@ import type { Highs } from 'highs'
 
 /** Length of one solver step (ms): the plan on screen is at most this old. */
 const SLICE_MS = 150
-/** Engine used for 'auto' (set from the browser benchmark, docs/research/solver-speed/_过程文件/impl-results.md). */
-export const AUTO_ENGINE: 'microlp' | 'highs' = 'highs'
 const ready = init()
 let cur = 0 // solve the WASM state belongs to
 let gen = 0 // bumped by every message: a step loop from an older one stops
@@ -79,7 +77,8 @@ self.onmessage = async (e: MessageEvent<{ type: string; id: number; settings?: s
   }
   cur = m.id
   const settings = JSON.parse(m.settings ?? '{}') as { integer?: boolean; engine?: string }
-  useHighs = !!settings.integer && (settings.engine === 'highs' || ((settings.engine ?? 'auto') === 'auto' && AUTO_ENGINE === 'highs'))
+  // 'auto' is resolved by the page (solver.ts races a microlp and a HiGHS worker)
+  useHighs = !!settings.integer && settings.engine === 'highs'
   highsTried = false
   highsStatus = ''
   let out: string

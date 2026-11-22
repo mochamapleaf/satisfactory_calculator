@@ -131,7 +131,8 @@ export interface Settings {
   shard_budget: number | null
   cost: CostWeights
   time_limit_ms: number
-  /** Whole-building MILP engine: microlp (built in) or HiGHS (loaded on first use); auto picks. */
+  /** Whole-building MILP engine: microlp (built in) or HiGHS (loaded on first use); auto runs both
+   *  in parallel workers and shows the better plan. */
   engine: Engine
   generator: Generator
   mixed_belts: boolean
@@ -298,61 +299,137 @@ export interface SolveUpdate {
   highs_status?: string
 }
 type OnUpdate = (u: SolveUpdate) => void
-let worker: Worker | null = null
-let seq = 0
-let running: { id: number; onUpdate: OnUpdate; gotPlan: boolean; busy: boolean } | null = null
-let idle: number | null = null // solve whose search the idle worker still holds
-function newWorker() {
-  worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
-  worker.onmessage = (e: MessageEvent<{ id: number; update: string }>) => {
-    const r = running
-    if (r?.id !== e.data.id) return
-    const u = JSON.parse(e.data.update) as SolveUpdate
-    if (u.plan) r.gotPlan = true
-    r.busy = !!u.engine_busy
-    if (u.done) { running = null; idle = u.gone ? null : r.id }
-    r.onUpdate(u)
+
+/** One worker and the solve it runs (or holds, idle, for "Keep solving"). */
+class Lane {
+  worker: Worker | null = null
+  running: { id: number; onUpdate: OnUpdate; gotPlan: boolean; busy: boolean } | null = null
+  idle: number | null = null
+  private open() {
+    this.worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
+    this.worker.onmessage = (e: MessageEvent<{ id: number; update: string }>) => {
+      const r = this.running
+      if (r?.id !== e.data.id) return
+      const u = JSON.parse(e.data.update) as SolveUpdate
+      if (u.plan) r.gotPlan = true
+      r.busy = !!u.engine_busy
+      if (u.done) { this.running = null; this.idle = u.gone ? null : r.id }
+      r.onUpdate(u)
+    }
+  }
+  stop() {
+    this.worker?.terminate()
+    this.worker = null
+    this.running = null
+    this.idle = null
+  }
+  start(id: number, s: Settings, onUpdate: OnUpdate) {
+    if (this.running) this.stop()
+    if (!this.worker) this.open()
+    this.running = { id, onUpdate, gotPlan: false, busy: false }
+    this.idle = null
+    this.worker!.postMessage({ type: 'solve', id, settings: JSON.stringify(s) })
+  }
+  keep(id: number, ms: number, onUpdate: OnUpdate): boolean {
+    if (this.running || this.idle !== id || !this.worker) return false
+    this.running = { id, onUpdate, gotPlan: true, busy: false }
+    this.idle = null
+    this.worker.postMessage({ type: 'resume', id, ms })
+    return true
+  }
+  /** After the first plan the worker keeps the search (see `keep`); before it, or while HiGHS
+   *  blocks the worker, the worker is terminated. */
+  cancel() {
+    const r = this.running
+    if (!r) return
+    if (r.gotPlan && this.worker && !r.busy) {
+      this.worker.postMessage({ type: 'stop', id: r.id })
+      this.running = null
+      this.idle = r.id
+    } else this.stop()
   }
 }
-function stopWorker() {
-  worker?.terminate()
-  worker = null
-  running = null
-  idle = null
+
+// lane 0: the requested engine (microlp for Auto); lane 1: HiGHS racing it under Auto
+const lanes = [new Lane(), new Lane()]
+let seq = 0
+
+const better = (a: Plan | null, b: Plan | null) =>
+  !a || a.status !== 'optimal' ? b : !b || b.status !== 'optimal' ? a : (b.proven_optimal && !a.proven_optimal) || b.objective < a.objective - 1e-9 * Math.max(1, Math.abs(a.objective)) ? b : a
+
+/** Auto: microlp and HiGHS solve the same plan in two workers; the page sees the better plan at
+ *  every moment, so Auto is never worse than microlp alone. A proof by either ends both. */
+let raceBest: (Plan | null)[] = [null, null]
+function race(onUpdate: OnUpdate, keep = false) {
+  const last: (SolveUpdate | null)[] = [null, null]
+  let shown: Plan | null = null
+  // "Keep solving": a lane whose search is gone still holds its best plan
+  const best: (Plan | null)[] = keep ? raceBest : [null, null]
+  raceBest = best
+  return (k: number) => (u: SolveUpdate) => {
+    last[k] = { ...u, plan: null }
+    if (u.plan) best[k] = u.plan
+    const proven = last.some(x => x?.proven) || best.some(p => p?.proven_optimal)
+    const done = proven || last.every(x => x?.done)
+    if (proven) for (const l of lanes) l.cancel()
+    const pick = better(best[0], best[1])
+    const plan = pick !== shown || done ? pick : null
+    if (plan) shown = plan
+    const bounds = last.map(x => x?.bound).filter((b): b is number => typeof b === 'number' && Number.isFinite(b))
+    const one = last[k]!
+    onUpdate({
+      ...one,
+      plan: plan ?? (done && !pick ? u.plan : null),
+      done,
+      proven,
+      bound: bounds.length ? Math.max(...bounds) : undefined,
+      elapsed_ms: Math.max(...last.map(x => x?.elapsed_ms ?? 0)),
+      deadline_ms: Math.max(...last.map(x => x?.deadline_ms ?? 0)),
+      engine: `race (${last.map(x => x?.engine ?? '–').join(' / ')})`,
+      engine_busy: false,
+      gone: last.every(x => x?.gone) || undefined,
+    })
+  }
 }
+
+let raceIds: [number, number] | null = null
+
 /** Start a solve; `onUpdate` gets the streamed updates. Returns the solve id. */
 export function solveStream(s: Settings, onUpdate: OnUpdate): number {
-  if (running) stopWorker()
-  if (!worker) newWorker()
   const id = ++seq
-  running = { id, onUpdate, gotPlan: false, busy: false }
-  idle = null
-  worker!.postMessage({ type: 'solve', id, settings: JSON.stringify(s) })
+  if (s.integer && (s.engine ?? 'auto') === 'auto') {
+    const h = race(onUpdate)
+    lanes[0].start(id, { ...s, engine: 'microlp' }, h(0))
+    lanes[1].start(id, { ...s, engine: 'highs' }, h(1))
+    raceIds = [id, id]
+  } else {
+    lanes[1].cancel()
+    raceIds = null
+    lanes[0].start(id, s, onUpdate)
+  }
   return id
 }
 /** One-shot solve (final plan only). */
 export function solveAsync(s: Settings): Promise<Plan> {
   return new Promise(resolve => solveStream(s, u => { if (u.done) resolve(u.plan ?? { ...emptyPlan(), status: 'cancelled' }) }))
 }
-/** Resume solve `id` for `ms` more where it stopped. False when the worker no longer holds it. */
+/** Resume solve `id` for `ms` more where it stopped. False when no worker holds it any more. */
 export function keepSolving(id: number, ms: number, onUpdate: OnUpdate): boolean {
-  if (running || idle !== id || !worker) return false
-  running = { id, onUpdate, gotPlan: true, busy: false }
-  idle = null
-  worker.postMessage({ type: 'resume', id, ms })
-  return true
+  if (raceIds && raceIds[0] === id) {
+    const h = race(onUpdate, true)
+    const a = lanes[0].keep(id, ms, h(0))
+    const b = lanes[1].keep(id, ms, h(1))
+    if (a !== b) {
+      // only one search is left: it alone continues (the other counts as done)
+      h(a ? 1 : 0)({ plan: null, done: true })
+    }
+    return a || b
+  }
+  return lanes[0].keep(id, ms, onUpdate)
 }
-/** Stop the running solve (if any). After its first plan the worker keeps the search (see
- *  `keepSolving`); before it, the worker is terminated. */
+/** Stop the running solve(s), if any. */
 export function cancelSolve() {
-  const r = running
-  if (!r) return
-  // HiGHS runs synchronously: the worker would see the stop only when it returns
-  if (r.gotPlan && worker && !r.busy) {
-    worker.postMessage({ type: 'stop', id: r.id })
-    running = null
-    idle = r.id
-  } else stopWorker()
+  for (const l of lanes) l.cancel()
 }
 /** Models above this many columns are not solved until the user asks (status 'too_large'). */
 export const AUTO_SOLVE_COLUMNS = 6000
