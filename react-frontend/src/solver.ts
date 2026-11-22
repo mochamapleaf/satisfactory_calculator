@@ -304,6 +304,9 @@ export function cancelSolve() {
 /** Models above this many columns are not solved until the user asks (status 'too_large'). */
 export const AUTO_SOLVE_COLUMNS = 6000
 export const latestRequest = () => seq
+/** Longest whole-building time limit the solver accepts (it clamps to 300 s). */
+export const MAX_TIME_MS = 300_000
+export const clampTime = (sec: number) => Math.round(Math.min(MAX_TIME_MS / 1000, Math.max(0.2, Number.isFinite(sec) ? sec : 4)) * 1000)
 
 /** Smallest belt / pipe tier that carries `rate`, e.g. "Mk.3" or "2× Mk.6". */
 export function carrier(rate: number, liquid: boolean, data: GameData): string {

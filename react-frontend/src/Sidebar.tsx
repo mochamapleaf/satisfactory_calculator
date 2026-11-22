@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, QualityPip, RemoveMark } from './Icon'
 import ItemPicker from './ItemPicker'
+import TimeInput from './TimeInput'
 import { DATASETS, defaultSettings, withDataset, dn, fmt, GENERATORS, itemName as qItemName, preset, qsplit, scarcity, withQ, type CostWeights, type Generator, type GameData, type ItemRate, type Objective, type Settings } from './solver'
 
 interface Props {
@@ -417,8 +418,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         {s.integer && (
           <div className="row small">
             <span className="grow">Time limit</span>
-            <input type="number" min={0.2} max={120} step={0.5} value={s.time_limit_ms / 1000}
-              onChange={e => set({ time_limit_ms: Math.round(Math.min(120, Math.max(0.2, +e.target.value)) * 1000) })} />
+            <TimeInput ms={s.time_limit_ms} onChange={time_limit_ms => set({ time_limit_ms })} />
             <span className="muted">s</span>
           </div>
         )}

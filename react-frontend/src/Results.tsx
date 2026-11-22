@@ -88,7 +88,8 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
 
         </div>
       </div>
-      {plan.warnings.map(w => <p className="warn" key={w}>{w}</p>)}
+      {/* the time-limit warning is shown above the tabs with retry controls */}
+      {plan.warnings.filter(w => !(s.integer && w.startsWith('Time limit reached'))).map(w => <p className="warn" key={w}>{w}</p>)}
 
       <h3>Buildings</h3>
       <ul className="chips">
