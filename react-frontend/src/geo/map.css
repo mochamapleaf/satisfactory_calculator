@@ -27,6 +27,7 @@
 .worldmap .sq { fill: none; stroke: var(--rule-strong); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .worldmap .sq.act { stroke: var(--fg); }
 .worldmap .mach, .geolegend .mach { fill: color-mix(in oklch, var(--raw) 35%, transparent); stroke: var(--raw); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.geolegend .base { fill: var(--warn); }
 .worldmap .base { fill: var(--warn); stroke: var(--raised); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .worldmap .sel { fill: none; stroke: var(--accent); stroke-width: 2px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
 .geolegend { margin-top: var(--s2); gap: var(--s1) var(--s4); }
@@ -56,6 +57,9 @@ p.solving { margin: var(--s2) 0; }
   .geoctl label { flex: 1 1 40%; }
   .geoctl select { width: 100%; }
   .geoctl button { flex: 1 1 100%; }
+  /* 7600 map units across ~350 px: larger type so axis numbers and hub names stay readable on a phone */
+  .worldmap .axis { font-size: 210px; }
+  .worldmap .lbl { font-size: 260px; }
 }
 .geolinks { table-layout: fixed; }
 .geolinks th:nth-child(1) { width: 46%; } .geolinks th:nth-child(2) { width: 28%; }

@@ -38,7 +38,8 @@ interface RunState {
 let last: RunState | null = null
 const solKey = (fmult: number, p: number) => `${fmult}|${p}`
 
-const statusText = (s: string) => (s === 'Optimal' ? 'proven optimal' : s === 'timeLimit' || s === 'interrupted' ? 'time limit' : s === 'stuck' ? 'solver stuck, skipped' : s)
+const statusText = (s: string) => (s === 'Optimal' ? 'proven optimal' : s === 'timeLimit' || s === 'interrupted' ? 'time limit' : s === 'stuck' ? 'solver stuck, skipped'
+  : s === 'rejected' ? 'solution failed the re-check, dropped' : s)
 const km = (m: number) => `${fmt(m / 1000, 1)} km`
 const oe = (x: number | null | undefined) => (x === null || x === undefined ? '—' : fmt(x, 0))
 
@@ -54,8 +55,14 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
   const [, tick] = useState(0)
 
   const targets = useMemo(() => Object.fromEntries(plan.targets.filter(t => t.rate > 0).map(t => [t.item, t.rate])), [plan])
-  const recipeIds = useMemo(() => [...new Set(plan.recipes.map(r => r.id))], [plan])
-  const opts: SweepOptions = { targets, base: p.base, tier: p.tier, workKm: p.workKm, pmax: p.pmax, timeLimit: p.timeLimit, recipeIds: p.recipes === 'plan' ? recipeIds : null }
+  // sorted, so the same recipe set in another order (the planner still refining) is the same input
+  const recipeIds = useMemo(() => [...new Set(plan.recipes.map(r => r.id))].sort(), [plan])
+  // the plan's supplied inputs are taken at the base site, free, up to the rate the plan uses
+  const suppliedIn = useMemo(() => Object.fromEntries(plan.supplied.filter(t => t.rate > 0).map(t => [t.item, t.rate * (1 + 1e-6)])), [plan])
+  const opts: SweepOptions = {
+    targets, base: p.base, tier: p.tier, workKm: p.workKm, pmax: p.pmax, timeLimit: p.timeLimit, recipeIds: p.recipes === 'plan' ? recipeIds : null,
+    supplied: p.recipes === 'plan' && Object.keys(suppliedIn).length ? suppliedIn : null,
+  }
   const key = JSON.stringify(opts)
   const itemName = (id: string) => data.items.find(i => i.id === id)?.name ?? id
   const recipeName = (id: string) => data.recipes.find(r => r.id === id)?.name ?? id
@@ -68,7 +75,14 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
     worker.current = null
     setRun(r => (r ? { ...r, solving: null, stopped: !r.done, error: why ?? r.error } : r))
   }
-  useEffect(() => () => { worker.current?.terminate(); worker.current = null }, [])
+  // leaving the tab ends the sweep: the worker dies with the view, so the kept state must say "stopped", or the
+  // tab would come back showing a solve that no worker is running
+  useEffect(() => () => {
+    if (worker.current) {
+      worker.current.terminate(); worker.current = null
+      if (last?.solving) last = { ...last, solving: null, stopped: !last.done }
+    }
+  }, [])
   // Watchdog. HiGHS stops itself at the time limit (and our interrupt callback 2 s later), but in the browser it
   // was seen to hang now and then where neither is reached. A solve running past its limit + 20 s is killed with
   // its worker: the point is recorded as not solved and the sweep goes on in a new worker. A worker silent for the
@@ -144,14 +158,19 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
       })
       if (e.type === 'done' || e.type === 'error') { w.terminate(); if (worker.current === w) worker.current = null }
     }
-    w.onerror = ev => { setRun(r => (r ? { ...r, solving: null, done: true, error: ev.message ? `The solver worker failed: ${ev.message}` : "The solver worker could not be loaded (offline, or the page is older than the site: reload it)." } : r)); w.terminate() }
+    w.onerror = ev => {
+      w.terminate()
+      if (worker.current !== w) return
+      worker.current = null
+      setRun(r => (r ? { ...r, solving: null, done: true, error: ev.message ? `The solver worker failed: ${ev.message}` : "The solver worker could not be loaded (offline, or the page is older than the site: reload it)." } : r))
+    }
     w.postMessage({
       game: {
         items: data.items.map(i => ({ id: i.id, liquid: i.liquid })),
         recipes: data.recipes.map(r => ({ id: r.id, alt: r.alt, building: r.building, in: r.in, out: r.out })),
         resources: data.resources.map(r => ({ item: r.item })),
       },
-      opts: o,
+      opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, i.name])) },
     })
   }
 
@@ -162,16 +181,21 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
   const shownKey = pick ?? (best ? solKey(1, best.p) : null)
   const shownRow = run?.rows.find(r => solKey(r.fmult, r.p) === shownKey) ?? null
   const sol = shownKey ? run?.sols.get(shownKey) ?? null : null
-  const beltOnly = f1.find(r => r.p === 0)
+  // belts-only reference: the cheapest solved plan without a hub at any p (a time-limited p = 0 solve is often beaten
+  // by a later point that still opens no hub; comparing with p = 0 alone would call that difference a rail saving)
+  const beltOnly = f1.reduce<SweepRow | null>((b, r) => (r.obj !== null && !r.copied && r.hubs.length === 0 && (!b || r.obj < b.obj!) ? r : b), null)
   const meta = run?.meta ?? null
-  const pStar = (rows: SweepRow[]) => rows.length ? rows.reduce((b, r) => (r.obj !== null && (b.obj === null || r.obj < b.obj - 1e-6 * Math.abs(b.obj))) ? r : b).hubs.length : null
+  // number of hubs of the cheapest solved plan; null while nothing is solved (a stuck or dropped point has no plan)
+  const pStar = (rows: SweepRow[]) => { const b = rows.reduce<SweepRow | null>((b, r) => (r.obj !== null && (!b || r.obj < b.obj! - 1e-6 * Math.abs(b.obj!)) ? r : b), null); return b ? b.hubs.length : null }
+  const unsolved = (run?.rows ?? []).filter(r => r.obj === null && !r.copied)
+  const noRail = !!meta && !meta.rail
   const sens = [0.5, 1, 2].map(fm => {
     const rows = run?.rows.filter(r => r.fmult === fm && !r.copied) ?? []
-    return { fm, p: pStar(rows), proven: rows.length > 0 && rows.every(r => r.status === 'Optimal'), n: rows.length }
+    return { fm, p: pStar(rows), proven: rows.length > 0 && rows.every(r => r.status === 'Optimal'), n: rows.length, solved: rows.some(r => r.obj !== null) }
   })
 
   const noTargets = !Object.keys(targets).length
-  const supplied = plan.supplied.length > 0 && p.recipes === 'plan'
+  const supplied = Object.keys(suppliedIn).length > 0 && p.recipes === 'plan'
 
   return (
     <div className="geo">
@@ -205,11 +229,12 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           : <button className="primary" disabled={noTargets} onClick={start}>{current && run?.rows.length ? 'Solve again' : 'Plan sites'}</button>}
       </div>
       {noTargets && <p className="muted">Add a target to the plan first.</p>}
-      {supplied && <p className="warn small">The plan uses supplied inputs; on the map everything is made from ore, so these recipes may not be enough. Choose “base recipes” if the solve finds no plan.</p>}
+      {supplied && <p className="note small">Supplied inputs ({Object.keys(suppliedIn).map(itemName).join(', ')}) are taken at the base site, free, up to the rate the plan uses. Choose “base recipes” to make everything from ore.</p>}
       {run && !current && run.rows.length > 0 && <p className="note small">The result below is for other inputs (plan or map settings changed). Use “Plan sites” to solve again.</p>}
       {run?.solving && <p className="solving" role="status">Solving {run.solving.label}: {fmt((performance.now() - run.solving.since) / 1000, 0)} s of ≤ {run.solving.limit} s{run.solving.best !== null ? ` · best ${oe(run.solving.best)}` : ''}{run.solving.bound !== null ? ` · bound ${oe(run.solving.bound)}` : ''}</p>}
       {run?.error && <p className="warn small">{run.error}</p>}
       {run?.stopped && <p className="muted small">Stopped; the points solved so far are kept.</p>}
+      {unsolved.length > 0 && <p className="warn small">Not solved: {unsolved.map(r => `${r.fmult === 1 ? '' : `F ${r.fmult}×, `}p ≤ ${r.p} (${statusText(r.status)})`).join('; ')}. The best plan is the best of the solved points only; a longer time per solve may find more.</p>}
 
       <div className="geogrid">
         <div className="geomap">
@@ -217,18 +242,19 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           <Legend sol={sol} itemName={itemName} />
         </div>
         <div className="geoside">
-          {!sol && !run?.solving && !run?.stopped && <p className="muted">{current && run?.done ? 'No plan found.' : 'Choose the base site and press “Plan sites”.'}</p>}
+          {!sol && !run?.solving && !run?.stopped && <p className="muted">{run?.done && pick ? 'No plan at this point.' : current && run?.done ? 'No plan found.' : 'Choose the base site and press “Plan sites”.'}</p>}
           {sol && shownRow && meta && <SummaryPanel sol={sol} row={shownRow} beltOnly={beltOnly ?? null} meta={meta} itemName={itemName} />}
           {f1.length > 0 && <>
             <h2>Cost by number of hubs</h2>
             <SweepChart rows={f1} shown={shownKey} onPick={r => setPick(solKey(r.fmult, r.p))} />
-            <p className="hint">Envelope cost(p) = cheapest plan with at most p open hubs; filled dots are proven optimal, hollow ones hit the time limit; the band is HiGHS's lower bound. p = 1 equals p = 0 (one hub cannot run a line). Tap a dot to show that plan.</p>
-            <table className="small"><thead><tr><th>Hub cost F</th><th className="num">best p*</th><th>proof</th></tr></thead>
+            {noRail ? <p className="hint">Trains are not unlocked at tier {meta!.tier}: there is one plan, by belt and pipe.</p>
+              : <p className="hint">Envelope cost(p) = cheapest plan with at most p open hubs; filled dots are proven optimal, hollow ones hit the time limit; the band is HiGHS's lower bound. p = 1 equals p = 0 (one hub cannot run a line). Tap a dot to show that plan.</p>}
+            {!noRail && <table className="small"><thead><tr><th>Hub cost F</th><th className="num">best p*</th><th>proof</th></tr></thead>
               <tbody>{sens.map(s => (
                 <tr key={s.fm} className={pick === solKey(s.fm, p.pmax) && s.fm !== 1 ? 'on' : ''}>
-                  <td>{s.fm}× {meta ? `(${fmt(meta.F * s.fm, 0)} OE)` : ''}{s.fm !== 1 && s.n > 0 && <button className="linkbtn" onClick={() => setPick(solKey(s.fm, p.pmax))}>show</button>}</td>
-                  <td className="num">{s.p ?? '…'}</td><td>{s.n ? (s.proven ? 'proven' : 'not proven') : 'pending'}</td>
-                </tr>))}</tbody></table>
+                  <td>{s.fm}× {meta ? `(${fmt(meta.F * s.fm, 0)} OE)` : ''}{s.fm !== 1 && s.solved && <button className="linkbtn" onClick={() => setPick(solKey(s.fm, p.pmax))}>show</button>}</td>
+                  <td className="num">{s.p ?? (s.n && !run?.solving ? '—' : '…')}</td><td>{s.n ? (s.proven ? 'proven' : s.solved ? 'not proven' : 'not solved') : run?.solving ? 'pending' : '—'}</td>
+                </tr>))}</tbody></table>}
           </>}
           {sol && site && <SiteDetail id={site} sol={sol} itemName={itemName} recipeName={recipeName} onBase={() => setP({ ...p, base: site })} isBase={site === (meta?.base ?? p.base)} />}
           {sol && meta && <Links sol={sol} meta={meta} itemName={itemName} />}
@@ -259,7 +285,9 @@ function SummaryPanel({ sol, row, beltOnly, meta, itemName }: { sol: Summary; ro
       </div>
       <p className="small">
         {row.fmult === 1 ? `p ≤ ${row.p}` : `F ${row.fmult}×, p ≤ ${row.p}`}: <b>{statusText(row.status)}</b>{row.status !== 'Optimal' && row.gap < 1 ? `, within ${fmt(row.gap * 100, 1)} % of the bound` : ''}.
-        {saving !== null && row.p > 0 && (saving > 1e-6 ? ` Rail saves ${fmt(saving * 100, 1)} % against belts only (${oe(beltOnly!.obj)} OE).` : ' Same cost as belts only: no train pays off here.')}
+        {row.fmult === 1 && sol.hubs.length === 0 && row.p > 0 && ' No train pays off in this plan: it uses belts and pipes only.'}
+        {saving !== null && sol.hubs.length > 0 && (saving > 1e-6 ? ` Rail saves ${fmt(saving * 100, 1)} % against the best belts-only plan found (${oe(beltOnly!.obj)} OE${beltOnly!.status === 'Optimal' ? '' : ', not proven optimal'}).`
+          : ` Not cheaper than the best belts-only plan found (${oe(beltOnly!.obj)} OE).`)}
         {sol.hubs.length > 0 && ` Hubs ${sol.hubs.join(', ')}.`} {fmt(machines, 1)} machines, {fmt(sol.rail_flow_items_per_min, 0)}/min by rail{pipeLen > 0 ? `, ${fmt(pipeLen / 1000, 1)} km of pipes (${sol.pipes.reduce((s, b) => s + b.n, 0)})` : ''}.
       </p>
       {sol.cbar_binding && sol.cbar_binding.length > 0 && <p className="warn small">The car bound is reached on {sol.cbar_binding.join(', ')}; the plan may need more cars than the model allowed.</p>}
@@ -353,7 +381,7 @@ function SweepChart({ rows, shown, onPick }: { rows: SweepRow[]; shown: string |
         return <g key={k} className="pt" onClick={() => onPick(r)}>
           <circle cx={X(r.p)} cy={Y(r.envelope!)} r={k === shown ? 6 : 4} className={r.status === 'Optimal' ? 'proven' : 'open'} />
           <circle cx={X(r.p)} cy={Y(r.envelope!)} r={12} fill="transparent" />
-          <title>{`p ≤ ${r.p}: ${fmt(r.obj ?? NaN, 0)} OE, ${r.hubs.length} hubs, ${statusText(r.status)}${r.copied ? ' (same as p = 0)' : ''}`}</title>
+          <title>{r.obj === null ? `p ≤ ${r.p}: ${statusText(r.status)}` : `p ≤ ${r.p}: ${fmt(r.obj, 0)} OE, ${r.hubs.length} hubs, ${statusText(r.status)}${r.copied ? ' (same as p = 0)' : ''}`}</title>
         </g>
       })}
       {ps.map(p => <text key={p} x={X(p)} y={H - 6} textAnchor="middle">{p}</text>)}
@@ -421,6 +449,8 @@ function Legend({ sol, itemName }: { sol: Summary | null; itemName: (id: string)
       <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="pipe" strokeWidth="3" /></svg>pipe</li>
       <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="rail" /></svg>rail</li>
       <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="hub open" /></svg>open hub</li>
+      <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="hub" /></svg>candidate hub</li>
+      <li><svg width="12" height="12" viewBox="-6 -6 12 12"><path d={star(0, 0, 6, 2.6)} className="base" /></svg>base</li>
       <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="mach" /></svg>machines</li>
       {used.map(k => <li key={k}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill={RES_COLOR[k] ?? 'gray'} /></svg>{itemName(k)}</li>)}
     </ul>

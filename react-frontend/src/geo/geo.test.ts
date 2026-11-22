@@ -8,10 +8,10 @@ import fs from 'node:fs'
 import highsLoader from 'highs'
 import {
   Data, type BuildOptions, type GeoNode, type SitesDoc, build, check, CheckError, hubsFor, haulCosts, nodeRate, oreEquivalents,
-  perMin, platformCap, rtdMin, summarize, thresholdBelts, W_RAW, materials,
+  perMin, platformCap, rtdMin, summarize, thresholdBelts, W_RAW, materials, recipeClosure, type LpSolve, type Summary,
 } from './model.ts'
 import { highsSolver } from './highsLp.ts'
-import { runSweep, type SweepRow } from './sweep.ts'
+import { runSweep, type SweepMeta, type SweepOptions, type SweepRow } from './sweep.ts'
 
 const R = (p: string) => JSON.parse(fs.readFileSync(new URL('../../../' + p, import.meta.url), 'utf8'))
 const game = R('data/game-data.json'), sitesDoc: SitesDoc = R('data/satisfactory-geo/sites.json')
@@ -181,3 +181,72 @@ test('p sweep equals the Python sweep p_sweep_plate12k.json (12 000 plate at Sm3
 })
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = any
+
+// ---------- review 6: what the Map tab adds around the Python model ----------
+const GEO = { sitesDoc, nodes, transport: tr }
+function sweepRun(o: Partial<SweepOptions> & { targets: Record<string, number> }, s: LpSolve = solve) {
+  const rows: SweepRow[] = [], sums: (Summary | null)[] = []
+  let error: string | null = null, done = false, meta: SweepMeta | null = null
+  runSweep(game, GEO, s, { base: 'S0_m1', tier: 8, workKm: 0, pmax: 2, timeLimit: 30, recipeIds: null, ...o }, e => {
+    if (e.type === 'row') { rows.push(e.row); sums.push(e.summary) }
+    if (e.type === 'error') error = e.message
+    if (e.type === 'done') done = true
+    if (e.type === 'meta') meta = e.meta
+  })
+  return { rows, sums, error: error as string | null, done, meta: meta as SweepMeta | null }
+}
+
+test('fmt keeps integer zeros at 0 decimals (9.7 s is "10", 57040.3 OE is "57040")', async () => {
+  const { fmt } = await import('../fmt.ts')
+  assert.equal(fmt(9.7, 0), '10'); assert.equal(fmt(57040.3, 0), '57040'); assert.equal(fmt(0.3, 0), '0')
+  assert.equal(fmt(1.5, 1), '1.5'); assert.equal(fmt(2.0000001, 2), '2'); assert.equal(fmt(10.04, 1), '10')
+})
+
+test('supplied inputs are taken at the base; without them the sweep names what nothing makes', () => {
+  const rec = recipeClosure(D, { Desc_Motor_C: 10 }).filter(r => !r.out.some(([k]) => k === 'Desc_Rotor_C')).map(r => r.id)
+  const names = { Desc_Rotor_C: 'Rotor' }
+  const bad = sweepRun({ targets: { Desc_Motor_C: 10 }, recipeIds: rec, names })
+  assert.equal(bad.rows.length, 0)
+  assert.match(bad.error!, /Nothing on the map makes Rotor with this plan's recipes/)
+  const ok = sweepRun({ targets: { Desc_Motor_C: 10 }, recipeIds: rec, supplied: { Desc_Rotor_C: 20.00002 }, fmults: [] })
+  assert.equal(ok.error, null); assert.ok(ok.done)
+  assert.equal(ok.rows[0].status, 'Optimal')
+  assert.ok(Math.abs(ok.sums[0]!.supplied!.Desc_Rotor_C - 20) < 1e-3) // 5 motor machines x 4 rotors/min ... 10 motors need 20 rotors
+  // less than the plan needs: infeasible, reported, no further solves
+  const short = sweepRun({ targets: { Desc_Motor_C: 10 }, recipeIds: rec, supplied: { Desc_Rotor_C: 5 } })
+  assert.ok(short.error && short.rows.length === 0)
+})
+
+test('a plan the nodes cannot supply stops at once with the shortfall, not with "No plan found"', () => {
+  const r = sweepRun({ targets: { Desc_IronPlate_C: 2e6 }, names: { Desc_OreIron_C: 'Iron Ore' } })
+  assert.equal(r.rows.length, 0); assert.ok(!r.done)
+  assert.match(r.error!, /cannot supply this plan at tier 8: Iron Ore 3000000\/min needed, \d+\/min from all nodes/)
+})
+
+test('no rail at tier 4: one solve is the whole sweep', () => {
+  const r = sweepRun({ targets: { Desc_IronPlate_C: 600 }, tier: 4, pmax: 4 })
+  assert.equal(r.error, null); assert.ok(r.done)
+  assert.deepEqual(r.rows.map(x => `${x.fmult}|${x.p}`), ['1|0'])
+  assert.equal(r.meta!.rail, false)
+})
+
+test('a solution that fails the re-check is dropped and the sweep goes on', () => {
+  let n = 0
+  const flaky: LpSolve = (m, o) => {
+    const res = solve(m, o)
+    if (m.integ.some(Boolean) && n++ === 0 && res.x) res.x.fill(0) // first MILP answer: nothing built, demand unmet
+    return res
+  }
+  const r = sweepRun({ targets: { Desc_IronPlate_C: 600 } }, flaky)
+  assert.equal(r.error, null); assert.ok(r.done)
+  assert.deepEqual(r.rows.map(x => `${x.fmult}|${x.p}`), ['1|0', '1|1', '1|2', '0.5|2', '2|2'])
+  assert.equal(r.rows[0].status, 'rejected'); assert.equal(r.rows[0].obj, null); assert.equal(r.sums[0], null)
+  assert.equal(r.rows[2].status, 'Optimal'); assert.ok(r.rows[2].obj! > 0)
+})
+
+test('meta.F is the 1× hub cost also when a restarted sweep begins at F 0.5×', () => {
+  const r = sweepRun({ targets: { Desc_IronPlate_C: 600 }, skip: ['1|0', '1|1', '1|2'] })
+  assert.deepEqual(r.rows.map(x => `${x.fmult}|${x.p}`), ['0.5|2', '2|2'])
+  assert.ok(Math.abs(r.meta!.F - 3490) < 1e-6)
+  assert.ok(Math.abs(r.rows[0].F - 1745) < 1e-6)
+})

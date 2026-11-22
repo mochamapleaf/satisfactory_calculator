@@ -199,6 +199,8 @@ export interface BuildOptions {
   machinesAt?: Set<string> | null; cbarMult?: number
   /** Web addition: recipes to use instead of the base-recipe closure (the current plan's recipes). */
   recipes?: GameRecipe[] | null
+  /** Web addition: items the plan takes as supplied inputs, available free at the base site up to this rate (/min). */
+  supplied?: Record<string, number> | null
 }
 export interface Line { a: string; b: string; length_m: number; rtd_min: number; cbar: number; cbar_fluid: number }
 export interface Meta {
@@ -215,6 +217,8 @@ export interface Index {
   x: Map<K2, number>; e: Map<K2, number>; f: Map<K3, number>; b: Map<K2, number>; bp: Map<K2, number>; h: Map<string, number>
   u: Map<K2, number>; z: Map<K2, number>; c: Map<K2, number>; cf: Map<K2, number>; g: Map<K3, number>
   A: Map<string, Map<string, number>>; solids: string[]; fluids: string[]
+  /** supplied input k taken at the base (web addition; empty in the Python model) */
+  sup: Map<string, number>
 }
 const k2 = (a: string, b: string) => `${a}|${b}`
 const k3 = (k: string, a: string, b: string) => `${k}|${a}|${b}`
@@ -274,6 +278,10 @@ export function build(d: Data, targets: Record<string, number>, solve: LpSolve, 
       supply.set(k2(k, s), sup)
     }
   }
+  const supVar = new Map<string, number>()
+  for (const [k, q] of Object.entries(o.supplied ?? {}).sort((a_, b_) => cmp(a_[0], b_[0]))) {
+    if (q > 0 && items.includes(k)) supVar.set(k, m.var(`s|${k}|${base}`, 0, 0, q))
+  }
   const f = new Map<K3, number>(), b = new Map<K2, number>(), bp = new Map<K2, number>()
   for (const [sa, sb, L] of d.arcs) {
     const km = L / 1000
@@ -285,7 +293,7 @@ export function build(d: Data, targets: Record<string, number>, solve: LpSolve, 
   const cs = new Map<K2, number>(), cfl = new Map<K2, number>(), g = new Map<K3, number>(), lines: Line[] = []
   const M = (pairs: [number, number][]) => new Map(pairs)
   if (rail) {
-    const gross = aggregateGross(d, recs, A, targets, items, solve)
+    const gross = aggregateGross(d, recs, A, targets, items, solve, o.supplied ?? null)
     let stacksUb = 0, fluidUb = 0, itemsUb = 0
     for (const [k, q] of gross) {
       if (d.liquid(k)) fluidUb += q
@@ -349,6 +357,7 @@ export function build(d: Data, targets: Record<string, number>, solve: LpSolve, 
       }
       const ej = e.get(k2(k, s))
       if (ej !== undefined) add(ej, 1)
+      if (s === base && supVar.has(k)) add(supVar.get(k)!, 1)
       for (const j of inc.get(k2(k, s)) ?? []) add(j, 1)
       for (const j of outg.get(k2(k, s)) ?? []) add(j, -1)
       const dem = s === base ? targets[k] ?? 0 : 0
@@ -362,13 +371,13 @@ export function build(d: Data, targets: Record<string, number>, solve: LpSolve, 
     rail, p, acc_s: accS, work_km: workKm, cbar_mult: cbarMult, recipes: recs.map(r => r.id), items, oe,
     lines, water_anywhere: waterAnywhere, slots, feed, dock_s: dock, fluid_car: fluidCar, v_mps: v, supply,
   }
-  const idx: Index = { x, e, f, b, bp, h: hvar, u, z, c: cs, cf: cfl, g, A, solids, fluids }
+  const idx: Index = { x, e, f, b, bp, h: hvar, u, z, c: cs, cf: cfl, g, A, solids, fluids, sup: supVar }
   return { m, idx, meta }
 }
 
 /** Location-free LP: min machines + raw; gross production per item (upper bound for flows). */
 export function aggregateGross(d: Data, recs: GameRecipe[], A: Map<string, Map<string, number>>, targets: Record<string, number>,
-  items: string[], solve: LpSolve): Map<string, number> {
+  items: string[], solve: LpSolve, supplied: Record<string, number> | null = null): Map<string, number> {
   const m = new Model()
   const x = new Map(recs.map(r => [r.id, m.var(r.id, W_MACH)]))
   const e = new Map<string, number>()
@@ -378,6 +387,8 @@ export function aggregateGross(d: Data, recs: GameRecipe[], A: Map<string, Map<s
     for (const [r, j] of x) { const q = A.get(r)!.get(k); if (q) co.set(j, q) }
     const ej = e.get(k)
     if (ej !== undefined) co.set(ej, 1)
+    const sq = supplied?.[k] ?? 0
+    if (sq > 0) co.set(m.var(`s|${k}`, 0, 0, sq), 1)
     m.row(k, co, targets[k] ?? 0)
   }
   const res = solve(m, {})
@@ -406,6 +417,7 @@ export function check(d: Data, m: Model, idx: Index, meta: Meta, xs: ArrayLike<n
   const add = (key: string, q: number) => net.set(key, (net.get(key) ?? 0) + q)
   for (const [key, j] of idx.x) { const [r, s] = key.split('|'); for (const [k, q] of A.get(r)!) add(k2(k, s), q * X(j)) }
   for (const [key, j] of idx.e) add(key, X(j))
+  for (const [k, j] of idx.sup) add(k2(k, base), X(j))
   for (const mp of [idx.f, idx.g]) for (const [key, j] of mp) { const [k, sa, sb] = key.split('|'); add(k2(k, sa), -X(j)); add(k2(k, sb), X(j)) }
   for (const s of d.sid) for (const k of meta.items) {
     const need = s === base ? targets[k] ?? 0 : 0
@@ -494,6 +506,8 @@ export interface Summary {
   pipes: { a: string; b: string; n: number; length_m: number; flow: Record<string, number> }[]
   machines: Record<string, Record<string, number>>; machines_total: Record<string, number>
   extraction: Record<string, Record<string, number>>; rail_flow_items_per_min: number; belt_count: number
+  /** supplied inputs taken at the base, /min (web addition) */
+  supplied?: Record<string, number>
   cbar_binding?: string[]
 }
 const sortedObj = <T>(entries: [string, T][]) => Object.fromEntries(entries.sort((a, b) => cmp(a[0], b[0])))
@@ -558,7 +572,28 @@ export function summarize(d: Data, m: Model, idx: Index, meta: Meta, xs: ArrayLi
   return {
     cost_parts, hubs, lines, belts, pipes, machines, machines_total, extraction,
     rail_flow_items_per_min: r6(rail), belt_count: belts.reduce((s, b_) => s + b_.n, 0),
+    ...(idx.sup.size ? { supplied: sortedObj([...idx.sup].filter(([, j]) => X(j) > 1e-6).map(([k, j]) => [k, r6(X(j))])) } : {}),
   }
+}
+
+// ---------- why a plan cannot be sited (web addition) ----------
+/** Items the recipes need but nothing provides: not raw, not made by a recipe, not supplied. */
+export function unmakeable(d: Data, recs: GameRecipe[], targets: Record<string, number>, supplied: Record<string, number> | null = null): string[] {
+  const made = new Set(recs.flatMap(r => r.out.map(([k]) => k)))
+  const need = new Set([...recs.flatMap(r => r.in.map(([k]) => k)), ...Object.keys(targets)])
+  return [...need].filter(k => !d.raw.has(k) && !made.has(k) && !((supplied?.[k] ?? 0) > 0)).sort(cmp)
+}
+/** Raw items the location-free plan needs more of than all nodes of the map give at `tier`: [item, need, have]. */
+export function rawShortfalls(d: Data, gross: Map<string, number>, tier: number, beltCap: number, pipeCap: number, waterAnywhere = true): [string, number, number][] {
+  const have = new Map<string, number>()
+  for (const s of d.sid) for (const [k, q] of d.supply(s, tier, beltCap, pipeCap)) have.set(k, (have.get(k) ?? 0) + q)
+  const out: [string, number, number][] = []
+  for (const [k, q] of gross) {
+    if (!d.raw.has(k) || (k === 'Desc_Water_C' && waterAnywhere)) continue
+    const h = have.get(k) ?? 0
+    if (q > h * (1 + 1e-9) + 1e-6) out.push([k, q, h])
+  }
+  return out.sort((a, b) => cmp(a[0], b[0]))
 }
 
 // ---------- one haul, closed form (geo_breakeven.py) ----------
