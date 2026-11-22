@@ -15,6 +15,8 @@ microlp = "0.8.0"
 web-time = "1"
 ndarray = "0.15.6"
 wasm-bindgen = "0.2"
+# DSP seed → galaxy (DoubleUTH/DSP-Seed-Finder, Apache-2.0, vendored; vendor/dsp_seed_gen/NOTICE.md)
+dsp_seed_gen = { path = "vendor/dsp_seed_gen" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 reqwest = { version = "0.11.18", features = ["blocking", "json"] }
