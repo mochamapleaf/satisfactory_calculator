@@ -48,3 +48,80 @@ pub fn solve_json(settings_json: &str) -> String {
     };
     serde_json::to_string(&planner::plan(data(&settings.game, &settings.dataset), &settings)).unwrap()
 }
+
+// ---- stepped whole-building solve (report §6 step 3): the worker calls `solve_start`, then
+// `solve_step` until `done`, posting each update; the best plan is sent whenever it changes.
+
+thread_local! {
+    static RUN: std::cell::RefCell<Option<planner::lp::Run<'static>>> = const { std::cell::RefCell::new(None) };
+}
+
+fn update(run: &planner::lp::Run, last_version: Option<u32>) -> String {
+    let pr = run.progress();
+    let plan = if last_version != Some(pr.version) {
+        serde_json::to_value(run.plan()).unwrap()
+    } else {
+        serde_json::Value::Null
+    };
+    serde_json::json!({
+        "done": pr.done, "plan": plan, "version": pr.version, "elapsed_ms": pr.elapsed_ms,
+        "objective": pr.objective, "bound": pr.bound, "gap": pr.gap, "proven": pr.proven,
+        "phase": pr.phase, "nodes": pr.nodes, "deadline_ms": pr.deadline_ms,
+    })
+    .to_string()
+}
+
+thread_local! {
+    static SENT: std::cell::Cell<Option<u32>> = const { std::cell::Cell::new(None) };
+}
+
+/// Start a solve. Returns `{done, plan, ...}`: a finished plan (LP, infeasible, too large, or
+/// proven at once) has `done: true`; otherwise `plan` is the first whole-building plan and the
+/// caller continues with `solve_step`.
+#[wasm_bindgen]
+pub fn solve_start(settings_json: &str) -> String {
+    RUN.with(|r| *r.borrow_mut() = None);
+    let settings: PlanSettings = match serde_json::from_str(settings_json) {
+        Ok(s) => s,
+        Err(e) => {
+            let p = serde_json::json!({"status": "error", "warnings": [format!("bad settings: {e}")]});
+            return serde_json::json!({"done": true, "plan": p}).to_string();
+        }
+    };
+    match planner::lp::start(data(&settings.game, &settings.dataset), &settings) {
+        planner::lp::Start::Done(p) => serde_json::json!({"done": true, "plan": p}).to_string(),
+        planner::lp::Start::Running(run) => {
+            let out = update(&run, None);
+            SENT.with(|s| s.set(Some(run.progress().version)));
+            RUN.with(|r| *r.borrow_mut() = Some(*run));
+            out
+        }
+    }
+}
+
+/// Continue the current solve for about `slice_ms`. Returns an update (`plan` null when unchanged;
+/// the final update always carries the plan).
+#[wasm_bindgen]
+pub fn solve_step(slice_ms: f64) -> String {
+    RUN.with(|r| {
+        let mut r = r.borrow_mut();
+        let Some(run) = r.as_mut() else { return serde_json::json!({"done": true, "gone": true}).to_string() };
+        let done = run.step(Some(slice_ms));
+        let last = SENT.with(|s| s.get());
+        let out = if done { update(run, None) } else { update(run, last) };
+        SENT.with(|s| s.set(Some(run.progress().version)));
+        out
+    })
+}
+
+/// Give the current solve `ms` more ("keep solving"). Returns false when there is none.
+#[wasm_bindgen]
+pub fn solve_extend(ms: f64) -> bool {
+    RUN.with(|r| match r.borrow_mut().as_mut() {
+        Some(run) => {
+            run.extend(ms);
+            true
+        }
+        None => false,
+    })
+}

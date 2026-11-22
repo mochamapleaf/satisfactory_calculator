@@ -266,44 +266,84 @@ export function solve(s: Settings): Plan {
   return JSON.parse(solve_json(JSON.stringify(s))) as Plan
 }
 
-// Solves in a Web Worker; a newer request supersedes older ones. WASM cannot be interrupted,
-// so a request still running when a newer one (or a cancel) arrives terminates the worker and
-// the next request starts a fresh one; the superseded promise resolves as 'cancelled'.
+// Solves in a Web Worker and streams the best plan so far (whole buildings: the rounded LP plan at
+// once, then every improvement, report solver-speed §6 step 3). A newer request supersedes older
+// ones: WASM cannot be interrupted inside a step, so a busy worker is terminated and the next
+// request starts a fresh one. A cancel after the first plan stops the worker between steps and
+// keeps its search, so "Keep solving" can resume the same tree.
+export interface SolveUpdate {
+  /** The best plan, when it changed (the final update of a solve always has it). */
+  plan: Plan | null
+  done: boolean
+  elapsed_ms?: number
+  objective?: number | null
+  bound?: number
+  gap?: number | null
+  proven?: boolean
+  /** heuristic | restricted | search | done */
+  phase?: string
+  nodes?: number
+  deadline_ms?: number
+  /** resume: the worker no longer holds this solve */
+  gone?: boolean
+}
+type OnUpdate = (u: SolveUpdate) => void
 let worker: Worker | null = null
 let seq = 0
-let running: { id: number; resolve: (p: Plan) => void } | null = null
-const cancelled = (): Plan => ({ ...emptyPlan(), status: 'cancelled' })
+let running: { id: number; onUpdate: OnUpdate; gotPlan: boolean } | null = null
+let idle: number | null = null // solve whose search the idle worker still holds
+function newWorker() {
+  worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
+  worker.onmessage = (e: MessageEvent<{ id: number; update: string }>) => {
+    const r = running
+    if (r?.id !== e.data.id) return
+    const u = JSON.parse(e.data.update) as SolveUpdate
+    if (u.plan) r.gotPlan = true
+    if (u.done) { running = null; idle = u.gone ? null : r.id }
+    r.onUpdate(u)
+  }
+}
 function stopWorker() {
   worker?.terminate()
   worker = null
-  const r = running
   running = null
-  r?.resolve(cancelled())
+  idle = null
 }
-export function solveAsync(s: Settings): Promise<Plan> {
+/** Start a solve; `onUpdate` gets the streamed updates. Returns the solve id. */
+export function solveStream(s: Settings, onUpdate: OnUpdate): number {
   if (running) stopWorker()
-  if (!worker) {
-    worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (e: MessageEvent<{ id: number; plan: string }>) => {
-      if (running?.id !== e.data.id) return
-      const r = running
-      running = null
-      r.resolve(JSON.parse(e.data.plan) as Plan)
-    }
-  }
+  if (!worker) newWorker()
   const id = ++seq
-  return new Promise(resolve => {
-    running = { id, resolve }
-    worker!.postMessage({ id, settings: JSON.stringify(s) })
-  })
+  running = { id, onUpdate, gotPlan: false }
+  idle = null
+  worker!.postMessage({ type: 'solve', id, settings: JSON.stringify(s) })
+  return id
 }
-/** Stop the running solve (if any); its promise resolves with status 'cancelled'. */
+/** One-shot solve (final plan only). */
+export function solveAsync(s: Settings): Promise<Plan> {
+  return new Promise(resolve => solveStream(s, u => { if (u.done) resolve(u.plan ?? { ...emptyPlan(), status: 'cancelled' }) }))
+}
+/** Resume solve `id` for `ms` more where it stopped. False when the worker no longer holds it. */
+export function keepSolving(id: number, ms: number, onUpdate: OnUpdate): boolean {
+  if (running || idle !== id || !worker) return false
+  running = { id, onUpdate, gotPlan: true }
+  idle = null
+  worker.postMessage({ type: 'resume', id, ms })
+  return true
+}
+/** Stop the running solve (if any). After its first plan the worker keeps the search (see
+ *  `keepSolving`); before it, the worker is terminated. */
 export function cancelSolve() {
-  if (running) { seq++; stopWorker() }
+  const r = running
+  if (!r) return
+  if (r.gotPlan && worker) {
+    worker.postMessage({ type: 'stop', id: r.id })
+    running = null
+    idle = r.id
+  } else stopWorker()
 }
 /** Models above this many columns are not solved until the user asks (status 'too_large'). */
 export const AUTO_SOLVE_COLUMNS = 6000
-export const latestRequest = () => seq
 /** Longest whole-building time limit the solver accepts (it clamps to 300 s). */
 export const MAX_TIME_MS = 300_000
 export const clampTime = (sec: number) => Math.round(Math.min(MAX_TIME_MS / 1000, Math.max(0.2, Number.isFinite(sec) ? sec : 4)) * 1000)

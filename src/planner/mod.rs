@@ -11,6 +11,8 @@ pub mod rules;
 mod quality_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod solve_tests;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

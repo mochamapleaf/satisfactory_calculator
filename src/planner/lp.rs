@@ -31,8 +31,8 @@ use super::{
     RateLine, Status,
 };
 use microlp::{
-    ComparisonOp, OptimizationDirection, Problem, Solution, SolutionStatus, SolveOptions,
-    TerminationReason, Variable,
+    ComparisonOp, OptimizationDirection, Problem, Solution, SolveOptions, SolveOutcome, TerminationReason,
+    Variable,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::time::Duration;
@@ -190,6 +190,8 @@ struct RecipeVars {
 
 struct Model {
     p: Problem,
+    /// Objective coefficient of every variable, by index (objective of a point without a solve).
+    cost: Vec<f64>,
     rv: Vec<RecipeVars>,
     raw: Vec<(String, Variable)>,
     sup: Vec<(String, Variable)>,
@@ -218,6 +220,7 @@ impl<'a> Unit<'a> {
     }
 }
 
+#[derive(Clone)]
 struct Inputs<'a> {
     units: Vec<Unit<'a>>,
     items: BTreeSet<String>,
@@ -234,46 +237,67 @@ fn shards_per_machine(c_max: f64) -> u32 {
     }
 }
 
+/// Machine power is linear in work (`power_exp` = 1, no overclocking): no power variable and no
+/// segment rows; the MW go straight onto the objective of x and n. Exact (report §4.2): at
+/// c_max = 1 every segment reads p ≥ P·x/speed + beacons·n, and p appears only in the objective.
+fn linear_power(w: &CostWeights, f: &Mode) -> bool {
+    w.power > 0.0 && f.power_exp == 1.0 && !f.overclock
+}
+
+/// Objective weight of one building of `u`: building weight with the per-building compute terms,
+/// modules, and the beacon MW when power is linear.
+fn building_weight(data: &GameData, s: &PlanSettings, w: &CostWeights, u: &Unit) -> f64 {
+    w.buildings * compute::machine_cost(w, u.recipe, &u.mode, s.mixed_belts)
+        + rules::module_cost(data, s, &u.mode)
+        + if linear_power(w, &u.mode) { w.power * u.mode.beacon_power } else { 0.0 }
+}
+
 fn build(data: &GameData, s: &PlanSettings, inp: &Inputs, integer: bool) -> Model {
-    build_scaled(data, s, inp, integer, &HashMap::new())
+    build_scaled(data, s, inp, integer, &HashMap::new(), &HashMap::new())
 }
 
 /// `scale`: per-recipe multiplier on the building cost (heuristic re-weighting).
+/// `n_cap`: upper bounds on the buildings of some units (budget fallback).
 fn build_scaled(
     data: &GameData,
     s: &PlanSettings,
     inp: &Inputs,
     integer: bool,
     scale: &HashMap<String, f64>,
+    n_cap: &HashMap<String, f64>,
 ) -> Model {
     let w = &inp.weights;
     let c_max = s.max_clock();
     let k_max = shards_per_machine(c_max);
     let mut p = Problem::new(OptimizationDirection::Minimize);
+    let mut cost: Vec<f64> = Vec::new();
+    let mut var = |p: &mut Problem, c: f64, b: (f64, f64), int: bool| {
+        cost.push(c);
+        if int {
+            p.add_integer_var(c, (b.0 as i32, b.1.min(MAX_BUILDINGS as f64) as i32))
+        } else {
+            p.add_var(c, b)
+        }
+    };
     let mut rv = Vec::new();
     let mut segments = Vec::new();
     for u in &inp.units {
         let f = &u.mode;
-        let x = p.add_var(0.0, (0.0, f64::INFINITY));
+        let lin = linear_power(w, f);
+        let x = var(&mut p, if lin { w.power * f.power_base / f.speed } else { 0.0 }, (0.0, f64::INFINITY), false);
         // building weight plus the per-building compute terms (sorters, logistics, coaters);
         // added here, not in `scale`, which is a multiplier rebuilt every heuristic round
         let wb = w.buildings
             * compute::machine_cost(w, u.recipe, f, s.mixed_belts)
             * scale.get(&u.key).copied().unwrap_or(1.0)
-            + rules::module_cost(data, s, f);
+            + rules::module_cost(data, s, f)
+            + if lin { w.power * f.beacon_power } else { 0.0 };
         let (c_max, k_max) = if f.overclock { (c_max, k_max) } else { (1.0, 0) };
-        let n = if integer {
-            p.add_integer_var(wb, (0, MAX_BUILDINGS))
-        } else {
-            p.add_var(wb, (0.0, f64::INFINITY))
-        };
+        let cap = n_cap.get(&u.key).copied().unwrap_or(f64::INFINITY);
+        let n = var(&mut p, wb, (0.0, cap), integer);
         p.add_constraint(&[(x, 1.0), (n, -c_max * f.speed)], ComparisonOp::Le, 0.0);
         let sv = if k_max > 0 {
-            let sv = if integer {
-                p.add_integer_var(w.shards, (0, MAX_BUILDINGS))
-            } else {
-                p.add_var(w.shards, (0.0, f64::INFINITY))
-            };
+            let sv = var(&mut p, w.shards, (0.0, f64::INFINITY), integer);
             p.add_constraint(&[(x, 1.0), (n, -f.speed), (sv, -0.5 * f.speed)], ComparisonOp::Le, 0.0);
             p.add_constraint(&[(sv, 1.0), (n, -(k_max as f64))], ComparisonOp::Le, 0.0);
             Some(sv)
@@ -281,8 +305,8 @@ fn build_scaled(
             None
         };
         let segs = power_segments(f.power_exp, c_max);
-        let pv = if w.power > 0.0 && (f.power_base > 0.0 || f.beacon_power > 0.0) {
-            let pv = p.add_var(w.power, (0.0, f64::INFINITY));
+        let pv = if !lin && w.power > 0.0 && (f.power_base > 0.0 || f.beacon_power > 0.0) {
+            let pv = var(&mut p, w.power, (0.0, f64::INFINITY), false);
             for (a, b) in &segs {
                 // p ≥ P·(a·x + b·n) + beacons·n (beacons draw full power whatever the clock)
                 p.add_constraint(
@@ -327,15 +351,15 @@ fn build_scaled(
             let limit = if s.ignore_limits { None } else { limit };
             let ext_mw = res.extractor_power / res.extractor_rate;
             let c = w.resources * resource_weight(data, w, it) + w.power * ext_mw;
-            raw.push((it.clone(), p.add_var(c, (0.0, limit.unwrap_or(f64::INFINITY)))));
+            raw.push((it.clone(), var(&mut p, c, (0.0, limit.unwrap_or(f64::INFINITY)), false)));
         }
     }
     let sup: Vec<(String, Variable)> =
-        inp.supplies.iter().map(|(it, q)| (it.clone(), p.add_var(0.0, (0.0, *q)))).collect();
+        inp.supplies.iter().map(|(it, q)| (it.clone(), var(&mut p, 0.0, (0.0, *q), false))).collect();
     let surplus: Vec<(String, Variable)> = inp
         .items
         .iter()
-        .map(|it| (it.clone(), p.add_var(w.surplus, (0.0, f64::INFINITY))))
+        .map(|it| (it.clone(), var(&mut p, w.surplus, (0.0, f64::INFINITY), false)))
         .collect();
 
     // item balance rows, built in one pass over the units (net coefficient per unit and item)
@@ -366,11 +390,11 @@ fn build_scaled(
         let b = inp.targets.get(it).copied().unwrap_or(0.0);
         balance.push((it.clone(), p.add_constraint(row.as_slice(), ComparisonOp::Eq, b)));
     }
-    Model { p, rv, raw, sup, surplus, balance, segments }
+    Model { p, cost, rv, raw, sup, surplus, balance, segments }
 }
 
 /// Solver-independent snapshot of a solution, keyed by recipe / item id.
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Point {
     rec: HashMap<String, (f64, f64, f64)>, // x, n, shards
     flows: HashMap<(u8, String), f64>,      // (0 raw | 1 supply | 2 surplus, item)
@@ -390,22 +414,55 @@ fn point_of(m: &Model, inp: &Inputs, sol: &Solution) -> Point {
     pt
 }
 
-/// MILP starting point from `pt`. With `round_up`, buildings are rounded up from the
-/// relaxation (always feasible unless a shard budget binds).
-fn hint_of(m: &Model, inp: &Inputs, pt: &Point, c_max: f64, round_up: bool) -> Vec<(Variable, f64)> {
+/// Whole-building plan from a relaxed point: buildings rounded up, work and flows unchanged, so
+/// every row holds but the boost-item and shard budgets. `shards = false` rounds to shardless
+/// machines (n = ⌈x / speed⌉), which always fits a shard budget.
+fn rounded(inp: &Inputs, pt: &Point, c_max: f64, shards: bool) -> Point {
+    let mut out = Point { rec: HashMap::new(), flows: pt.flows.clone() };
+    for u in &inp.units {
+        let f = &u.mode;
+        let Some(&(x, _, _)) = pt.rec.get(&u.key) else { continue };
+        let cm = if f.overclock && shards { c_max } else { 1.0 };
+        let n = if x <= 1e-9 { 0.0 } else { (x / (cm * f.speed) - 1e-9).ceil() };
+        let c = if n > 0.0 { x / (n * f.speed) } else { 0.0 };
+        let sh = if c > 1.0 { ((c - 1.0) / 0.5 - 1e-9).ceil() * n } else { 0.0 };
+        out.rec.insert(u.key.clone(), (x, n, sh));
+    }
+    out
+}
+
+/// The boost-item (Somersloop) and shard budgets hold at `pt` (whole buildings and shards).
+fn within_budgets(s: &PlanSettings, inp: &Inputs, pt: &Point) -> bool {
+    for (item, budget) in budgets(s) {
+        let used: f64 = inp
+            .units
+            .iter()
+            .filter_map(|u| {
+                let q = u.mode.held.iter().find(|(i, _)| *i == item)?.1;
+                Some(q * pt.rec.get(&u.key)?.1.round())
+            })
+            .sum();
+        if used > budget + 1e-6 {
+            return false;
+        }
+    }
+    if let Some(b) = s.shard_budget {
+        let used: f64 = pt.rec.values().map(|v| v.2.round()).sum();
+        if used > b as f64 + 1e-6 {
+            return false;
+        }
+    }
+    true
+}
+
+/// Values of every model variable at a whole-building point (buildings and shards rounded,
+/// power from the segments).
+fn values_of(m: &Model, inp: &Inputs, pt: &Point) -> Vec<(Variable, f64)> {
     let mut hint = Vec::new();
     for ((u, v), segs) in inp.units.iter().zip(&m.rv).zip(&m.segments) {
         let f = &u.mode;
-        let c_max = if f.overclock { c_max } else { 1.0 };
-        let (x, mut n, mut sh) = pt.rec.get(&u.key).copied().unwrap_or((0.0, 0.0, 0.0));
-        if round_up {
-            n = if x <= 1e-9 { 0.0 } else { (x / (c_max * f.speed) - 1e-9).ceil() };
-            let c = if n > 0.0 { x / (n * f.speed) } else { 0.0 };
-            sh = if c > 1.0 { ((c - 1.0) / 0.5 - 1e-9).ceil() * n } else { 0.0 };
-        } else {
-            n = n.round();
-            sh = sh.round();
-        }
+        let (x, n, sh) = pt.rec.get(&u.key).copied().unwrap_or((0.0, 0.0, 0.0));
+        let (n, sh) = (n.round(), sh.round());
         hint.push((v.x, x));
         hint.push((v.n, n));
         if let Some(s) = v.s {
@@ -425,6 +482,25 @@ fn hint_of(m: &Model, inp: &Inputs, pt: &Point, c_max: f64, round_up: bool) -> V
     hint
 }
 
+/// Warm start with the integer variables only (buildings, shards): microlp fixes them and
+/// completes the rest by LP. That completion cannot trip over the tolerance of a fixed
+/// continuous value and is at least as cheap as the point itself.
+fn int_hint(m: &Model, inp: &Inputs, pt: &Point) -> Vec<(Variable, f64)> {
+    let mut hint = Vec::new();
+    for (u, v) in inp.units.iter().zip(&m.rv) {
+        let (_, n, sh) = pt.rec.get(&u.key).copied().unwrap_or((0.0, 0.0, 0.0));
+        hint.push((v.n, n.round()));
+        if let Some(s) = v.s {
+            hint.push((s, sh.round()));
+        }
+    }
+    hint
+}
+
+fn objective_of(m: &Model, values: &[(Variable, f64)]) -> f64 {
+    values.iter().map(|(v, x)| m.cost[v.idx()] * x).sum()
+}
+
 /// Inputs restricted to the recipes in `keep`.
 fn restrict<'a>(inp: &Inputs<'a>, keep: &BTreeSet<String>) -> Inputs<'a> {
     let units: Vec<Unit> = inp.units.iter().filter(|u| keep.contains(&u.key)).cloned().collect();
@@ -437,12 +513,133 @@ fn restrict<'a>(inp: &Inputs<'a>, keep: &BTreeSet<String>) -> Inputs<'a> {
     }
 }
 
-fn milp_options(ms: u64, hint: Vec<(Variable, f64)>) -> SolveOptions {
+/// First MILP call: root LP and warm-start check with no time limit and no branching. A deadline
+/// inside the hint's LP completion would silently drop the hint (report §3.4).
+fn milp_root(hint: Vec<(Variable, f64)>) -> SolveOptions {
     let mut o = SolveOptions::default();
-    o.time_limit = Some(Duration::from_millis(ms.max(50)));
+    o.time_limit = None;
+    o.node_limit = Some(0);
     o.mip_gap = MIP_GAP;
     o.warm_start = Some(hint);
     o
+}
+
+fn resume_options(ms: f64) -> microlp::ResumeOptions {
+    let mut o = microlp::ResumeOptions::default();
+    o.time_limit = Some(Duration::from_secs_f64(ms.clamp(5.0, 1e9) / 1e3));
+    o.node_limit = None;
+    o.mip_gap = Some(MIP_GAP);
+    o
+}
+
+/// Drops a mode column dominated by another mode of the same recipe: same inputs and products
+/// per unit of work, at least as fast, no dearer per building, no more power when power has a
+/// weight, no more boost items held, same overclocking. A plan using the dominated column can move
+/// its work and buildings to the dominating one at no higher cost, so the optimum is unchanged
+/// (report §4.2). Returns the kept units and, per kept unit, the dropped units it dominates
+/// (dominance is transitive), for the display tie-break in `detier`.
+fn drop_dominated<'a>(
+    data: &GameData,
+    s: &PlanSettings,
+    units: Vec<Unit<'a>>,
+    w: &CostWeights,
+) -> (Vec<Unit<'a>>, HashMap<String, Vec<Unit<'a>>>) {
+    let same = |a: &Vec<(String, f64)>, b: &Vec<(String, f64)>| {
+        let (ma, mb): (BTreeMap<&str, f64>, BTreeMap<&str, f64>) =
+            (a.iter().map(|(i, q)| (i.as_str(), *q)).collect(), b.iter().map(|(i, q)| (i.as_str(), *q)).collect());
+        ma.len() == mb.len() && ma.iter().all(|(k, v)| mb.get(k).is_some_and(|x| (x - v).abs() <= 1e-12 * (1.0 + v.abs())))
+    };
+    let held_le = |a: &Mode, b: &Mode| a.held.iter().all(|(i, q)| b.held.iter().any(|(j, r)| i == j && q <= r));
+    let wb: Vec<f64> = units.iter().map(|u| building_weight(data, s, w, u)).collect();
+    let dom = |j: usize, k: usize| {
+        let (uj, uk) = (&units[j], &units[k]);
+        uj.recipe.id == uk.recipe.id
+            && uj.mode.overclock == uk.mode.overclock
+            && uj.mode.power_exp == uk.mode.power_exp
+            && uj.mode.speed >= uk.mode.speed
+            && wb[j] <= wb[k]
+            && (w.power <= 0.0 || (uj.mode.power_base <= uk.mode.power_base && uj.mode.beacon_power <= uk.mode.beacon_power))
+            && held_le(&uj.mode, &uk.mode)
+            && same(&uj.ins, &uk.ins)
+            && same(&uj.outs, &uk.outs)
+    };
+    let mut by: Vec<Option<usize>> = vec![None; units.len()];
+    let mut by_recipe: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+    for (i, u) in units.iter().enumerate() {
+        by_recipe.entry(u.recipe.id.as_str()).or_default().push(i);
+    }
+    for idx in by_recipe.values() {
+        for &k in idx {
+            for &j in idx {
+                // identical columns dominate each other: keep the first
+                if j != k && by[j].is_none() && dom(j, k) && !(dom(k, j) && k < j) {
+                    by[k] = Some(j);
+                    break;
+                }
+            }
+        }
+    }
+    // follow chains (j itself dropped later) to the kept unit
+    let root = |mut k: usize| {
+        while let Some(j) = by[k] {
+            k = j;
+        }
+        k
+    };
+    let roots: Vec<usize> = (0..units.len()).map(root).collect();
+    let keys: Vec<String> = units.iter().map(|u| u.key.clone()).collect();
+    let mut kept = Vec::new();
+    let mut dropped: HashMap<String, Vec<Unit<'a>>> = HashMap::new();
+    for (k, u) in units.into_iter().enumerate() {
+        if roots[k] == k {
+            kept.push(u);
+        } else {
+            dropped.entry(keys[roots[k]].clone()).or_default().push(u);
+        }
+    }
+    (kept, dropped)
+}
+
+/// Display tie-break after `drop_dominated`: where a dropped (slower) tier runs the same work on
+/// the same whole buildings at the same objective weight and holds the same boosts, show the one
+/// drawing the least power. The objective is unchanged; without this the plan would always show
+/// the fastest tier (more MW) where tiers tie (Resources / Buildings objectives).
+fn detier<'a>(
+    data: &GameData,
+    s: &PlanSettings,
+    inp: &Inputs<'a>,
+    dropped: &HashMap<String, Vec<Unit<'a>>>,
+    pt: &Point,
+) -> Option<(Inputs<'a>, Point)> {
+    if dropped.is_empty() {
+        return None;
+    }
+    let w = &inp.weights;
+    let (mut units, mut out, mut changed) = (inp.units.clone(), pt.clone(), false);
+    for u in &inp.units {
+        let Some(alts) = dropped.get(&u.key) else { continue };
+        let Some(&(x, n, sh)) = pt.rec.get(&u.key) else { continue };
+        if x <= 1e-9 || n < 0.5 || u.mode.overclock {
+            continue;
+        }
+        let power = |m: &Mode| n * m.power_base * (x / (n * m.speed)).powf(m.power_exp) + m.beacon_power * n;
+        let wu = building_weight(data, s, w, u);
+        let best = alts
+            .iter()
+            .filter(|k| {
+                k.mode.speed * n >= x * (1.0 - 1e-9)
+                    && k.mode.held == u.mode.held
+                    && (building_weight(data, s, w, k) - wu).abs() <= 1e-9 * (1.0 + wu.abs())
+            })
+            .min_by(|a, b| power(&a.mode).total_cmp(&power(&b.mode)));
+        if let Some(k) = best.filter(|k| power(&k.mode) < power(&u.mode) - 1e-9) {
+            out.rec.remove(&u.key);
+            out.rec.insert(k.key.clone(), (x, n, sh));
+            units.push(k.clone());
+            changed = true;
+        }
+    }
+    changed.then(|| (Inputs { units, ..inp.clone() }, out))
 }
 
 /// Split `x` units of work over `n` machines holding `s` shards, minimising power
@@ -472,30 +669,24 @@ pub fn machine_groups(n: f64, x: f64, s: f64, c_max: f64, integer: bool) -> Vec<
     g
 }
 
-fn finish(
-    data: &GameData,
-    s: &PlanSettings,
-    inp: &Inputs,
-    m: &Model,
-    sol: &Solution,
-    integer: bool,
-    plan: &mut Plan,
-) {
+/// Fills the plan's recipe rows, flows and totals from a point (LP solution or whole-building plan).
+fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: bool, plan: &mut Plan) {
     let name = |id: &str| data.item_name(id);
     let clean = |v: f64| if v.abs() < 1e-7 { 0.0 } else { v };
     let c_max = s.max_clock();
     let mut summary: Option<ComputeSummary> = None;
     // DSP: compute cost of every plan (whatever the objective), so presets compare
     let cw = (data.game == "dsp").then(|| compute::model().weights(&s.generator));
-    for (u, v) in inp.units.iter().zip(&m.rv) {
+    for u in &inp.units {
         let (r, f) = (u.recipe, &u.mode);
         let c_max = if f.overclock { c_max } else { 1.0 };
-        let x = clean(sol[v.x]);
+        let Some(&(x, n, sh)) = pt.rec.get(&u.key) else { continue };
+        let x = clean(x);
         if x <= 0.0 {
             continue;
         }
-        let mut n = clean(sol[v.n]);
-        let mut sh = v.s.map(|s| clean(sol[s])).unwrap_or(0.0);
+        let mut n = clean(n);
+        let mut sh = clean(sh);
         if integer {
             n = n.round();
             sh = sh.round();
@@ -556,22 +747,24 @@ fn finish(
         }
     }
     plan.recipes.sort_by(|a, b| a.name.cmp(&b.name));
-    for (it, v) in &m.raw {
-        let q = clean(sol[*v]);
+    let flow = |k: u8, it: &String| clean(pt.flows.get(&(k, it.clone())).copied().unwrap_or(0.0));
+    for it in &inp.items {
+        let q = flow(0, it);
         if q > 0.0 {
-            let res = data.resource(it).unwrap();
-            plan.extraction_power += q / res.extractor_rate * res.extractor_power;
+            if let Some(res) = data.resource(it) {
+                plan.extraction_power += q / res.extractor_rate * res.extractor_power;
+            }
             plan.raw.push(RateLine::new(it, &name(it), q));
         }
     }
-    for (it, v) in &m.sup {
-        let q = clean(sol[*v]);
+    for it in inp.supplies.keys() {
+        let q = flow(1, it);
         if q > 0.0 {
             plan.supplied.push(RateLine::new(it, &name(it), q));
         }
     }
-    for (it, v) in &m.surplus {
-        let q = clean(sol[*v]);
+    for it in &inp.items {
+        let q = flow(2, it);
         if q > 1e-6 {
             plan.surplus.push(RateLine::new(it, &name(it), q));
         }
@@ -620,10 +813,406 @@ fn finish(
     }
 }
 
-pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
+#[cfg(test)]
+thread_local! {
+    /// Tests: build the model without the exact reductions (dominated columns, linear power),
+    /// to check that they leave the optimum unchanged.
+    pub(crate) static NO_SHRINK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+fn shrink() -> bool {
+    #[cfg(test)]
+    {
+        !NO_SHRINK.with(|c| c.get())
+    }
+    #[cfg(not(test))]
+    {
+        true
+    }
+}
+
+/// Outcome of `start`: a finished plan (LP mode, infeasible, too large, …) or a whole-building
+/// solve to drive with `Run::step`.
+pub enum Start<'a> {
+    Done(Plan),
+    Running(Box<Run<'a>>),
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum Phase {
+    /// Re-weighted LPs (k done): neighbourhood for the restricted MILP, plus their rounded plans.
+    Reweight(u8),
+    /// MILP over the recipes the LPs use.
+    Sub,
+    /// The full MILP, warm-started from the best plan in hand.
+    Full,
+    Done,
+}
+
+struct SubRun<'a> {
+    inp: Inputs<'a>,
+    m: Model,
+    out: SolveOutcome,
+    /// ms since start
+    until: f64,
+}
+
+/// Progress of a running whole-building solve.
+#[derive(Clone, Debug)]
+pub struct Progress {
+    pub elapsed_ms: f64,
+    /// Objective of the best plan in hand.
+    pub objective: Option<f64>,
+    /// Lower bound on the objective (LP relaxation, then the MILP's best bound).
+    pub bound: f64,
+    /// Relative gap of the best plan to the bound.
+    pub gap: Option<f64>,
+    pub proven: bool,
+    pub done: bool,
+    pub phase: &'static str,
+    /// Bumped whenever the best plan changes.
+    pub version: u32,
+    pub nodes: u64,
+    pub deadline_ms: f64,
+}
+
+/// A whole-building solve run in steps, holding the best plan found so far (report §6 steps 0, 3):
+/// the rounded-up LP plan is there as soon as the LP is solved, the heuristics and the MILP only
+/// ever improve it, and a MILP that ends without an incumbent no longer loses it.
+pub struct Run<'a> {
+    data: &'a GameData,
+    s: PlanSettings,
+    started: web_time::Instant,
+    budget: f64,
+    /// ms since start
+    deadline: f64,
+    /// Plan without recipe rows: LP bound, item values, model size, warnings so far.
+    base: Plan,
+    inp: Inputs<'a>,
+    dropped: HashMap<String, Vec<Unit<'a>>>,
+    m: Model,
+    c_max: f64,
+    lp_pt: Point,
+    lp_ms: f64,
+    support: BTreeSet<String>,
+    prev: HashMap<String, (f64, f64, f64)>,
+    sub: Option<SubRun<'a>>,
+    full: Option<SolveOutcome>,
+    best: Option<(f64, Point)>,
+    version: u32,
+    bound: f64,
+    proven: bool,
+    phase: Phase,
+    failure: Option<String>,
+    nodes: u64,
+}
+
+impl<'a> Run<'a> {
+    fn ms(&self) -> f64 {
+        self.started.elapsed().as_secs_f64() * 1e3
+    }
+
+    fn gap(&self) -> Option<f64> {
+        self.best.as_ref().map(|(o, _)| (o - self.bound).max(0.0) / o.abs().max(1e-10))
+    }
+
+    /// Takes `pt` (whole buildings) as the best plan when it fits the budgets and is cheaper.
+    fn offer(&mut self, pt: Point) {
+        if !within_budgets(&self.s, &self.inp, &pt) {
+            return;
+        }
+        let obj = objective_of(&self.m, &values_of(&self.m, &self.inp, &pt));
+        if !obj.is_finite() {
+            return;
+        }
+        if self.best.as_ref().is_none_or(|(b, _)| obj < b - 1e-9 * b.abs().max(1.0)) {
+            self.best = Some((obj, pt));
+            self.version += 1;
+        }
+    }
+
+    /// A plan within the budgets when rounding up the LP breaks them (report §5.1): shardless
+    /// machines for a shard budget; for a Somersloop budget, the buildings holding them capped at
+    /// ⌊LP buildings⌋ (then at 0) and the LP re-solved, the rest rounded up.
+    fn budget_fallback(&mut self) -> Option<Point> {
+        let pt = rounded(&self.inp, &self.lp_pt, self.c_max, false);
+        if within_budgets(&self.s, &self.inp, &pt) {
+            return Some(pt);
+        }
+        // caps per unit holding a budgeted item: ⌊LP buildings⌋, then the budget left over
+        // handed out (one more building each) to the largest fractional parts; also all-floor and zero
+        let mut floor: HashMap<String, f64> = HashMap::new();
+        let mut greedy: HashMap<String, f64> = HashMap::new();
+        for (item, budget) in budgets(&self.s) {
+            let mut left = budget;
+            let mut frac: Vec<(f64, f64, String)> = Vec::new();
+            for u in self.inp.units.iter() {
+                let Some(q) = u.mode.held.iter().find(|(i, _)| *i == item).map(|h| h.1) else { continue };
+                let n = self.lp_pt.rec.get(&u.key).map(|v| v.1).unwrap_or(0.0);
+                let f = (n + 1e-9).floor();
+                floor.insert(u.key.clone(), f);
+                greedy.insert(u.key.clone(), f);
+                left -= q * f;
+                if n - f > 1e-7 {
+                    frac.push((n - f, q, u.key.clone()));
+                }
+            }
+            frac.sort_by(|a, b| b.0.total_cmp(&a.0));
+            for (_, q, k) in frac {
+                if q <= left + 1e-9 {
+                    left -= q;
+                    *greedy.get_mut(&k).unwrap() += 1.0;
+                }
+            }
+        }
+        let zero: HashMap<String, f64> = floor.keys().map(|k| (k.clone(), 0.0)).collect();
+        let mut best: Option<(f64, Point)> = None;
+        for caps in [greedy, floor, zero] {
+            let lpm = build_scaled(self.data, &self.s, &self.inp, false, &HashMap::new(), &caps);
+            if let Ok(Ok(sol)) = lpm.p.solve().map(|o| o.into_solution()) {
+                let p = point_of(&lpm, &self.inp, &sol);
+                for shards in [true, false] {
+                    let r = rounded(&self.inp, &p, self.c_max, shards);
+                    if within_budgets(&self.s, &self.inp, &r) {
+                        // every candidate's recipes join the restricted MILP's neighbourhood
+                        self.support.extend(r.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()));
+                        let obj = objective_of(&self.m, &values_of(&self.m, &self.inp, &r));
+                        if best.as_ref().is_none_or(|b| obj < b.0) {
+                            best = Some((obj, r));
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        best.map(|b| b.1)
+    }
+
+    /// Runs the next piece of work, about `slice_ms` long (`None`: each phase to its end).
+    /// Returns true when the solve is finished (proven, out of time, or failed).
+    pub fn step(&mut self, slice_ms: Option<f64>) -> bool {
+        if self.phase != Phase::Done && self.gap().is_some_and(|g| g <= MIP_GAP) {
+            self.proven = true;
+            self.phase = Phase::Done;
+        }
+        match self.phase {
+            Phase::Reweight(k) => self.step_reweight(k),
+            Phase::Sub => self.step_sub(slice_ms),
+            Phase::Full => self.step_full(slice_ms),
+            Phase::Done => {}
+        }
+        if self.phase != Phase::Done && self.gap().is_some_and(|g| g <= MIP_GAP) {
+            self.proven = true;
+            self.phase = Phase::Done;
+        }
+        self.phase == Phase::Done
+    }
+
+    /// Whole buildings make small recipes dear: re-solve the LP charging each recipe ceil(n)/n of
+    /// its building cost at its last rate (sparser plans), and keep every recipe these LPs use as
+    /// the neighbourhood of the restricted MILP. Skipped when the LP alone took a tenth of the budget.
+    fn step_reweight(&mut self, k: u8) {
+        if k >= 4 || self.inp.weights.buildings <= 0.0 || self.lp_ms > self.budget / 10.0 || self.ms() >= self.deadline {
+            self.phase = Phase::Sub;
+            return;
+        }
+        let scale: HashMap<String, f64> = self
+            .prev
+            .iter()
+            .filter(|(_, v)| v.1 > 1e-7)
+            .map(|(k, v)| (k.clone(), ((v.1 - 1e-9).ceil() / v.1).min(1e3)))
+            .collect();
+        let rm = build_scaled(self.data, &self.s, &self.inp, false, &scale, &HashMap::new());
+        match rm.p.solve().map(|o| o.into_solution()) {
+            Ok(Ok(sol)) => {
+                let pt = point_of(&rm, &self.inp, &sol);
+                self.support.extend(pt.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()));
+                let r = rounded(&self.inp, &pt, self.c_max, true);
+                self.prev = pt.rec;
+                self.offer(r);
+                self.phase = Phase::Reweight(k + 1);
+            }
+            _ => self.phase = Phase::Sub,
+        }
+    }
+
+    /// MILP over the recipes the LPs (and the best plan) use: few integer variables, so it
+    /// often finds a better plan quickly. A quarter of the budget.
+    fn step_sub(&mut self, slice_ms: Option<f64>) {
+        let now = self.ms();
+        let run = match self.sub.take() {
+            Some(mut sub) => {
+                let left = sub.until.min(self.deadline) - now;
+                if left <= 0.0 {
+                    self.phase = Phase::Full;
+                    return;
+                }
+                match sub.out.resume_with(resume_options(slice_ms.unwrap_or(f64::INFINITY).min(left))) {
+                    Ok(out) => {
+                        sub.out = out;
+                        Some(sub)
+                    }
+                    Err(_) => None,
+                }
+            }
+            None => {
+                let mut keep = self.support.clone();
+                if let Some((_, b)) = &self.best {
+                    keep.extend(b.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()));
+                }
+                if keep.len() >= self.inp.units.len() || now >= self.deadline {
+                    self.phase = Phase::Full;
+                    return;
+                }
+                let sub_inp = restrict(&self.inp, &keep);
+                let m = build(self.data, &self.s, &sub_inp, true);
+                let from = self.best.as_ref().map(|b| b.1.clone()).unwrap_or_else(|| rounded(&self.inp, &self.lp_pt, self.c_max, true));
+                let hint = int_hint(&m, &sub_inp, &from);
+                let until = now + self.budget / 4.0;
+                match m.p.solve_with(milp_root(hint)) {
+                    Ok(out) => Some(SubRun { inp: sub_inp, m, out, until }),
+                    Err(_) => None,
+                }
+            }
+        };
+        let Some(sub) = run else {
+            self.phase = Phase::Full;
+            return;
+        };
+        if let Some(sol) = sub.out.solution() {
+            let pt = point_of(&sub.m, &sub.inp, sol);
+            self.offer(pt);
+        }
+        let open = matches!(sub.out.termination_reason(), TerminationReason::TimeLimit | TerminationReason::NodeLimit);
+        if open && self.ms() < sub.until.min(self.deadline) {
+            self.sub = Some(sub);
+        } else {
+            self.phase = Phase::Full;
+        }
+    }
+
+    /// The full MILP, warm-started from the best plan, resumed in slices until the deadline.
+    fn step_full(&mut self, slice_ms: Option<f64>) {
+        let now = self.ms();
+        let res = match self.full.take() {
+            Some(out) => {
+                let left = self.deadline - now;
+                if left <= 0.0 {
+                    self.full = Some(out);
+                    self.phase = Phase::Done;
+                    return;
+                }
+                out.resume_with(resume_options(slice_ms.unwrap_or(f64::INFINITY).min(left)))
+            }
+            None => {
+                if now >= self.deadline {
+                    self.phase = Phase::Done;
+                    return;
+                }
+                let from = self.best.as_ref().map(|b| b.1.clone()).unwrap_or_else(|| rounded(&self.inp, &self.lp_pt, self.c_max, true));
+                self.m.p.solve_with(milp_root(int_hint(&self.m, &self.inp, &from)))
+            }
+        };
+        match res {
+            Ok(out) => {
+                let st = out.stats();
+                self.nodes = st.nodes_solved;
+                if let Some(b) = st.best_bound.filter(|b| b.is_finite()) {
+                    self.bound = self.bound.max(b);
+                }
+                if let Some(sol) = out.solution() {
+                    let pt = point_of(&self.m, &self.inp, sol);
+                    self.offer(pt);
+                }
+                match out.termination_reason() {
+                    TerminationReason::TimeLimit | TerminationReason::NodeLimit => {
+                        self.full = Some(out);
+                        if self.ms() >= self.deadline {
+                            self.phase = Phase::Done;
+                        }
+                    }
+                    _ => {
+                        // proven optimal (within MIP_GAP); the best plan is at least as good
+                        self.proven = self.best.is_some();
+                        self.phase = Phase::Done;
+                    }
+                }
+            }
+            Err(microlp::Error::Infeasible) => {
+                self.failure = Some("No whole-building plan fits (check the shard budget).".into());
+                self.phase = Phase::Done;
+            }
+            Err(e) => {
+                self.failure = Some(format!("Solver error: {e}"));
+                self.phase = Phase::Done;
+            }
+        }
+    }
+
+    /// Gives the solve `ms` more from now ("keep solving"); resumes the MILP where it stopped.
+    pub fn extend(&mut self, ms: f64) {
+        self.deadline = self.ms() + ms.clamp(100.0, 300_000.0);
+        if self.phase == Phase::Done && !self.proven && self.failure.is_none() {
+            self.phase = Phase::Full;
+        }
+    }
+
+    pub fn progress(&self) -> Progress {
+        Progress {
+            elapsed_ms: self.ms(),
+            objective: self.best.as_ref().map(|b| b.0),
+            bound: self.bound,
+            gap: self.gap(),
+            proven: self.proven,
+            done: self.phase == Phase::Done,
+            phase: match self.phase {
+                Phase::Reweight(_) => "heuristic",
+                Phase::Sub => "restricted",
+                Phase::Full => "search",
+                Phase::Done => "done",
+            },
+            version: self.version,
+            nodes: self.nodes,
+            deadline_ms: self.deadline,
+        }
+    }
+
+    /// The best plan in hand (a finished plan once `step` returned true).
+    pub fn plan(&self) -> Plan {
+        let mut plan = self.base.clone();
+        let done = self.phase == Phase::Done;
+        plan.solve_ms = self.ms();
+        let Some((obj, pt)) = &self.best else {
+            plan.status = Status::Infeasible;
+            if done {
+                plan.warnings.push(
+                    self.failure.clone().unwrap_or_else(|| "Time limit reached before a whole-building plan was found.".into()),
+                );
+            }
+            return plan;
+        };
+        plan.status = Status::Optimal;
+        plan.objective = *obj;
+        plan.proven_optimal = self.proven;
+        let gap = self.gap().unwrap_or(0.0);
+        plan.gap = if gap > 0.0 { Some(gap) } else { None };
+        if done && !self.proven {
+            plan.warnings.push(format!(
+                "Time limit reached: best whole-building plan found, not proven optimal (within {:.1} % of the bound).",
+                gap * 100.0
+            ));
+        }
+        match detier(self.data, &self.s, &self.inp, &self.dropped, pt) {
+            Some((inp, pt)) => finish(self.data, &self.s, &inp, &pt, true, &mut plan),
+            None => finish(self.data, &self.s, &self.inp, pt, true, &mut plan),
+        }
+        plan
+    }
+}
+
+/// Sets up a solve: model, LP relaxation, and (whole buildings) the first plan in hand.
+pub fn start<'a>(data: &'a GameData, s: &PlanSettings) -> Start<'a> {
     let started = web_time::Instant::now();
     let mut plan = Plan::default();
-    let name = |id: &str| data.item_name(id);
     // quality tiers (`x@q`) only where the data has them and some target or supply asks for one
     let quality_on = quality::active(data, s);
     let resolve = |key: &str| {
@@ -653,35 +1242,64 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
     }
     if targets.is_empty() {
         plan.status = Status::Empty;
-        return plan;
+        return Start::Done(plan);
     }
 
     let allowed = allowed_recipes(data, s);
     let target_ids: Vec<String> = targets.keys().cloned().collect();
-    // quality plans: expanded recipes `r@i` with loadout modes (pruned at the base level first)
-    let expanded = if quality_on { quality::expand(data, s, &allowed, &target_ids) } else { vec![] };
-    let all_units: Vec<Unit> = if quality_on {
-        expanded.iter().flat_map(|(r, ms)| ms.iter().map(move |m| Unit::new(r, m.clone()))).collect()
-    } else {
-        // item recycling only makes sense with quality
-        allowed
-            .iter()
-            .filter(|r| !r.recycling)
-            .flat_map(|r| rules::modes(data, r, s).into_iter().map(move |mode| Unit::new(r, mode)))
-            .collect()
-    };
+    if quality_on {
+        // quality plans: expanded recipes `r@i` with loadout modes (pruned at the base level
+        // first); the units borrow these local recipes, so the plan is finished here
+        let expanded = quality::expand(data, s, &allowed, &target_ids);
+        let all_units: Vec<Unit> =
+            expanded.iter().flat_map(|(r, ms)| ms.iter().map(move |m| Unit::new(r, m.clone()))).collect();
+        let units = relevant(&all_units, &target_ids);
+        return match start_units(data, s, started, plan, units, targets, supplies) {
+            Start::Running(mut run) => {
+                while !run.step(None) {}
+                Start::Done(run.plan())
+            }
+            Start::Done(p) => Start::Done(p),
+        };
+    }
+    // item recycling only makes sense with quality
+    let all_units: Vec<Unit<'a>> = allowed
+        .iter()
+        .filter(|r| !r.recycling)
+        .flat_map(|r| rules::modes(data, r, s).into_iter().map(move |mode| Unit::new(r, mode)))
+        .collect();
     let units = relevant(&all_units, &target_ids);
-    let items = items_of(&units, &targets, &supplies);
+    start_units(data, s, started, plan, units, targets, supplies)
+}
+
+fn start_units<'b>(
+    data: &'b GameData,
+    s: &PlanSettings,
+    started: web_time::Instant,
+    mut plan: Plan,
+    units: Vec<Unit<'b>>,
+    targets: BTreeMap<String, f64>,
+    supplies: BTreeMap<String, f64>,
+) -> Start<'b> {
+    let name = |id: &str| data.item_name(id);
+    let quality_on = quality::active(data, s);
     let mut weights = s.weights();
     for v in [&mut weights.resources, &mut weights.buildings, &mut weights.power, &mut weights.shards, &mut weights.surplus] {
         if !v.is_finite() || *v < 0.0 {
             *v = 0.0;
         }
     }
-    let inp = Inputs { units, items, targets, supplies, weights };
-    plan.columns = inp.units.len();
-    plan.rows = inp.items.len();
+    plan.columns = units.len();
     plan.quality = quality_on;
+    // Quality loops run tiers of a recipe on shared machines that switch recipes, which
+    // per-column whole buildings would overcount (report §2.1): solve them continuously.
+    let integer = s.integer && !quality_on;
+    // whole buildings: drop dominated machine tiers / modes (exact, report §6 step 2)
+    let (units, dropped) =
+        if integer && shrink() { drop_dominated(data, s, units, &weights) } else { (units, HashMap::new()) };
+    let items = items_of(&units, &targets, &supplies);
+    let inp = Inputs { units, items, targets, supplies, weights };
+    plan.rows = inp.items.len();
     if s.max_columns > 0 && plan.columns > s.max_columns {
         plan.status = Status::TooLarge;
         plan.warnings.push(format!(
@@ -689,23 +1307,20 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
             plan.columns, plan.rows, s.max_columns
         ));
         plan.solve_ms = started.elapsed().as_secs_f64() * 1e3;
-        return plan;
+        return Start::Done(plan);
     }
-    // Quality loops run tiers of a recipe on shared machines that switch recipes, which
-    // per-column whole buildings would overcount (report §2.1): solve them continuously.
-    let integer = s.integer && !quality_on;
     if quality_on && s.integer {
         plan.warnings.push("Quality plans are solved with fractional machines: the higher tiers of a recipe normally share machines that switch recipes.".into());
     }
 
-    // 1. continuous relaxation: lower bound, shadow prices, warm start
+    // 1. continuous relaxation: lower bound, shadow prices, first plan
     let lp_model = build(data, s, &inp, false);
     let lp = match lp_model.p.solve().map(|o| o.into_solution()) {
         Ok(Ok(sol)) => sol,
         Ok(Err(_)) => {
             plan.status = Status::Infeasible;
             plan.warnings.push("Solver stopped before finding a plan.".into());
-            return plan;
+            return Start::Done(plan);
         }
         Err(microlp::Error::Infeasible) => {
             plan.status = Status::Infeasible;
@@ -750,16 +1365,16 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
                     off.join("; ")
                 ));
             }
-            return plan;
+            return Start::Done(plan);
         }
         Err(microlp::Error::Unbounded) => {
             plan.status = Status::Unbounded;
-            return plan;
+            return Start::Done(plan);
         }
         Err(e) => {
             plan.status = Status::Infeasible;
             plan.warnings.push(format!("Solver error: {e}"));
-            return plan;
+            return Start::Done(plan);
         }
     };
     plan.lp_bound = lp.objective();
@@ -772,88 +1387,70 @@ pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
         }
         plan.item_values.sort_by(|a, b| b.value.partial_cmp(&a.value).unwrap_or(std::cmp::Ordering::Equal));
     }
+    let lp_pt = point_of(&lp_model, &inp, &lp);
 
     if !integer {
         plan.status = Status::Optimal;
         plan.objective = lp.objective();
         plan.proven_optimal = true;
-        finish(data, s, &inp, &lp_model, &lp, false, &mut plan);
+        finish(data, s, &inp, &lp_pt, false, &mut plan);
         plan.solve_ms = started.elapsed().as_secs_f64() * 1e3;
-        return plan;
+        return Start::Done(plan);
     }
 
-    // 2. primal heuristic: MILP over the recipes the relaxation uses (few integer
-    //    variables, solves fast), then 3. the full MILP warm-started from it.
+    // 2. whole buildings: the LP rounded up is the first plan in hand
     let c_max = s.max_clock();
-    let budget = s.time_limit_ms.clamp(200, 300_000);
-    let lp_pt = point_of(&lp_model, &inp, &lp);
     let m = build(data, s, &inp, true);
-    let mut hint = hint_of(&m, &inp, &lp_pt, c_max, true);
-    let mut support: BTreeSet<String> =
-        lp_pt.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()).collect();
-    // Whole buildings make small recipes dear: re-solve the LP charging each recipe
-    // ceil(n)/n of its building cost at its last rate (sparser plans), and keep every
-    // recipe these LPs use as the neighbourhood for the restricted MILP.
-    if inp.weights.buildings > 0.0 {
-        let mut prev = lp_pt.rec.clone();
-        for _ in 0..4 {
-            let scale: HashMap<String, f64> = prev
-                .iter()
-                .filter(|(_, v)| v.1 > 1e-7)
-                .map(|(k, v)| (k.clone(), ((v.1 - 1e-9).ceil() / v.1).min(1e3)))
-                .collect();
-            let rm = build_scaled(data, s, &inp, false, &scale);
-            match rm.p.solve().map(|o| o.into_solution()) {
-                Ok(Ok(sol)) => {
-                    let pt = point_of(&rm, &inp, &sol);
-                    support.extend(pt.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()));
-                    prev = pt.rec;
-                }
-                _ => break,
-            }
+    let support: BTreeSet<String> = lp_pt.rec.iter().filter(|(_, v)| v.0 > 1e-7).map(|(k, _)| k.clone()).collect();
+    let budget = s.time_limit_ms.clamp(200, 300_000) as f64;
+    let lp_ms = started.elapsed().as_secs_f64() * 1e3;
+    let mut run = Run {
+        data,
+        s: s.clone(),
+        started,
+        budget,
+        deadline: budget,
+        bound: plan.lp_bound,
+        base: plan,
+        prev: lp_pt.rec.clone(),
+        inp,
+        dropped,
+        m,
+        c_max,
+        lp_pt,
+        lp_ms,
+        support,
+        sub: None,
+        full: None,
+        best: None,
+        version: 0,
+        proven: false,
+        phase: Phase::Reweight(0),
+        failure: None,
+        nodes: 0,
+    };
+    let first = rounded(&run.inp, &run.lp_pt, c_max, true);
+    if within_budgets(s, &run.inp, &first) {
+        run.offer(first);
+    } else if let Some(pt) = run.budget_fallback() {
+        run.offer(pt);
+    }
+    if run.gap().is_some_and(|g| g <= MIP_GAP) {
+        run.proven = true;
+        run.phase = Phase::Done;
+    }
+    Start::Running(Box::new(run))
+}
+
+/// Solves a plan to the end (time limit or proof).
+pub fn solve(data: &GameData, s: &PlanSettings) -> Plan {
+    match start(data, s) {
+        Start::Done(p) => p,
+        Start::Running(mut run) => {
+            while !run.step(None) {}
+            run.plan()
         }
     }
-    if support.len() < inp.units.len() {
-        let sub_inp = restrict(&inp, &support);
-        let sub = build(data, s, &sub_inp, true);
-        let sub_hint = hint_of(&sub, &sub_inp, &lp_pt, c_max, true);
-        if let Ok(Ok(sol)) = sub.p.solve_with(milp_options(budget / 4, sub_hint)).map(|o| o.into_solution()) {
-            hint = hint_of(&m, &inp, &point_of(&sub, &sub_inp, &sol), c_max, false);
-        }
-    }
-    let left = budget.saturating_sub(started.elapsed().as_millis() as u64);
-    match m.p.solve_with(milp_options(left, hint)) {
-        Ok(outcome) => match outcome.into_solution() {
-            Ok(sol) => {
-                plan.status = Status::Optimal;
-                plan.objective = sol.objective();
-                plan.proven_optimal = sol.status() == SolutionStatus::Optimal
-                    || sol.termination_reason() == TerminationReason::MipGap;
-                plan.gap = if sol.status() == SolutionStatus::Optimal { None } else { sol.gap() };
-                if !plan.proven_optimal {
-                    plan.warnings.push(format!(
-                        "Time limit reached: best whole-building plan found, not proven optimal{}.",
-                        sol.gap().map(|g| format!(" (within {:.1} % of the bound)", g * 100.0)).unwrap_or_default()
-                    ));
-                }
-                finish(data, s, &inp, &m, &sol, true, &mut plan);
-            }
-            Err(_) => {
-                plan.status = Status::Infeasible;
-                plan.warnings.push("Time limit reached before a whole-building plan was found.".into());
-            }
-        },
-        Err(microlp::Error::Infeasible) => {
-            plan.status = Status::Infeasible;
-            plan.warnings.push("No whole-building plan fits (check the shard budget).".into());
-        }
-        Err(e) => {
-            plan.status = Status::Infeasible;
-            plan.warnings.push(format!("Solver error: {e}"));
-        }
-    }
-    plan.solve_ms = started.elapsed().as_secs_f64() * 1e3;
-    plan
 }
 
 /// Map from item id to total raw input (handy in tests).
