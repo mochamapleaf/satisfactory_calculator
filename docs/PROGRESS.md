@@ -212,3 +212,15 @@ Plan: `docs/research/satisfactory-geo/00-最终报告.md` §7–§9; step log `d
   (`tools/geo_reference_dump.py`, highspy) gives the same model size, objective, hubs and cars; sweep equals
   `p_sweep_plate12k.json`. Browser: 12 000 plate/min at Sm3_0 → 95 123.6 vs 99 386.2 belts only (−4.3 %), p* 2/2/0.
 - Not done: tech-tier planning (G9), shared track segments, per-site integer refinement (G7).
+
+## 2026-11-22 — DSP seed planning (memo step 13; report docs/research/dsp-seed/00-最终报告.md §9 steps 1–4, 7)
+Step log: `docs/research/dsp-seed/_过程文件/progress-impl.md` (checks vs report, MINE choices, known issues).
+- Seed import: `vendor/dsp_seed_gen` = data/ + worldgen/ of DoubleUTH/DSP-Seed-Finder @c050ff02 (Apache-2.0, LICENSE.txt +
+  NOTICE.md), fork exposes vein node counts (oil seeps). Seed 12345678 / 32 / 0.1× equals the research prototype natively.
+- `src/planner/dsp_galaxy.rs`: S(L), release level per finite resource (ρ 1 / 0.8), first level of the all-quota LP (binary search),
+  multi-system LP (star systems, pairwise shipping with stations ∝ distance and warpers, quotas m·ρ·S(L) ≤ B·z, oil / gas-giant /
+  photon rates, target z or max z under building / Dyson caps), Dark Fog drops as user-rated sources (BWIKI unlock levels).
+- WASM `dsp_galaxy_json`, `dsp_thresholds_json`, `dsp_galaxy_plan_json`; DSP tab "Galaxy" (lazy, own worker, own settings).
+- Tests: 10 in `dsp_galaxy_tests.rs` + 1 in the vendored crate; live 24/24 on vite preview, shots in `_过程文件/shots-web/`.
+- Known: the WASM generator differs from native on 1 of 145 planets of the test seed (float maths); not checked against the game.
+  Not modelled: energy balance, Dyson power from the seed, multi-period model, building materials, Dark Fog defence cost.

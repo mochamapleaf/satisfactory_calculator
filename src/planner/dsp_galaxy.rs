@@ -495,6 +495,8 @@ fn unit_plan(data: &GameData, ts: &ThresholdSettings, g: &Galaxy, stocks: &BTree
     let mut st = ts.plan.clone();
     st.game = "dsp".into();
     st.integer = false;
+    // report §4.3: the quota LP minimises buildings (the sidebar objective is for the main plan)
+    st.objective = super::Objective::Buildings;
     st.targets = vec![ItemRate { item: CUBE.into(), rate: 1.0 }];
     st.ignore_limits = false;
     st.resource_limits.clear();

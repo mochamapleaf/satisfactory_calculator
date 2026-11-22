@@ -1,0 +1,26 @@
+PASS stars 32 — 32
+PASS gas giants 15 — 15
+PASS oil 402.3/s (WASM; native 404.8) — 402.3/s
+PASS magnets 182 k — 182 k
+PASS iron stock 127.78 M — ['铁矿', '127.78 M', '104']
+PASS AngelStern P0 iron 1.55 M (prototype 1553315)
+PASS magnets per cube 10 — ['单极磁石', '182 k', '10', 'L98', '17.11 M', '380', 'L94', '12.53 M', '278', '4.195']
+PASS magnet release L98 / L94 — ['单极磁石', '182 k', '10', 'L98', '17.11 M', '380', 'L94', '12.53 M', '278', '4.195']
+PASS cubes to L98 17.11 M — 17.11 M
+PASS quota LP feasible from L6 / L6 — feasible from L6 (ρ = 1) / L6 (ρ = 0
+PASS oil 2/cube at L6 — uses crude oil 2/cube and unipolar magnets 0
+PASS Mk.III magnets per cube 3.28 (±0.01) — ['单极磁石', '182 k', '3.277', 'L77', '10.22 M', '227', 'L72', '7.08 M', '157', '4.195']
+PASS Mk.III magnet release L77 / L72 — ['单极磁石', '182 k', '3.277', 'L77', '10.22 M', '227', 'L72', '7.08 M', '157', '4.195']
+PASS target z 1000 — 1,000/min
+PASS 20 GW, 1 photon/cube — 20 GW | 20 GW
+RAY RECEIVERS, 1 PHOTON/CUBE
+PASS magnets within quota — ['单极磁石珍奇', '182 k', '2']
+PASS shipments listed — INTERSTELLAR SHIPMENTS (30, LARGEST ITEM·LY FIRST)
+PASS max z at 20 GW = 1000 — 1,000/min
+PASS max z at 20 GW sprayed = 1250 — 1,250/min
+PASS Dark Fog: magnets mined per cube 9.5 — ['单极磁石', '182 k', '9.5', 'L97', '16.74 M', '279', 'L93', '12.25 M', '204', '4.195']
+PASS plan uses Dark Fog drops
+PASS no page errors
+PASS 390 px light: no horizontal page scroll — scrollWidth 390
+PASS 390 px dark: no horizontal page scroll — scrollWidth 390
+24/24 checks passed

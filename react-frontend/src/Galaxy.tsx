@@ -70,7 +70,7 @@ const TYPE_ZH: Record<string, string> = { MainSeqStar: '主序星', GiantStar: '
 const RARE = new Set(['fire-ice', 'kimberlite-ore', 'fractal-silicon', 'organic-crystal', 'optical-grating-crystal', 'spiniform-stalagmite-crystal', 'unipolar-magnet'])
 
 /** Thousands-separated number with at most `d` decimals. */
-const num = (x: number, d = 0) => (Number.isFinite(x) ? x.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 }) : '–')
+const num = (x: number, d = 0) => (Number.isFinite(x) ? (Number(x.toFixed(d)) + 0).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 }) : '–')
 /** Compact: 1.23 M, 456 k. */
 const compact = (x: number) => (Math.abs(x) >= 1e6 ? `${fmt(x / 1e6, 2)} M` : Math.abs(x) >= 1e4 ? `${fmt(x / 1e3, 0)} k` : num(x, 1))
 const lv = (l: number | null | undefined) => (l === null || l === undefined ? '—' : `L${l}`)
@@ -163,7 +163,9 @@ export default function GalaxyTab({ data, settings }: Props) {
       <p className="hint">
         星区规划 Galaxy planning: generate the galaxy of a seed (DoubleUTH/DSP-Seed-Finder generator, Apache-2.0, not yet checked against a save),
         find when each finite resource can be used forever (矿物利用 0.94<sup>L</sup>), and split production over star systems.
-        Recipe options come from the sidebar{prolif ? ` (proliferator: ${prolif})` : ' (no proliferator)'}.
+        Recipe options come from the sidebar: {settings.allow_all_alternates ? 'all alternates' : `${settings.enabled_alternates.length} alternates`},
+        {prolif ? ` proliferator ${settings.effects.filter(e => e.startsWith('proliferator')).join(' + ')}` : ' no proliferator'}
+        {!settings.allow_all_alternates && <> (the report's numbers use all alternates)</>}.
       </p>
 
       {/* ---- seed import */}
@@ -185,6 +187,7 @@ export default function GalaxyTab({ data, settings }: Props) {
           </div>
         </details>
       </div>
+      <p className="hint">The generator is not checked against the game yet. In the browser its floating-point maths can differ from the desktop build on a few planets (seed 12345678: one of 145 planets, the home ocean planet, 24.1 vs 26.7 oil/s).</p>
       {busy && <p className="solving" role="status">{busy}</p>}
       {g?.error && <p className="warn">{g.error}</p>}
       {g && !g.error && <GalaxyTables g={g} name={name} systems={systems} toggle={toggleSystem} open={open} setOpen={setOpen}
@@ -226,7 +229,7 @@ export default function GalaxyTab({ data, settings }: Props) {
               <option value="max">Maximum z (终局最大白糖)</option>
             </select>
           </label>
-          {o.goal === 'target' && <label>Cubes/min<input type="number" value={o.target} onChange={e => set({ target: numIn(e.target.value, 0, 1e7, 1000) })} /></label>}
+          {o.goal === 'target' && <label>Target cubes/min<input type="number" value={o.target} onChange={e => set({ target: numIn(e.target.value, 0, 1e7, 1000) })} /></label>}
           {o.goal === 'target' && <label>Minimise
             <select value={o.objective} onChange={e => set({ objective: e.target.value as Opts['objective'] })}>
               <option value="buildings">buildings</option>
@@ -259,7 +262,7 @@ export default function GalaxyTab({ data, settings }: Props) {
           </details>
         </div>
         {gp?.error && <p className="warn">{gp.error}</p>}
-        {gp && !gp.error && <PlanView gp={gp} name={name} starName={starName} />}
+        {gp && !gp.error && <PlanView gp={gp} name={name} starName={starName} recipeName={id => { const r = data.recipes.find(x => x.id === id); return r ? (r.name_zh ?? r.name) : id }} />}
       </>}
     </div>
   )
@@ -412,7 +415,7 @@ function DarkFogBox({ g, df, set, name }: { g: Galaxy; df: DarkFog; set: (d: Dar
   )
 }
 
-function PlanView({ gp, name, starName }: { gp: GalaxyPlan; name: (id: string) => string; starName: (i: number) => string }) {
+function PlanView({ gp, name, starName, recipeName }: { gp: GalaxyPlan; name: (id: string) => string; starName: (i: number) => string; recipeName: (id: string) => string }) {
   const [sel, setSel] = useState<number | null>(null)
   if (gp.status !== 'optimal') {
     return <div className="warn"><b>{gp.status === 'unbounded' ? 'Unbounded' : 'No plan'}</b>{gp.warnings.map((w, i) => <p key={i}>{w}</p>)}</div>
@@ -456,7 +459,7 @@ function PlanView({ gp, name, starName }: { gp: GalaxyPlan; name: (id: string) =
             sel === s.star && <tr key={`${s.star}-d`}><td colSpan={7} className="small">
               {s.extraction.length > 0 && <div><b>Extraction</b>: {s.extraction.map(e => `${name(e.item.replace(' (gas)', ''))}${e.item.endsWith('(gas)') ? ' (gas)' : ''} ${num(e.rate, 1)}/min${e.cap !== null ? ` of ${num(e.cap, 0)} ${e.limit}` : ''}`).join(' · ')}</div>}
               {s.drops.length > 0 && <div><b>Dark Fog drops</b>: {s.drops.map(d => `${name(d.item)} ${num(d.rate, 1)}/min`).join(' · ')}</div>}
-              <div><b>Recipes</b>: {s.recipes.length === 0 ? 'none' : s.recipes.slice(0, 40).map(r => `${r.recipe}${r.mode ? ` [${r.mode}]` : ''} ×${num(r.machines, 1)}`).join(' · ')}{s.recipes.length > 40 ? ` … +${s.recipes.length - 40}` : ''}</div>
+              <div><b>Recipes</b>: {s.recipes.length === 0 ? 'none' : s.recipes.slice(0, 40).map(r => `${recipeName(r.recipe)}${r.mode ? ` [${r.mode}]` : ''} ×${num(r.machines, 1)}`).join(' · ')}{s.recipes.length > 40 ? ` … +${s.recipes.length - 40}` : ''}</div>
             </td></tr>,
           ])}
         </tbody>

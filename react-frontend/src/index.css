@@ -466,7 +466,7 @@ svg.belt { display: block; font-family: var(--font-ui); }
 .galaxy h4 .tabbtn { margin-left: var(--s2); padding: 1px var(--s2); border: 1px solid var(--rule); border-radius: var(--radius); color: var(--muted); background: none; font-size: var(--t-xs); min-height: 0; text-transform: none; letter-spacing: 0; }
 .galaxy button.tabbtn { padding: 2px var(--s2); border: 1px solid var(--rule); border-radius: var(--radius); color: var(--muted); background: none; font-size: var(--t-sm); min-height: 0; }
 .galaxy td.small { white-space: normal; }
-.galaxy td.small > div { margin: 2px 0; }
+.galaxy td.small > div { margin: 2px 0; white-space: normal; overflow-wrap: anywhere; }
 .galaxy .tag { margin-left: var(--s1); }
 .galaxy .threshold th[colspan] { text-align: center; border-bottom: 1px solid var(--rule); }
 .galaxy .solving { margin: var(--s2) 0; }
