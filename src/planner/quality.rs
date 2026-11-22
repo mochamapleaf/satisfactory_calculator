@@ -250,7 +250,7 @@ fn loadout_modes(
             // built-in machine and researched productivity apply to every recipe; productivity
             // modules only where the recipe allows them (km is 0 otherwise)
             let p = (b.base_productivity + research + km * pv.productivity).min(MAX_PRODUCTIVITY);
-            let speed = b.speed * (1.0 + kq * qv.speed + km * pv.speed + bo.speed).max(0.2);
+            let speed = b.speed_at(s.machine_quality) * (1.0 + kq * qv.speed + km * pv.speed + bo.speed).max(0.2);
             let consumption = (1.0 + kq * qv.consumption + km * pv.consumption + bo.consumption).max(0.2);
             let power = b.power * consumption;
             // fuel and spent fuel stay at normal quality (fluids and heat have none)

@@ -1,0 +1,329 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+37
+PRODUCTION BUILDINGS
+115.7MW
+PRODUCTION POWER
+0.2MW
+EXTRACTION, EST.
+115.9MW
+TOTAL POWER
+optimal
+WHOLE BUILDINGS · 3907 MS
+Buildings
+1×
+Assembling machine 3
+2×
+Centrifuge
+2×
+Chemical plant
+1×
+Cryogenic plant
+4×
+Electric furnace
+19×
+Electromagnetic plant
+1×
+Heat exchanger
+1×
+Nuclear reactor
+1×
+Oil refinery
+5×
+Recycler
+Recipes
+RECIPE	BUILDING	BUILDINGS	CLOCK		MW	IN (/MIN)	OUT (/MIN)	
+Advanced circuit3 TIERS
+Electromagnetic plant · 1Q 4P
+	Electromagnetic plant	11
+normal 6.48
+uncommon 2.66
+rare 1.11
+	93.2% busy	—	86.1	
+90.7 Electronic circuit
+90.7 Plastic bar
+181.39 Copper cable
+37.26 Electronic circuit ★uncommon
+37.26 Plastic bar ★uncommon
+74.52 Copper cable ★uncommon
+15.52 Electronic circuit ★rare
+15.52 Plastic bar ★rare
+31.04 Copper cable ★rare
+	
+106.28 Advanced circuit
+50.04 Advanced circuit ★uncommon
+21.45 Advanced circuit ★rare
+1.42 Advanced circuit ★epic
+0.16 Advanced circuit ★legendary
+	
+
+Advanced circuit recycling3 TIERS
+4Q
+	Recycler	3
+normal 1.66
+uncommon 0.78
+rare 0.34
+	92.6% busy	—	0.5	
+106.28 Advanced circuit
+50.04 Advanced circuit ★uncommon
+21.45 Advanced circuit ★rare
+	
+39.86 Electronic circuit
+30.72 Electronic circuit ★uncommon
+14.87 Electronic circuit ★rare
+3.1 Electronic circuit ★epic
+0.34 Electronic circuit ★legendary
+39.86 Plastic bar
+30.72 Plastic bar ★uncommon
+14.87 Plastic bar ★rare
+3.1 Plastic bar ★epic
+0.34 Plastic bar ★legendary
+79.71 Copper cable
+61.44 Copper cable ★uncommon
+29.73 Copper cable ★rare
+6.19 Copper cable ★epic
+0.69 Copper cable ★legendary
+	
+
+Advanced circuit2 TIERS
+Electromagnetic plant · 5P
+	Electromagnetic plant	1
+epic 0.32
+legendary 0.04
+	35.1% busy	—	3.5	
+3.16 Electronic circuit ★epic
+3.16 Plastic bar ★epic
+6.32 Copper cable ★epic
+0.35 Electronic circuit ★legendary
+0.35 Plastic bar ★legendary
+0.7 Copper cable ★legendary
+	
+4.35 Advanced circuit ★epic
+0.48 Advanced circuit ★legendary
+	
+
+Coal liquefaction
+3P
+	Oil refinery	1	15.1% busy	—	0.2	
+10 Coal
+24.99 Heavy oil
+49.98 Steam (500°C)
+	
+138.69 Heavy oil
+34.98 Light oil
+17.49 Petroleum gas
+	
+
+Copper cable
+Electromagnetic plant · 5P
+	Electromagnetic plant	1	20.2% busy	—	2	
+12.15 Copper plate
+	
+66.82 Copper cable
+	
+
+Copper cable
+Electromagnetic plant · 1Q 4P
+	Electromagnetic plant	1	55.3% busy	—	4.6	
+46.48 Copper plate
+	
+217.88 Copper cable
+13.07 Copper cable ★uncommon
+1.31 Copper cable ★rare
+0.13 Copper cable ★epic
+0.01 Copper cable ★legendary
+	
+
+Copper plate
+Electric furnace · 2P
+	Electric furnace	2	74.5% busy	—	0.7	
+39.09 Copper ore
+	
+58.63 Copper plate
+	
+
+Electronic circuit3 TIERS
+Electromagnetic plant · 1Q 4P
+	Electromagnetic plant	2
+normal 1.09
+uncommon 0.22
+rare 0.09
+	70.4% busy	—	11.8	
+91.83 Iron plate
+275.49 Copper cable
+18.63 Iron plate ★uncommon
+55.89 Copper cable ★uncommon
+7.76 Iron plate ★rare
+23.28 Copper cable ★rare
+	
+215.22 Electronic circuit
+56.57 Electronic circuit ★uncommon
+22.1 Electronic circuit ★rare
+1.48 Electronic circuit ★epic
+0.16 Electronic circuit ★legendary
+	
+
+Electronic circuit recycling3 TIERS
+4Q
+	Recycler	1
+normal 0.21
+uncommon 0.07
+rare 0.03
+	30.7% busy	—	0.1	
+164.39 Electronic circuit
+50.04 Electronic circuit ★uncommon
+21.45 Electronic circuit ★rare
+	
+30.82 Iron plate
+18.63 Iron plate ★uncommon
+7.76 Iron plate ★rare
+1.58 Iron plate ★epic
+0.18 Iron plate ★legendary
+92.47 Copper cable
+55.89 Copper cable ★uncommon
+23.28 Copper cable ★rare
+4.74 Copper cable ★epic
+0.53 Copper cable ★legendary
+	
+
+Electronic circuit2 TIERS
+Electromagnetic plant · 5P
+	Electromagnetic plant	1
+epic 0.03
+legendary 0
+	2.9% busy	—	0.3	
+1.58 Iron plate ★epic
+4.74 Copper cable ★epic
+0.18 Iron plate ★legendary
+0.53 Copper cable ★legendary
+	
+4.35 Electronic circuit ★epic
+0.48 Electronic circuit ★legendary
+	
+
+Heat exchanger : Steam	Heat exchanger	1	0.8% busy	—	0	
+5 Water
+4.85 Heat (MJ)
+	
+49.98 Steam (500°C)
+	
+
+Heavy oil cracking to light oil
+Chemical plant · 3P
+	Chemical plant	1	17.2% busy	—	0.1	
+85.27 Water
+113.7 Heavy oil
+	
+149.23 Light oil
+	
+
+Iron plate
+Electric furnace · 2P
+	Electric furnace	2	77.5% busy	—	0.7	
+40.67 Iron ore
+	
+61.01 Iron plate
+	
+
+Kovarex enrichment process
+2P
+	Centrifuge	1	0% busy	—	0	
+0 Uranium-235
+0 Uranium-238
+	
+0 Uranium-235
+0 Uranium-238
+	
+
+Light oil cracking to petroleum gas
+Chemical plant · 3P
+	Chemical plant	1	37.2% busy	—	0.3	
+184.21 Water
+184.21 Light oil
+	
+214.92 Petroleum gas
+	
+
+Nuclear reactor	Nuclear reactor	1	0.2% busy	—	0	
+0 Uranium fuel cell
+	
+4.85 Heat (MJ)
+0 Depleted uranium fuel cell
+	
+
+Plastic bar
+Cryogenic plant · 2Q 6P
+	Cryogenic plant	1	48.4% busy	—	4.2	
+232.41 Petroleum gas
+11.62 Coal
+	
+50.84 Plastic bar
+6.54 Plastic bar ★uncommon
+0.65 Plastic bar ★rare
+0.07 Plastic bar ★epic
+0.01 Plastic bar ★legendary
+	
+
+
+Quality module recycling ★epic
+4Q
+	Recycler	1	5.8% busy	—	0	
+1.47 Quality module ★epic
+	
+1.38 Electronic circuit ★epic
+0.46 Electronic circuit ★legendary
+1.38 Advanced circuit ★epic
+0.46 Advanced circuit ★legendary
+	
+
+Quality module ★epic
+Electromagnetic plant · 5Q
+	Electromagnetic plant	1	23.8% busy	—	0.5	
+7.14 Electronic circuit ★epic
+7.14 Advanced circuit ★epic
+	
+1.47 Quality module ★epic
+0.67 Quality module ★legendary
+	
+
+Quality module ★legendary
+Electromagnetic plant
+	Electromagnetic plant	1	2.8% busy	—	0.1	
+1.1 Electronic circuit ★legendary
+1.1 Advanced circuit ★legendary
+	
+0.33 Quality module ★legendary
+	
+
+Uranium fuel cell
+Assembling machine 3 · 4P
+	Assembling machine 3	1	0% busy	—	0	
+0 Iron plate
+0 Uranium-235
+0 Uranium-238
+	
+0 Uranium fuel cell
+	
+
+Uranium processing
+2P
+	Centrifuge	1	0% busy	—	0	
+0 Uranium ore
+	
+0 Uranium-235
+0 Uranium-238
+	
+Raw resources
+RESOURCE	/MIN	OF WORLD MAX	CARRIER
+Coal	21.62	—	Belt Mk.1
+Copper ore	39.09	—	Belt Mk.1
+Iron ore	40.67	—	Belt Mk.1
+Uranium ore	0	—	Belt Mk.1
+Water	274.48	—	—
+Outputs
+ITEM	/MIN	CARRIER
+Quality module ★legendary	1	Belt Mk.1
+Depleted uranium fuel cell BYPRODUCT	0	Belt Mk.1

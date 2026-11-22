@@ -290,7 +290,8 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                 }
                 let bl = bo.label();
                 let label = [f.label.as_str(), bl.as_str()].iter().filter(|x| !x.is_empty()).cloned().collect::<Vec<_>>().join(" \u{b7} ");
-                let speed = b.speed * (1.0 + f.speed + bo.speed).max(0.2);
+                // machine quality: the building's crafting speed at its tier (power per machine unchanged)
+                let speed = b.speed_at(s.machine_quality) * (1.0 + f.speed + bo.speed).max(0.2);
                 let consumption = (1.0 + f.consumption + bo.consumption).max(0.2);
                 let (fuel_in, fuel_out) = fuel_io(b, consumption, speed);
                 out.push(Mode {

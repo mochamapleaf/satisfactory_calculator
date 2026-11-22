@@ -212,3 +212,21 @@ Plan: `docs/research/satisfactory-geo/00-最终报告.md` §7–§9; step log `d
   (`tools/geo_reference_dump.py`, highspy) gives the same model size, objective, hubs and cars; sweep equals
   `p_sweep_plate12k.json`. Browser: 12 000 plate/min at Sm3_0 → 95 123.6 vs 99 386.2 belts only (−4.3 %), p* 2/2/0.
 - Not done: tech-tier planning (G9), shared track segments, per-site integer refinement (G7).
+
+## 2026-11-22 — Factorio: whole-building quality plans (machines shared across tiers), machine quality
+Design: `docs/research/factorio-quality/00-最终报告.md` §2.1 / §5 step 6, impl-progress step 8; step log
+`docs/research/factorio-quality/_过程文件/progress-int.md`.
+- `lp.rs`: quality plans with whole buildings are solved as a MILP: per tier column a continuous share
+  n_c ≥ x_c / speed, one integer N per (base recipe, machine, loadout) group with Σ n_c ≤ N carrying the
+  building / module / beacon cost. Works with the stepped run (stream, Stop, Keep solving), the restricted
+  MILP, reweighting per group, and the HiGHS engine (only integer columns are rounded on the way back).
+  `Unit` owns its recipe (`Arc`), so expanded quality recipes no longer force a blocking solve.
+  The "fractional machines" warning is gone; LP mode (oracle tests) unchanged.
+- Machine quality: `PlanSettings.machine_quality`, crafting speed per tier from FactorioLab `qualityRecord`
+  (`Building.quality_speed`, converter; AM3 1.25 → 3.125 legendary), power per machine unchanged.
+- UI: one row per shared group with the tier split and busy %, Machine quality select; Auto races both engines.
+- Tests: hand-checkable widget loop (7 AM3 for 6.0067 normal + 0.8477 higher tiers), known optimum 103.878557596
+  (= scipy milp, `int_known_optimum.py`), gear@4 + HiGHS value round trip, machine quality. 4 s bench: gear,
+  circuit, quality module, processing unit, LDS chain all proven within 1e-4 (≤ 2.8 s); all-planets legendary
+  plastic unproven (79 % relative gap on a near-zero objective). Live browser test on :4173 with both engines.
+- Open: quality mining (report: second phase).

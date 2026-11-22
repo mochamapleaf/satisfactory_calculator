@@ -235,6 +235,7 @@ fn one_recipe(id: &str, mode: &str, machines: f64) -> Plan {
             somersloops: 0,
             compute: 0.0,
             beacons: 0.0,
+            group_machines: 0.0,
         }],
         ..Default::default()
     }

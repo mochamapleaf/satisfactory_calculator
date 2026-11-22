@@ -173,6 +173,9 @@ pub struct PlanSettings {
     pub beacon_module: String,
     pub beacon_counts: Vec<u32>,
     pub beacon_quality: u8,
+    /// Factorio: quality tier of every crafting machine (0 normal … 4 legendary): crafting speed
+    /// from the data's per-tier speeds (`Building::quality_speed`), power per machine unchanged.
+    pub machine_quality: u8,
     pub beacon_share: f64,
     /// Factorio: objective cost of one module held by a machine (or its beacons), per module
     /// quality tier (normal … legendary; a shorter list repeats its last value). Empty = modules are
@@ -222,6 +225,7 @@ impl Default for PlanSettings {
             beacon_module: String::new(),
             beacon_counts: vec![8],
             beacon_quality: 0,
+            machine_quality: 0,
             beacon_share: 1.0,
             module_costs: vec![],
             belt_layout: Default::default(),
@@ -297,6 +301,11 @@ pub struct PlanRecipe {
     /// Factorio: beacons charged to this recipe (machines x beacons per machine / sharing).
     #[serde(default)]
     pub beacons: f64,
+    /// Factorio quality plans: whole machines of this row's shared group (the tiers r@0 … r@4 of
+    /// one base recipe on one machine type and loadout switch recipes on the same machines);
+    /// `machines` is then this tier's share of them. 0 outside quality plans.
+    #[serde(default)]
+    pub group_machines: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

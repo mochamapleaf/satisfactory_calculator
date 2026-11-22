@@ -1,0 +1,135 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+
+Best plan found (stopped) in 1.6 s: within 81.4 % of the lower bound, not proven optimal. More time can improve it or prove it.
+
+Keep solving (+8 s)
+Time limit
+s
+Use fractional buildings
+8
+PRODUCTION BUILDINGS
+0.1MW
+PRODUCTION POWER
+0MW
+EXTRACTION, EST.
+0.1MW
+TOTAL POWER
+≤ 81.4% gap
+WHOLE BUILDINGS · 460 MS
+Buildings
+2×
+Agricultural tower
+5×
+Biochamber
+1×
+Captive biter spawner
+Recipes
+RECIPE	BUILDING	BUILDINGS	CLOCK		MW	IN (/MIN)	OUT (/MIN)	
+Bioflux2 TIERS
+4P
+	Biochamber	1
+normal 0
+legendary 0.1
+	10% busy	—	0	
+0.04 Yumako mash
+0.03 Jelly
+6.32 Nutrients
+12 Yumako mash ★legendary
+9.6 Jelly ★legendary
+	
+0.03 Bioflux
+8 Bioflux ★legendary
+	
+
+
+Bioplastic ★legendary
+4P
+	Biochamber	1	33.3% busy	—	0	
+8 Bioflux ★legendary
+32 Yumako mash ★legendary
+21 Nutrients
+	
+60 Plastic bar ★legendary
+	
+
+Biter egg	Captive biter spawner	1	2.8% busy	—	0	
+0.03 Bioflux
+	
+0.85 Biter egg
+	
+
+Jellynut processing2 TIERS
+Biochamber · 4P
+	Biochamber	1
+normal 0
+legendary 0.02
+	2% busy	—	0	
+0 Jellynut
+1.26 Nutrients
+0.96 Jellynut ★legendary
+	
+0 Jellynut seed
+0.03 Jelly
+0.05 Jellynut seed ★legendary
+9.6 Jelly ★legendary
+	
+
+Jellystem2 TIERS	Agricultural tower	1
+normal 0
+legendary 0.1
+	9.6% busy	—	0	
+0 Jellynut seed
+0.02 Jellynut seed ★legendary
+	
+0 Jellynut
+0.96 Jellynut ★legendary
+	
+
+Nutrients from biter egg
+Biochamber · 4P
+	Biochamber	1	3.5% busy	—	0	
+0.85 Biter egg
+2.22 Nutrients
+	
+42.37 Nutrients
+	
+
+Yumako processing2 TIERS
+Biochamber · 4P
+	Biochamber	1
+normal 0
+legendary 0.18
+	18.4% busy	—	0	
+0.01 Yumako
+11.56 Nutrients
+8.8 Yumako ★legendary
+	
+0 Yumako seed
+0.04 Yumako mash
+0.44 Yumako seed ★legendary
+44 Yumako mash ★legendary
+	
+
+Yumako tree2 TIERS	Agricultural tower	1
+normal 0
+legendary 0.88
+	88.1% busy	—	0.1	
+0 Yumako seed
+0.18 Yumako seed ★legendary
+	
+0.01 Yumako
+8.8 Yumako ★legendary
+	
+Raw resources
+RESOURCE	/MIN	OF WORLD MAX	CARRIER
+Outputs
+ITEM	/MIN	CARRIER
+
+Plastic bar ★legendary	60	Belt Mk.1
+Jellynut seed ★legendary BYPRODUCT	0.03	Belt Mk.1
+Yumako seed BYPRODUCT	0	Belt Mk.1
+Yumako seed ★legendary BYPRODUCT	0.26	Belt Mk.1

@@ -99,6 +99,20 @@ pub struct Building {
     /// Space Age: where the building can be placed (crusher: space platform; empty = anywhere).
     #[serde(default)]
     pub locations: Vec<String>,
+    /// Factorio: crafting speed per machine quality tier (normal … legendary), from FactorioLab
+    /// `qualityRecord`; empty = speed does not depend on quality.
+    #[serde(default)]
+    pub quality_speed: Vec<f64>,
+}
+
+impl Building {
+    /// Crafting speed of the machine at quality tier `q` (Factorio machine quality).
+    pub fn speed_at(&self, q: u8) -> f64 {
+        if q == 0 {
+            return self.speed;
+        }
+        self.quality_speed.get(q as usize).copied().unwrap_or(self.speed)
+    }
 }
 
 /// What a burner building consumes per minute, per building at 100 % consumption (consumption

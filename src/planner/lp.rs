@@ -35,6 +35,7 @@ use microlp::{
     Variable,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Breakpoints (clock as a fraction) of the piecewise-linear power curve.
@@ -64,7 +65,7 @@ pub fn is_ore_conversion(data: &GameData, r: &Recipe) -> bool {
 }
 
 /// Units that can contribute to the targets (upstream closure, extra inputs included).
-fn relevant<'a>(units: &[Unit<'a>], targets: &[String]) -> Vec<Unit<'a>> {
+fn relevant(units: &[Unit], targets: &[String]) -> Vec<Unit> {
     let mut by_out: HashMap<&str, Vec<usize>> = HashMap::new();
     for (k, u) in units.iter().enumerate() {
         for (it, q) in &u.outs {
@@ -201,12 +202,14 @@ struct Model {
     surplus: Vec<(String, Variable)>,
     balance: Vec<(String, microlp::Constraint)>,
     segments: Vec<Vec<(f64, f64)>>,
+    /// Shared-machine groups (`Inputs::shared`): whole machines per group key.
+    groups: Vec<(String, Variable)>,
 }
 
 /// One way of running one recipe: a column of the model.
 #[derive(Clone)]
-struct Unit<'a> {
-    recipe: &'a Recipe,
+struct Unit {
+    recipe: Arc<Recipe>,
     mode: Mode,
     key: String,
     /// Inputs (incl. the mode's extra inputs) and products per unit of work.
@@ -214,22 +217,34 @@ struct Unit<'a> {
     outs: Vec<(String, f64)>,
 }
 
-impl<'a> Unit<'a> {
-    fn new(recipe: &'a Recipe, mode: Mode) -> Self {
+impl Unit {
+    fn new(recipe: Arc<Recipe>, mode: Mode) -> Self {
         let ins = recipe.inputs.iter().chain(&mode.extra_inputs).cloned().collect();
-        let mut outs = rules::outputs(recipe, &mode);
+        let mut outs = rules::outputs(&recipe, &mode);
         outs.extend(mode.extra_outputs.iter().cloned());
-        Unit { recipe, key: format!("{}#{}", recipe.id, mode.key), mode, ins, outs }
+        let key = format!("{}#{}", recipe.id, mode.key);
+        Unit { recipe, key, mode, ins, outs }
     }
 }
 
 #[derive(Clone)]
-struct Inputs<'a> {
-    units: Vec<Unit<'a>>,
+struct Inputs {
+    units: Vec<Unit>,
     items: BTreeSet<String>,
     targets: BTreeMap<String, f64>,
     supplies: BTreeMap<String, f64>,
     weights: CostWeights,
+    /// Quality plans with whole buildings (report §2.1, §5 step 6): the tier columns of one base
+    /// recipe on one machine type and loadout share machines that switch recipes. Each column keeps
+    /// a continuous share n_c >= x_c / speed; one integer N per `group_key` carries the building
+    /// cost, with sum_c n_c <= N.
+    shared: bool,
+}
+
+/// Shared-machine group of a unit: base recipe (tier suffix dropped) and mode (machine + loadout
+/// + beacons). Every column of a group has the same speed, power and held modules.
+fn group_key(u: &Unit) -> String {
+    format!("{}#{}", quality::split(&u.recipe.id).0, u.mode.key)
 }
 
 fn shards_per_machine(c_max: f64) -> u32 {
@@ -250,7 +265,7 @@ fn linear_power(w: &CostWeights, f: &Mode) -> bool {
 /// Objective weight of one building of `u`: building weight with the per-building compute terms,
 /// modules, and the beacon MW when power is linear.
 fn building_weight(data: &GameData, s: &PlanSettings, w: &CostWeights, u: &Unit) -> f64 {
-    w.buildings * compute::machine_cost(w, u.recipe, &u.mode, s.mixed_belts)
+    w.buildings * compute::machine_cost(w, &u.recipe, &u.mode, s.mixed_belts)
         + rules::module_cost(data, s, &u.mode)
         + if linear_power(w, &u.mode) { w.power * u.mode.beacon_power } else { 0.0 }
 }
@@ -291,20 +306,25 @@ fn build_scaled(
     };
     let mut rv = Vec::new();
     let mut segments = Vec::new();
+    let shared = inp.shared;
+    // shared machines: power is linear in work (quality loadouts never overclock) and the beacons'
+    // MW go with the group's whole machines, so no power variables
+    let lin_of = |f: &Mode| linear_power(w, f) || (shared && w.power > 0.0 && f.power_exp == 1.0 && !f.overclock);
     for u in &inp.units {
         let f = &u.mode;
-        let lin = linear_power(w, f);
+        let lin = lin_of(f);
         let x = var(&mut p, if lin { w.power * f.power_base / f.speed } else { 0.0 }, (0.0, f64::INFINITY), false);
         // building weight plus the per-building compute terms (sorters, logistics, coaters);
         // added here, not in `scale`, which is a multiplier rebuilt every heuristic round
         let wb = w.buildings
-            * compute::machine_cost(w, u.recipe, f, s.mixed_belts)
+            * compute::machine_cost(w, &u.recipe, f, s.mixed_belts)
             * scale.get(&u.key).copied().unwrap_or(1.0)
             + rules::module_cost(data, s, f)
             + if lin { w.power * f.beacon_power } else { 0.0 };
         let (c_max, k_max) = if f.overclock { (c_max, k_max) } else { (1.0, 0) };
         let cap = n_cap.get(&u.key).copied().unwrap_or(f64::INFINITY);
-        let n = var(&mut p, wb, (0.0, cap), integer);
+        // shared: this column's continuous share of its group's machines, at no cost of its own
+        let n = if shared { var(&mut p, 0.0, (0.0, cap), false) } else { var(&mut p, wb, (0.0, cap), integer) };
         con(&mut p, &[(x, 1.0), (n, -c_max * f.speed)], ComparisonOp::Le, 0.0);
         let sv = if k_max > 0 {
             let sv = var(&mut p, w.shards, (0.0, f64::INFINITY), integer);
@@ -332,6 +352,28 @@ fn build_scaled(
         };
         segments.push(segs);
         rv.push(RecipeVars { x, n, s: sv, p: pv });
+    }
+    // one whole-machine count per shared group: sum_c n_c <= N_g
+    let mut groups = Vec::new();
+    if shared {
+        let mut by: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+        for (k, u) in inp.units.iter().enumerate() {
+            by.entry(group_key(u)).or_default().push(k);
+        }
+        for (g, idx) in by {
+            let u = &inp.units[idx[0]];
+            let f = &u.mode;
+            let wb = w.buildings
+                * compute::machine_cost(w, &u.recipe, f, s.mixed_belts)
+                * scale.get(&g).copied().unwrap_or(1.0)
+                + rules::module_cost(data, s, f)
+                + if lin_of(f) { w.power * f.beacon_power } else { 0.0 };
+            let nv = var(&mut p, wb, (0.0, f64::INFINITY), integer);
+            let mut row: Vec<(Variable, f64)> = idx.iter().map(|&k| (rv[k].n, 1.0)).collect();
+            row.push((nv, -1.0));
+            con(&mut p, row.as_slice(), ComparisonOp::Le, 0.0);
+            groups.push((g, nv));
+        }
     }
     // boost items held per building (Somersloops, modules) against their budgets
     for (item, budget) in budgets(s) {
@@ -401,7 +443,7 @@ fn build_scaled(
         let b = inp.targets.get(it).copied().unwrap_or(0.0);
         balance.push((it.clone(), con(&mut p, row.as_slice(), ComparisonOp::Eq, b)));
     }
-    Model { p, cost, bounds, rows: rows_out.into_inner(), rv, raw, sup, surplus, balance, segments }
+    Model { p, cost, bounds, rows: rows_out.into_inner(), rv, raw, sup, surplus, balance, segments, groups }
 }
 
 /// Solver-independent snapshot of a solution, keyed by recipe / item id.
@@ -409,6 +451,7 @@ fn build_scaled(
 struct Point {
     rec: HashMap<String, (f64, f64, f64)>, // x, n, shards
     flows: HashMap<(u8, String), f64>,      // (0 raw | 1 supply | 2 surplus, item)
+    groups: HashMap<String, f64>,           // shared-machine groups: whole machines
 }
 
 fn point_of(m: &Model, inp: &Inputs, sol: &Solution) -> Point {
@@ -426,6 +469,9 @@ fn point_from(m: &Model, inp: &Inputs, sol: impl Fn(Variable) -> f64) -> Point {
             pt.flows.insert((k, it.clone()), sol(*v).max(0.0));
         }
     }
+    for (g, v) in &m.groups {
+        pt.groups.insert(g.clone(), sol(*v).max(0.0));
+    }
     pt
 }
 
@@ -433,15 +479,25 @@ fn point_from(m: &Model, inp: &Inputs, sol: impl Fn(Variable) -> f64) -> Point {
 /// every row holds but the boost-item and shard budgets. `shards = false` rounds to shardless
 /// machines (n = ⌈x / speed⌉), which always fits a shard budget.
 fn rounded(inp: &Inputs, pt: &Point, c_max: f64, shards: bool) -> Point {
-    let mut out = Point { rec: HashMap::new(), flows: pt.flows.clone() };
+    let mut out = Point { rec: HashMap::new(), flows: pt.flows.clone(), groups: HashMap::new() };
     for u in &inp.units {
         let f = &u.mode;
         let Some(&(x, _, _)) = pt.rec.get(&u.key) else { continue };
+        if inp.shared {
+            // each tier's share stays fractional; its group's machines are rounded up below
+            let n = if x <= 1e-9 { 0.0 } else { x / f.speed };
+            out.rec.insert(u.key.clone(), (x, n, 0.0));
+            *out.groups.entry(group_key(u)).or_insert(0.0) += n;
+            continue;
+        }
         let cm = if f.overclock && shards { c_max } else { 1.0 };
         let n = if x <= 1e-9 { 0.0 } else { (x / (cm * f.speed) - 1e-9).ceil() };
         let c = if n > 0.0 { x / (n * f.speed) } else { 0.0 };
         let sh = if c > 1.0 { ((c - 1.0) / 0.5 - 1e-9).ceil() * n } else { 0.0 };
         out.rec.insert(u.key.clone(), (x, n, sh));
+    }
+    for n in out.groups.values_mut() {
+        *n = (*n - 1e-9).ceil().max(0.0);
     }
     out
 }
@@ -477,7 +533,9 @@ fn values_of(m: &Model, inp: &Inputs, pt: &Point) -> Vec<(Variable, f64)> {
     for ((u, v), segs) in inp.units.iter().zip(&m.rv).zip(&m.segments) {
         let f = &u.mode;
         let (x, n, sh) = pt.rec.get(&u.key).copied().unwrap_or((0.0, 0.0, 0.0));
-        let (n, sh) = (n.round(), sh.round());
+        // shared-machine shares are continuous; whole buildings and shards are not
+        let n = if m.bounds[v.n.idx()].2 { n.round() } else { n };
+        let sh = sh.round();
         hint.push((v.x, x));
         hint.push((v.n, n));
         if let Some(s) = v.s {
@@ -494,6 +552,10 @@ fn values_of(m: &Model, inp: &Inputs, pt: &Point) -> Vec<(Variable, f64)> {
             hint.push((*v, pt.flows.get(&(k, it.clone())).copied().unwrap_or(0.0)));
         }
     }
+    for (g, v) in &m.groups {
+        let n = pt.groups.get(g).copied().unwrap_or(0.0);
+        hint.push((*v, if m.bounds[v.idx()].2 { n.round() } else { n }));
+    }
     hint
 }
 
@@ -504,10 +566,15 @@ fn int_hint(m: &Model, inp: &Inputs, pt: &Point) -> Vec<(Variable, f64)> {
     let mut hint = Vec::new();
     for (u, v) in inp.units.iter().zip(&m.rv) {
         let (_, n, sh) = pt.rec.get(&u.key).copied().unwrap_or((0.0, 0.0, 0.0));
-        hint.push((v.n, n.round()));
+        if m.bounds[v.n.idx()].2 {
+            hint.push((v.n, n.round()));
+        }
         if let Some(s) = v.s {
             hint.push((s, sh.round()));
         }
+    }
+    for (g, v) in &m.groups {
+        hint.push((*v, pt.groups.get(g).copied().unwrap_or(0.0).round()));
     }
     hint
 }
@@ -517,7 +584,7 @@ fn objective_of(m: &Model, values: &[(Variable, f64)]) -> f64 {
 }
 
 /// Inputs restricted to the recipes in `keep`.
-fn restrict<'a>(inp: &Inputs<'a>, keep: &BTreeSet<String>) -> Inputs<'a> {
+fn restrict(inp: &Inputs, keep: &BTreeSet<String>) -> Inputs {
     let units: Vec<Unit> = inp.units.iter().filter(|u| keep.contains(&u.key)).cloned().collect();
     Inputs {
         items: items_of(&units, &inp.targets, &inp.supplies),
@@ -525,6 +592,7 @@ fn restrict<'a>(inp: &Inputs<'a>, keep: &BTreeSet<String>) -> Inputs<'a> {
         targets: inp.targets.clone(),
         supplies: inp.supplies.clone(),
         weights: inp.weights.clone(),
+        shared: inp.shared,
     }
 }
 
@@ -553,12 +621,12 @@ fn resume_options(ms: f64) -> microlp::ResumeOptions {
 /// its work and buildings to the dominating one at no higher cost, so the optimum is unchanged
 /// (report §4.2). Returns the kept units and, per kept unit, the dropped units it dominates
 /// (dominance is transitive), for the display tie-break in `detier`.
-fn drop_dominated<'a>(
+fn drop_dominated(
     data: &GameData,
     s: &PlanSettings,
-    units: Vec<Unit<'a>>,
+    units: Vec<Unit>,
     w: &CostWeights,
-) -> (Vec<Unit<'a>>, HashMap<String, Vec<Unit<'a>>>) {
+) -> (Vec<Unit>, HashMap<String, Vec<Unit>>) {
     let same = |a: &Vec<(String, f64)>, b: &Vec<(String, f64)>| {
         let (ma, mb): (BTreeMap<&str, f64>, BTreeMap<&str, f64>) =
             (a.iter().map(|(i, q)| (i.as_str(), *q)).collect(), b.iter().map(|(i, q)| (i.as_str(), *q)).collect());
@@ -604,7 +672,7 @@ fn drop_dominated<'a>(
     let roots: Vec<usize> = (0..units.len()).map(root).collect();
     let keys: Vec<String> = units.iter().map(|u| u.key.clone()).collect();
     let mut kept = Vec::new();
-    let mut dropped: HashMap<String, Vec<Unit<'a>>> = HashMap::new();
+    let mut dropped: HashMap<String, Vec<Unit>> = HashMap::new();
     for (k, u) in units.into_iter().enumerate() {
         if roots[k] == k {
             kept.push(u);
@@ -619,14 +687,15 @@ fn drop_dominated<'a>(
 /// the same whole buildings at the same objective weight and holds the same boosts, show the one
 /// drawing the least power. The objective is unchanged; without this the plan would always show
 /// the fastest tier (more MW) where tiers tie (Resources / Buildings objectives).
-fn detier<'a>(
+fn detier(
     data: &GameData,
     s: &PlanSettings,
-    inp: &Inputs<'a>,
-    dropped: &HashMap<String, Vec<Unit<'a>>>,
+    inp: &Inputs,
+    dropped: &HashMap<String, Vec<Unit>>,
     pt: &Point,
-) -> Option<(Inputs<'a>, Point)> {
-    if dropped.is_empty() {
+) -> Option<(Inputs, Point)> {
+    // (shared machines: a tier column cannot move to another machine type alone)
+    if dropped.is_empty() || inp.shared {
         return None;
     }
     let w = &inp.weights;
@@ -693,7 +762,7 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
     // DSP: compute cost of every plan (whatever the objective), so presets compare
     let cw = (data.game == "dsp").then(|| compute::model().weights(&s.generator));
     for u in &inp.units {
-        let (r, f) = (u.recipe, &u.mode);
+        let (r, f) = (&*u.recipe, &u.mode);
         let c_max = if f.overclock { c_max } else { 1.0 };
         let Some(&(x, n, sh)) = pt.rec.get(&u.key) else { continue };
         let x = clean(x);
@@ -702,17 +771,19 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
         }
         let mut n = clean(n);
         let mut sh = clean(sh);
-        if integer {
+        // shared machines: n is this tier's share of its group's whole machines
+        let whole = integer && !inp.shared;
+        if whole {
             n = n.round();
             sh = sh.round();
         }
-        let groups = machine_groups(n, x / f.speed, sh, c_max, integer);
+        let groups = machine_groups(n, x / f.speed, sh, c_max, whole);
         let power: f64 = groups
             .iter()
             .map(|g| g.count * f.power_base * (g.clock_percent / 100.0).powf(f.power_exp))
             .sum::<f64>()
             + f.beacon_power * n;
-        let shards = if integer { sh } else { groups.iter().map(|g| g.count * g.shards as f64).sum() };
+        let shards = if whole { sh } else { groups.iter().map(|g| g.count * g.shards as f64).sum() };
         let b = data.building(&f.building);
         plan.recipes.push(PlanRecipe {
             id: r.id.clone(),
@@ -737,13 +808,14 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
             somersloops: f.somersloops,
             compute: 0.0,
             beacons: n * f.beacons,
+            group_machines: 0.0,
         });
         if let Some(w) = &cw {
             let k = compute::sorters_per_machine(r, f, s.mixed_belts, compute::model().sorter_capacity);
             let bw = w.building_weights.get(&f.building).copied().unwrap_or(1.0);
             // every placed entity costs, working or idle (spec §4.2): whole buildings also
             // when the plan is fractional; power stays as solved
-            let ne = if integer { n } else { (n - 1e-6).ceil() };
+            let ne = if whole { n } else { (n - 1e-6).ceil() };
             let parts = [
                 ne * bw,
                 ne * w.sorter * k,
@@ -788,18 +860,25 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
         plan.targets.push(RateLine::new(it, &name(it), *q));
     }
     plan.production_power = plan.recipes.iter().map(|r| r.power).sum();
-    // Buildings to place per type. Fractional quality plans: the tiers of a base recipe run
-    // on shared machines that switch recipes, so round up per (base recipe, machine,
-    // loadout), not per tier column.
+    // Buildings to place per type. Quality plans: the tiers of a base recipe run on shared
+    // machines that switch recipes, so whole machines per (base recipe, machine, loadout), not
+    // per tier column (with whole buildings this is the solved group count, report §5 step 6).
     let mut groups: BTreeMap<(String, String), (String, f64)> = BTreeMap::new();
     for r in &plan.recipes {
         let base = if plan.quality { quality::split(&r.id).0 } else { r.id.as_str() };
         let g = groups.entry((base.to_string(), r.mode.clone())).or_insert((r.building.clone(), 0.0));
         g.1 += r.machines;
     }
+    let whole_of = |n: f64| if integer && !inp.shared { n } else { (n - 1e-6).ceil() };
+    if plan.quality {
+        for r in plan.recipes.iter_mut() {
+            let n = groups.get(&(quality::split(&r.id).0.to_string(), r.mode.clone())).map(|g| g.1).unwrap_or(0.0);
+            r.group_machines = whole_of(n);
+        }
+    }
     let mut counts: BTreeMap<String, f64> = BTreeMap::new();
     for (_, (b, n)) in groups {
-        *counts.entry(b).or_insert(0.0) += if integer { n } else { (n - 1e-6).ceil() };
+        *counts.entry(b).or_insert(0.0) += whole_of(n);
     }
     // Factorio beacons (whole beacons in total; per machine they may be shared)
     let beacons: f64 = plan.recipes.iter().map(|r| r.beacons).sum();
@@ -863,8 +942,8 @@ enum Phase {
     Done,
 }
 
-struct SubRun<'a> {
-    inp: Inputs<'a>,
+struct SubRun {
+    inp: Inputs,
     m: Model,
     out: SolveOutcome,
     /// ms since start
@@ -902,15 +981,15 @@ pub struct Run<'a> {
     deadline: f64,
     /// Plan without recipe rows: LP bound, item values, model size, warnings so far.
     base: Plan,
-    inp: Inputs<'a>,
-    dropped: HashMap<String, Vec<Unit<'a>>>,
+    inp: Inputs,
+    dropped: HashMap<String, Vec<Unit>>,
     m: Model,
     c_max: f64,
     lp_pt: Point,
     lp_ms: f64,
     support: BTreeSet<String>,
     prev: HashMap<String, (f64, f64, f64)>,
-    sub: Option<SubRun<'a>>,
+    sub: Option<SubRun>,
     full: Option<SolveOutcome>,
     best: Option<(f64, Point)>,
     version: u32,
@@ -1030,11 +1109,22 @@ impl<'a> Run<'a> {
             self.phase = Phase::Sub;
             return;
         }
-        let scale: HashMap<String, f64> = self
-            .prev
-            .iter()
-            .filter(|(_, v)| v.1 > 1e-7)
-            .map(|(k, v)| (k.clone(), ((v.1 - 1e-9).ceil() / v.1).min(1e3)))
+        let per_key: HashMap<String, f64> = if self.inp.shared {
+            // shared machines: re-weight each group by its own rounding
+            let mut sums: HashMap<String, f64> = HashMap::new();
+            for u in &self.inp.units {
+                if let Some(v) = self.prev.get(&u.key) {
+                    *sums.entry(group_key(u)).or_insert(0.0) += v.1;
+                }
+            }
+            sums
+        } else {
+            self.prev.iter().map(|(k, v)| (k.clone(), v.1)).collect()
+        };
+        let scale: HashMap<String, f64> = per_key
+            .into_iter()
+            .filter(|(_, n)| *n > 1e-7)
+            .map(|(k, n)| (k, ((n - 1e-9).ceil() / n).min(1e3)))
             .collect();
         let rm = build_scaled(self.data, &self.s, &self.inp, false, &scale, &HashMap::new());
         match rm.p.solve().map(|o| o.into_solution()) {
@@ -1202,8 +1292,10 @@ impl<'a> Run<'a> {
     pub fn offer_values(&mut self, values: &[f64], bound: Option<f64>, proven: bool) {
         if values.len() == self.m.cost.len() && values.iter().all(|v| v.is_finite()) {
             let m = &self.m;
-            let pt = point_from(m, &self.inp, |v| values[v.idx()]);
-            let pt = Point { rec: pt.rec.into_iter().map(|(k, (x, n, s))| (k, (x, n.round(), s.round()))).collect(), flows: pt.flows };
+            // whole buildings and shards rounded; continuous columns (shared-machine shares) as given
+            let vals: Vec<f64> =
+                values.iter().zip(&m.bounds).map(|(v, (_, _, int))| if *int { v.round() } else { *v }).collect();
+            let pt = point_from(m, &self.inp, |v| vals[v.idx()]);
             if self.rows_hold(&pt) {
                 self.offer(pt);
             }
@@ -1400,22 +1492,24 @@ pub fn start<'a>(data: &'a GameData, s: &PlanSettings) -> Start<'a> {
         // quality plans: expanded recipes `r@i` with loadout modes (pruned at the base level
         // first); the units borrow these local recipes, so the plan is finished here
         let expanded = quality::expand(data, s, &allowed, &target_ids);
-        let all_units: Vec<Unit> =
-            expanded.iter().flat_map(|(r, ms)| ms.iter().map(move |m| Unit::new(r, m.clone()))).collect();
+        let all_units: Vec<Unit> = expanded
+            .into_iter()
+            .flat_map(|(r, ms)| {
+                let r = Arc::new(r);
+                ms.into_iter().map(move |m| Unit::new(r.clone(), m))
+            })
+            .collect();
         let units = relevant(&all_units, &target_ids);
-        return match start_units(data, s, started, plan, units, targets, supplies) {
-            Start::Running(mut run) => {
-                while !run.step(None) {}
-                Start::Done(run.plan())
-            }
-            Start::Done(p) => Start::Done(p),
-        };
+        return start_units(data, s, started, plan, units, targets, supplies);
     }
     // item recycling only makes sense with quality
-    let all_units: Vec<Unit<'a>> = allowed
+    let all_units: Vec<Unit> = allowed
         .iter()
         .filter(|r| !r.recycling)
-        .flat_map(|r| rules::modes(data, r, s).into_iter().map(move |mode| Unit::new(r, mode)))
+        .flat_map(|r| {
+            let rc = Arc::new((*r).clone());
+            rules::modes(data, r, s).into_iter().map(move |mode| Unit::new(rc.clone(), mode))
+        })
         .collect();
     let units = relevant(&all_units, &target_ids);
     start_units(data, s, started, plan, units, targets, supplies)
@@ -1426,7 +1520,7 @@ fn start_units<'b>(
     s: &PlanSettings,
     started: web_time::Instant,
     mut plan: Plan,
-    units: Vec<Unit<'b>>,
+    units: Vec<Unit>,
     targets: BTreeMap<String, f64>,
     supplies: BTreeMap<String, f64>,
 ) -> Start<'b> {
@@ -1440,14 +1534,19 @@ fn start_units<'b>(
     }
     plan.columns = units.len();
     plan.quality = quality_on;
-    // Quality loops run tiers of a recipe on shared machines that switch recipes, which
-    // per-column whole buildings would overcount (report §2.1): solve them continuously.
-    let integer = s.integer && !quality_on;
-    // whole buildings: drop dominated machine tiers / modes (exact, report §6 step 2)
-    let (units, dropped) =
-        if integer && shrink() { drop_dominated(data, s, units, &weights) } else { (units, HashMap::new()) };
+    let integer = s.integer;
+    // Quality loops run the tiers of a recipe on shared machines that switch recipes (report
+    // §2.1): whole machines per (base recipe, machine, loadout) group, not per tier column.
+    let shared = integer && quality_on;
+    // whole buildings: drop dominated machine tiers / modes (exact, report §6 step 2; per column,
+    // so not with shared machines, where a column's group may have spare capacity)
+    let (units, dropped) = if integer && !shared && shrink() {
+        drop_dominated(data, s, units, &weights)
+    } else {
+        (units, HashMap::new())
+    };
     let items = items_of(&units, &targets, &supplies);
-    let inp = Inputs { units, items, targets, supplies, weights };
+    let inp = Inputs { units, items, targets, supplies, weights, shared };
     plan.rows = inp.items.len();
     if s.max_columns > 0 && plan.columns > s.max_columns {
         plan.status = Status::TooLarge;
@@ -1457,9 +1556,6 @@ fn start_units<'b>(
         ));
         plan.solve_ms = started.elapsed().as_secs_f64() * 1e3;
         return Start::Done(plan);
-    }
-    if quality_on && s.integer {
-        plan.warnings.push("Quality plans are solved with fractional machines: the higher tiers of a recipe normally share machines that switch recipes.".into());
     }
 
     // 1. continuous relaxation: lower bound, shadow prices, first plan

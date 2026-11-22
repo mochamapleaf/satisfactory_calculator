@@ -1,0 +1,91 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+50
+PRODUCTION BUILDINGS
+22.7MW
+PRODUCTION POWER
+2.1MW
+EXTRACTION, EST.
+24.8MW
+TOTAL POWER
+optimal
+WHOLE BUILDINGS · 37 MS
+Buildings
+13×
+Assembling machine 3
+35×
+Electric furnace
+2×
+Recycler
+Recipes
+RECIPE	BUILDING	BUILDINGS	CLOCK		MW	IN (/MIN)	OUT (/MIN)	
+Iron gear wheel4 TIERS
+Assembling machine 3 · 2Q 2P
+	Assembling machine 3	12
+normal 8.91
+uncommon 1.78
+rare 0.54
+epic 0.16
+	94.9% busy	—	11.1	
+1603.8 Iron plate
+320.59 Iron plate ★uncommon
+97.1 Iron plate ★rare
+29.35 Iron plate ★epic
+	
+1052.49 Iron gear wheel
+345.71 Iron gear wheel ★uncommon
+104.31 Iron gear wheel ★rare
+31.51 Iron gear wheel ★epic
+4.11 Iron gear wheel ★legendary
+	
+
+Iron gear wheel recycling4 TIERS
+4Q
+	Recycler	2
+normal 1.37
+uncommon 0.45
+rare 0.14
+epic 0.04
+	99.9% busy	—	0.4	
+1052.49 Iron gear wheel
+345.71 Iron gear wheel ★uncommon
+104.31 Iron gear wheel ★rare
+31.51 Iron gear wheel ★epic
+	
+394.69 Iron plate
+248.05 Iron plate ★uncommon
+89.85 Iron plate ★rare
+28.62 Iron plate ★epic
+5.81 Iron plate ★legendary
+	
+
+
+Iron gear wheel ★legendary
+Assembling machine 3 · 4P
+	Assembling machine 3	1	4.9% busy	—	0.1	
+5.89 Iron plate ★legendary
+	
+5.89 Iron gear wheel ★legendary
+	
+
+Iron plate
+Electric furnace · 1Q 1P
+	Electric furnace	35	98.3% busy	—	11.1	
+1031.78 Iron ore
+	
+1209.12 Iron plate
+72.55 Iron plate ★uncommon
+7.25 Iron plate ★rare
+0.73 Iron plate ★epic
+0.08 Iron plate ★legendary
+	
+Raw resources
+RESOURCE	/MIN	OF WORLD MAX	CARRIER
+Iron ore	1031.78	—	Belt Mk.2
+Outputs
+ITEM	/MIN	CARRIER
+
+Iron gear wheel ★legendary	10	Belt Mk.1

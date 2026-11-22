@@ -156,6 +156,8 @@ export interface Settings {
   beacon_counts: number[]
   beacon_quality: number
   beacon_share: number
+  /** Factorio: quality tier of every crafting machine (0 normal … 4 legendary): crafting speed from the data. */
+  machine_quality: number
   /** Factorio: objective cost per module held, by module quality (normal … legendary); [] = free. */
   module_costs: number[]
   /** Solver guard: models with more columns are not solved (0 = no limit). Set per request, not saved. */
@@ -277,6 +279,9 @@ export interface PlanRecipe {
   compute: number
   /** Factorio: beacons charged to this recipe. */
   beacons?: number
+  /** Factorio quality plans: whole machines of the row's shared group (tiers of one recipe on one
+   *  machine type and loadout switch recipes); `machines` is this tier's share. */
+  group_machines?: number
 }
 /** DSP compute (UPS) cost of a plan; 1 unit = one machine updated once per logic tick. */
 export interface ComputeSummary {
@@ -348,6 +353,7 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   beacon_counts: [8],
   beacon_quality: 0,
   beacon_share: 1,
+  machine_quality: 0,
   module_costs: [],
   belt_layout: defaultBeltLayout(),
 })
@@ -514,7 +520,7 @@ function race(onUpdate: OnUpdate, keep = false) {
   return (k: number) => (u: SolveUpdate) => {
     last[k] = { ...u, plan: null }
     if (u.plan) best[k] = u.plan
-    // a result without a search (too large, infeasible, a fractional quality plan) is the same
+    // a result without a search (too large, infeasible, an LP) is the same
     // in both lanes: the first one ends the solve
     const direct = u.done && u.phase === undefined && !u.gone && !!u.plan && u.plan.status !== 'error'
     const proven = last.some(x => x?.proven) || best.some(p => p?.proven_optimal)
@@ -545,15 +551,10 @@ function race(onUpdate: OnUpdate, keep = false) {
 
 let raceIds: [number, number] | null = null
 
-/** Quality plans are solved with fractional machines (lp.rs): there is no search to race. */
-const fractionalQuality = (s: Settings) =>
-  s.game === 'factorio' && !!DATASETS.find(d => d.id === (s.dataset || '2.0'))?.quality
-  && [...s.targets, ...s.supplies].some(t => qsplit(t.item)[1] > 0)
-
 /** Start a solve; `onUpdate` gets the streamed updates. Returns the solve id. */
 export function solveStream(s: Settings, onUpdate: OnUpdate): number {
   const id = ++seq
-  if (s.integer && (s.engine ?? 'auto') === 'auto' && !fractionalQuality(s)) {
+  if (s.integer && (s.engine ?? 'auto') === 'auto') {
     const h = race(onUpdate)
     lanes[0].start(id, { ...s, engine: 'microlp' }, h(0))
     lanes[1].start(id, { ...s, engine: 'highs' }, h(1), true)

@@ -198,12 +198,16 @@ function QualitySettings({ data, s, set }: { data: GameData; s: Settings; set: (
       <h2>Quality</h2>
       <p className="hint">
         {active
-          ? 'Every recipe on the chain runs per input quality; the solver picks quality / productivity modules per machine and where to recycle. Solved as an LP (fractional machines).'
+          ? `Every recipe on the chain runs per input quality; the solver picks quality / productivity modules per machine and where to recycle. ${s.integer ? 'Whole buildings: the tiers of a recipe with the same machine and modules share machines that switch recipes.' : 'Solved as an LP (fractional machines).'}`
           : 'Pick a quality above normal on a target to plan an upcycling loop.'}
       </p>
       <div className="row small">
         <span className="grow">Module quality</span>
         <QualitySelect data={data} value={s.module_quality} label="Quality of all modules" onChange={module_quality => set({ module_quality })} />
+      </div>
+      <div className="row small" title="Crafting speed of every machine at this quality (from the game data, e.g. assembling machine 3: 1.25 → 3.125 legendary); power per machine unchanged">
+        <span className="grow">Machine quality</span>
+        <QualitySelect data={data} value={s.machine_quality ?? 0} label="Quality of all machines" onChange={machine_quality => set({ machine_quality })} />
       </div>
       <div className="row small">
         <span className="grow">Quality slots</span>

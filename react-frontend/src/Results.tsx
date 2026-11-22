@@ -1,5 +1,5 @@
 import { Icon, RemoveMark } from './Icon'
-import { carrier, dn, fmt, isLiquid, qsplit, type GameData, type MachineGroup, type Plan, type Settings } from './solver'
+import { carrier, dn, fmt, isLiquid, qsplit, type GameData, type MachineGroup, type Plan, type PlanRecipe, type RateLine, type Settings } from './solver'
 
 /** CPU time per tick: µs, or ms from 1000 µs. */
 const fmtUs = (us: number) => (us >= 1000 ? `${fmt(us / 1000, 1)} ms` : `${fmt(us, us < 10 ? 1 : 0)} µs`)
@@ -45,8 +45,26 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
     setSettings(x => ({ ...x, disabled_recipes: [...x.disabled_recipes, key] }))
   }
   const totalSloops = plan.somersloops
-  // quality plans are always solved continuously
-  const whole = s.integer && !plan.quality
+  const whole = s.integer
+  // quality plans: one row per shared group (base recipe × machine × loadout); the tiers it runs
+  // switch recipes on the group's machines, listed as a tier split
+  const rowGroups: PlanRecipe[][] = []
+  {
+    const at = new Map<string, PlanRecipe[]>()
+    for (const r of plan.recipes) {
+      const k = plan.quality ? `${qsplit(r.id)[0]}#${r.mode}` : `${r.id}#${r.mode}`
+      const g = at.get(k)
+      if (g) g.push(r)
+      else { const n = [r]; at.set(k, n); rowGroups.push(n) }
+    }
+    for (const g of rowGroups) g.sort((a, b) => qsplit(a.id)[1] - qsplit(b.id)[1])
+  }
+  const tierName = (q: number) => (data.qualities?.[q] ?? ['normal', 'uncommon', 'rare', 'epic', 'legendary'][q] ?? '?').toLowerCase()
+  const sumLines = (ls: RateLine[]) => {
+    const m = new Map<string, RateLine>()
+    for (const l of ls) { const o = m.get(l.item); if (o) o.rate += l.rate; else m.set(l.item, { ...l }) }
+    return [...m.values()]
+  }
 
   // group buildings by type
   // (quality plans: tiers of a recipe share machines, so the solver rounds up per base recipe and loadout)
@@ -58,6 +76,30 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
     if (s.ignore_limits) return null
     if (item in s.resource_limits) return s.resource_limits[item]
     return data.resources.find(r => r.item === item)?.limit ?? null
+  }
+
+  const sharedRow = (g: PlanRecipe[]) => {
+              const r = g[0]
+              const share = g.reduce((a, x) => a + x.machines, 0)
+              const n = r.group_machines ?? Math.ceil(share - 1e-6)
+              const base = r.name.replace(/ ★\S+$/, '')
+              return (
+                <tr key={qsplit(r.id)[0] + '#' + r.mode} className="shared">
+                  <td><Icon id={qsplit(r.outputs[0]?.item ?? '')[0]} />{base}<span className="tag" title="These quality tiers run on the same machines, which switch recipes">{g.length} tiers</span>{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
+                  <td><Icon id={bid(r.building)} />{r.building}</td>
+                  <td className="num" title={`shared by ${g.length} tiers: ${fmt(share, 4)} machines of work`}>
+                    <b>{fmt(n, whole ? 0 : 2)}</b>{!whole && <span className="muted"> ({fmt(share)})</span>}
+                    {g.map(x => <div key={x.id} className="muted small">{tierName(qsplit(x.id)[1])} {fmt(x.machines)}</div>)}
+                  </td>
+                  <td className="small">{n > 0 ? `${fmt((100 * share) / n, 1)}% busy` : ''}</td>
+                  <td><span className="muted">—</span></td>
+                  <td className="num">{fmt(g.reduce((a, x) => a + x.power, 0), 1)}</td>
+                  {plan.compute && <td className="num">{fmt((100 * g.reduce((a, x) => a + x.compute, 0)) / (plan.compute.total || 1), 1)}%</td>}
+                  <td className="small">{sumLines(g.flatMap(x => x.inputs)).map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
+                  <td className="small">{sumLines(g.flatMap(x => x.outputs)).map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
+                  <td><button className="x" title="Exclude these tiers of the recipe and re-solve" aria-label={`Exclude ${base}`} onClick={() => setSettings(x => ({ ...x, disabled_recipes: [...x.disabled_recipes, ...g.map(y => qsplit(y.id)[1] === 0 ? `${y.id}@0` : y.id)] }))}><RemoveMark /></button></td>
+                </tr>
+              )
   }
 
   return (
@@ -103,14 +145,18 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
             <tr><th>Recipe</th><th>Building</th><th className="num">Buildings</th><th>Clock</th><th>{data.game === 'satisfactory' ? 'Somersloops' : ''}</th><th className="num">MW</th>{plan.compute && <th className="num" title="Share of the plan's compute (units per tick incl. power)">算力</th>}<th>In (/min)</th><th>Out (/min)</th><th></th></tr>
           </thead>
           <tbody>
-            {plan.recipes.map(r => (
+            {rowGroups.map(g => g.length > 1 ? sharedRow(g) : [g[0]].map(r => (
               <tr key={r.id + '#' + r.mode}>
                 <td><Icon id={r.outputs[0]?.item} />{r.name}{r.alt && <span className="tag">alt</span>}{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
                 <td><Icon id={bid(r.building)} />{r.building}</td>
                 <td className="num" title={`work = ${fmt(r.throughput, 4)} machines at 100 %`}>
-                  {whole ? fmt(r.machines) : <>{fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span></>}
+                  {plan.quality && r.group_machines
+                    ? (whole ? fmt(r.group_machines, 0) : <>{fmt(r.machines)} <span className="muted">→ {r.group_machines}</span></>)
+                    : whole ? fmt(r.machines) : <>{fmt(r.machines)} <span className="muted">→ {r.machines_ceil}</span></>}
                 </td>
-                <td className="small">{r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}</td>
+                <td className="small">{plan.quality && r.group_machines
+                  ? `${fmt((100 * r.machines) / r.group_machines, 1)}% busy`
+                  : r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}</td>
                 <td>
                   {data.game === 'satisfactory' && slots(r.id) > 0
                     ? <select value={r.id in s.somersloops ? r.somersloops : 'auto'} onChange={e => setSloops(r.id, e.target.value === 'auto' ? -1 : +e.target.value)}>
@@ -125,7 +171,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 <td className="small">{r.outputs.map(l => <div key={l.item}><Icon id={l.item} size={16} />{fmt(l.rate)} {l.name}</div>)}</td>
                 <td><button className="x" title="Exclude this recipe and re-solve" aria-label={`Exclude ${r.name}`} onClick={() => exclude(r.id)}><RemoveMark /></button></td>
               </tr>
-            ))}
+            ))[0])}
           </tbody>
         </table>
       </div>

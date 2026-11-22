@@ -4,6 +4,7 @@
 use super::data::{GameData, Item, Recipe, Resource};
 use super::quality::{qrow, split};
 use super::*;
+use super::lp::{self, Start};
 
 fn lp_settings(dataset: &str, target: &str, rate: f64) -> PlanSettings {
     let mut s = PlanSettings {
@@ -771,4 +772,210 @@ fn module_cost_by_quality_tier() {
     s.module_costs = vec![1000.0, 0.0];
     let normal = plan(&d, &s);
     assert!(normal.objective > raw(&normal, "iron-plate"));
+}
+
+// ---- whole buildings shared across quality tiers (report §2.1, §5 step 6; progress-int.md) ----
+
+/// Whole-building settings for the test loops: parts cost 1, a building `wb`.
+fn int_settings(target: &str, rate: f64, wb: f64) -> PlanSettings {
+    let mut s = lp_settings("spa", target, rate);
+    s.integer = true;
+    s.time_limit_ms = 20_000;
+    s.cost.buildings = wb;
+    s
+}
+
+/// Whole machines per shared group (base recipe, mode) from the rows' tier shares.
+fn group_sums(p: &Plan) -> HashMap<(String, String), f64> {
+    let mut g: HashMap<(String, String), f64> = HashMap::new();
+    for r in &p.recipes {
+        *g.entry((split(&r.id).0.to_string(), r.mode.clone())).or_default() += r.machines;
+    }
+    g
+}
+
+/// Hand-checkable loop: part → widget in AM3 (no productivity), legendary Q3 everywhere,
+/// 2 legendary widgets / min. Tier shares stay fractional (x / speed); each (recipe, loadout)
+/// group gets ⌈Σ shares⌉ whole machines, so the higher tiers ride on one machine shared with
+/// the normal tier instead of one machine each.
+#[test]
+fn integer_shared_widget_loop_by_hand() {
+    let mut d = loop_data("assembling-machine-3", false);
+    add_resource(&mut d, "part", 1.0);
+    let lp = plan(&d, &lp_settings("spa", "widget@4", 2.0));
+    let s = int_settings("widget@4", 2.0, 1e-3);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert!(p.proven_optimal, "gap {:?}", p.gap);
+    assert!(!p.warnings.iter().any(|w| w.contains("fractional")), "{:?}", p.warnings);
+    assert_balanced(&p);
+    // parts as in the LP (309.4476 = 2 × 154.7238, 4Q at every tier): buildings only add 1e-3 each
+    assert!(close(raw(&p, "part"), 2.0 * 154.7238, 1e-5), "{}", raw(&p, "part"));
+    assert!(close(raw(&p, "part"), raw(&lp, "part"), 1e-6));
+    let g = group_sums(&p);
+    let whole: f64 = g.values().map(|n| (n - 1e-6).ceil()).sum();
+    assert_eq!(p.buildings, whole, "{g:?}");
+    for r in &p.recipes {
+        let n = g[&(split(&r.id).0.to_string(), r.mode.clone())];
+        assert_eq!(r.group_machines, (n - 1e-6).ceil(), "{}", r.id);
+        // a tier's share is its work at full speed
+        let base = if r.id.starts_with("widget-recycling") { 0.5 } else { 1.25 };
+        let speed = base * if r.mode_label.contains("4Q") { 0.8 } else { 1.0 };
+        assert!(close(r.machines, r.throughput / speed, 1e-9), "{} {} {}", r.id, r.machines, r.throughput);
+    }
+    // by hand: AM3 4Q crafts 60 parts/min × speed 1.0 per machine; normal tier 7.0855 : 1 against
+    // uncommon … epic; recycler 4Q 0.4 × 60 widgets/min
+    let craft: f64 = p.recipes.iter().filter(|r| r.id.starts_with("widget") && !r.id.contains("recycling")).map(|r| r.machines).sum();
+    let normal: f64 = p.recipes.iter().filter(|r| r.id == "widget").map(|r| r.machines).sum();
+    let legendary: f64 = p.recipes.iter().filter(|r| r.id == "widget@4").map(|r| r.machines).sum();
+    let higher = craft - normal - legendary;
+    assert!((normal / higher - 7.0855).abs() < 0.005, "{normal} {higher}");
+    // normal … epic share the 4Q machines; legendary parts are crafted on plain machines
+    let craft_whole = p.recipes.iter().find(|r| r.id == "widget").unwrap().group_machines;
+    assert_eq!(craft_whole, (normal + higher - 1e-6).ceil());
+    assert!(craft_whole <= (normal - 1e-6).ceil() + 1.0, "k normal + 1 shared: {craft_whole} for {normal} + {higher}");
+    let per_column: f64 = p.recipes.iter().map(|r| r.machines_ceil).sum();
+    assert!(p.buildings < per_column, "{} vs {per_column}", p.buildings);
+    println!(
+        "widget loop: {} buildings ({:?}), craft {normal:.4} + {higher:.4} → {craft_whole}, per column {per_column}",
+        p.buildings, p.building_counts.iter().map(|b| (b.building.clone(), b.count)).collect::<Vec<_>>()
+    );
+}
+
+/// Known optimum (scipy milp on the same model, `_过程文件/int_known_optimum.py`): the widget loop
+/// with AM3 and productivity, buildings at 2 parts each, 1 legendary widget / min. The whole-building
+/// optimum trades parts for buildings (loadouts change), so it differs from the LP rounded up.
+#[test]
+fn integer_shared_known_optimum() {
+    let mut d = loop_data("assembling-machine-3", true);
+    add_resource(&mut d, "part", 1.0);
+    let s = int_settings("widget@4", 1.0, 2.0);
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert!(p.proven_optimal, "gap {:?}", p.gap);
+    assert_balanced(&p);
+    let lp = { let mut s = s.clone(); s.integer = false; plan(&d, &s) };
+    println!("known optimum: integer {:.6} ({} buildings, {:.4} parts), LP {:.6}", p.objective, p.buildings, raw(&p, "part"), lp.objective);
+    assert!(p.objective >= lp.objective - 1e-9);
+    assert!((p.objective - KNOWN_WIDGET_OPT).abs() < 1e-4 * KNOWN_WIDGET_OPT, "{} vs {KNOWN_WIDGET_OPT}", p.objective);
+}
+/// scipy/HiGHS: 103.878557596 (79.878558 parts; 1 AM3 4P, 3 AM3 2Q 2P, 8 recyclers 4Q); LP 101.412181.
+const KNOWN_WIDGET_OPT: f64 = 103.878557596;
+
+/// Legendary gear (2x1, Nauvis, default objective): whole buildings shared across tiers cost no
+/// more than the fractional plan rounded up per group, and the external-engine hooks (HiGHS)
+/// take continuous tier shares: the solved plan's values pass the row check in a fresh run.
+#[test]
+fn integer_quality_gear_and_engine_values() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = lp_settings("2x1", "iron-gear-wheel@4", 10.0);
+    s.cost = Objective::Resources.preset();
+    s.integer = true;
+    s.time_limit_ms = 4000;
+    let lp = { let mut s = s.clone(); s.integer = false; plan(&d, &s) };
+    let Start::Running(mut run) = lp::start(&d, &s) else { panic!("quality plans with whole buildings run a search") };
+    let first = run.progress().objective.unwrap();
+    while !run.step(Some(200.0)) {}
+    let p = run.plan();
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert_balanced(&p);
+    assert!(p.objective <= first + 1e-9 && p.objective >= lp.objective - 1e-9);
+    let g = group_sums(&p);
+    assert_eq!(p.buildings, g.values().map(|n| (n - 1e-6).ceil()).sum::<f64>());
+    let vals = run.best_values();
+    let Start::Running(mut fresh) = lp::start(&d, &s) else { panic!() };
+    let v0 = fresh.progress().version;
+    fresh.offer_values(&vals, None, false);
+    let o = fresh.progress().objective.unwrap();
+    assert!((o - p.objective).abs() <= 1e-9 * p.objective.abs().max(1.0) || fresh.progress().version > v0, "{o} vs {}", p.objective);
+    assert!(o <= p.objective + 1e-6 * p.objective.abs().max(1.0), "engine values refused: {o} vs {}", p.objective);
+    println!("gear@4 10/min: integer {:.4} ({} bld, gap {:?}), LP {:.4}, first {:.4}", p.objective, p.buildings, p.gap, lp.objective, first);
+}
+
+/// Machine quality (report §5 step 6): crafting speed per tier from the data (AM3 1.25 → 3.125
+/// legendary, ×2.5), power per machine unchanged; normal plans and quality loadouts alike.
+#[test]
+fn machine_quality_speed() {
+    let d = GameData::for_set("factorio", "2x1");
+    let am3 = d.building("assembling-machine-3").unwrap();
+    assert_eq!(am3.quality_speed, vec![1.25, 1.625, 2.0, 2.375, 3.125]);
+    assert_eq!(am3.speed_at(4), 3.125);
+    let mut s = lp_settings("2x1", "iron-gear-wheel", 75.0);
+    s.disabled_buildings = vec!["assembling-machine-1".into(), "assembling-machine-2".into(), "foundry".into()];
+    s.prod_module = String::new();
+    s.quality_module = String::new();
+    let gear = |p: &Plan| p.recipes.iter().find(|r| r.id == "iron-gear-wheel").map(|r| (r.machines, r.power)).unwrap();
+    let (n0, p0) = gear(&plan(&d, &s));
+    s.machine_quality = 4;
+    let (n4, p4) = gear(&plan(&d, &s));
+    // 75 gears / min = 1.25 crafts / s × 0.5 s = 0.625 machines at speed 1 → 0.5 normal AM3, 0.2 legendary
+    assert!(close(n0, 0.5, 1e-9) && close(n4, 0.2, 1e-9), "{n0} {n4}");
+    assert!(close(p4 / n4, p0 / n0, 1e-9), "power per machine {p0} {p4}");
+    // quality loadouts use the same speed: 4Q AM3 at legendary machine quality = 3.125 × 0.8
+    let mut d1 = loop_data("assembling-machine-3", false);
+    add_resource(&mut d1, "part", 1.0);
+    let mut s1 = lp_settings("spa", "widget@4", 1.0);
+    s1.machine_quality = 4;
+    let p = plan(&d1, &s1);
+    let r = p.recipes.iter().find(|r| r.id == "widget").unwrap();
+    assert!(close(r.machines, r.throughput / (3.125 * 0.8), 1e-9), "{} {}", r.machines, r.throughput);
+}
+
+/// Bench (progress-int.md): whole-building quality plans at a 4 s limit, native microlp.
+/// `cargo test --release -- --ignored --nocapture quality_integer_bench`
+#[test]
+#[ignore]
+fn quality_integer_bench() {
+    let all = || ["nauvis", "vulcanus", "gleba", "fulgora", "aquilo", "space-platform"].map(String::from).to_vec();
+    let mut cases: Vec<(&str, GameData, PlanSettings)> = Vec::new();
+    for (name, target, rate, mq) in [
+        ("gear@4 10/min, normal modules", "iron-gear-wheel@4", 10.0, 0u8),
+        ("gear@4 10/min, legendary modules", "iron-gear-wheel@4", 10.0, 4),
+        ("quality module 1@4 1/min, legendary modules", "quality-module@4", 1.0, 4),
+        ("electronic circuit@4 30/min", "electronic-circuit@4", 30.0, 4),
+        ("processing unit@4 1/min", "processing-unit@4", 1.0, 4),
+    ] {
+        let mut s = PlanSettings { game: "factorio".into(), dataset: "2x1".into(), module_quality: mq, ..Default::default() };
+        s.targets = vec![ItemRate { item: target.into(), rate }];
+        cases.push((name, GameData::for_set("factorio", "2x1"), s));
+    }
+    // LDS shuffle: all planets, research 15, LDS recycling allowed, legendary modules
+    let mut s = PlanSettings { game: "factorio".into(), dataset: "2x1".into(), module_quality: 4, planets: all(), ..Default::default() };
+    s.targets = vec![ItemRate { item: "plastic-bar@4".into(), rate: 60.0 }];
+    s.research_productivity.insert("casting-low-density-structure".into(), 1.5);
+    s.recycle_allow = vec!["low-density-structure".into()];
+    cases.push(("LDS shuffle plastic@4 60/min (all planets)", GameData::for_set("factorio", "2x1"), s));
+    // LDS shuffle on its own chain (as oracle_lds_shuffle): normal plastic costs 1, buildings 0.01
+    let mut d = GameData::for_set("factorio", "spa");
+    keep(&mut d, &["casting-low-density-structure", "low-density-structure-recycling"]);
+    add_resource(&mut d, "plastic-bar", 1.0);
+    for f in ["molten-iron", "molten-copper"] {
+        add_resource(&mut d, f, 0.0);
+    }
+    let mut s = lp_settings("spa", "plastic-bar@4", 60.0);
+    s.cost.buildings = 0.01;
+    s.research_productivity.insert("casting-low-density-structure".into(), 1.5);
+    s.recycle_allow = vec!["low-density-structure".into()];
+    cases.push(("LDS shuffle oracle chain 60/min", d, s));
+    for (name, d, mut s) in cases {
+        s.integer = false;
+        let lp = plan(&d, &s);
+        s.integer = true;
+        s.time_limit_ms = 4000;
+        let t = std::time::Instant::now();
+        let Start::Running(mut run) = lp::start(&d, &s) else {
+            println!("{name}: no search ({:?})", lp.warnings);
+            continue;
+        };
+        let first_ms = t.elapsed().as_secs_f64() * 1e3;
+        let first = run.progress().objective;
+        while !run.step(Some(250.0)) {}
+        let p = run.plan();
+        let lp_rounded: f64 = lp.building_counts.iter().map(|b| b.count).sum();
+        println!(
+            "{name}: {} cols | LP {:.4} | first {:?} @ {first_ms:.0} ms | final {:.4} gap {:.3} % proven {} in {:.0} ms | buildings {} (LP per-group ceil {lp_rounded})",
+            p.columns, lp.objective, first.map(|f| (f * 1e4).round() / 1e4), p.objective, 100.0 * p.gap.unwrap_or(0.0), p.proven_optimal, p.solve_ms, p.buildings
+        );
+        assert_balanced(&p);
+    }
 }

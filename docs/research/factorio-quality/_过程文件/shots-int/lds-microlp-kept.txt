@@ -1,0 +1,129 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+
+Best plan found in 10.6 s: within 76 % of the lower bound, not proven optimal. More time can improve it or prove it.
+
+Keep solving (+8 s)
+Time limit
+s
+Use fractional buildings
+7
+PRODUCTION BUILDINGS
+0.1MW
+PRODUCTION POWER
+0MW
+EXTRACTION, EST.
+0.1MW
+TOTAL POWER
+≤ 76% gap
+WHOLE BUILDINGS · 10583 MS
+Buildings
+2×
+Agricultural tower
+5×
+Biochamber
+Recipes
+RECIPE	BUILDING	BUILDINGS	CLOCK		MW	IN (/MIN)	OUT (/MIN)	
+Bioflux2 TIERS
+4P
+	Biochamber	1
+normal 0.03
+legendary 0.1
+	12.8% busy	—	0	
+3.32 Yumako mash
+2.65 Jelly
+8.04 Nutrients
+12 Yumako mash ★legendary
+9.6 Jelly ★legendary
+	
+2.21 Bioflux
+8 Bioflux ★legendary
+	
+
+
+Bioplastic ★legendary
+4P
+	Biochamber	1	33.3% busy	—	0	
+8 Bioflux ★legendary
+32 Yumako mash ★legendary
+21 Nutrients
+	
+60 Plastic bar ★legendary
+	
+
+Jellynut processing2 TIERS
+Biochamber · 4P
+	Biochamber	1
+normal 0.01
+legendary 0.02
+	2.6% busy	—	0	
+0.27 Jellynut
+1.61 Nutrients
+0.96 Jellynut ★legendary
+	
+0.01 Jellynut seed
+2.65 Jelly
+0.05 Jellynut seed ★legendary
+9.6 Jelly ★legendary
+	
+
+Jellystem2 TIERS	Agricultural tower	1
+normal 0.03
+legendary 0.24
+	26.7% busy	—	0	
+0.01 Jellynut seed
+0.05 Jellynut seed ★legendary
+	
+0.27 Jellynut
+2.4 Jellynut ★legendary
+	
+
+Nutrients from bioflux
+4P
+	Biochamber	1	1.8% busy	—	0	
+2.21 Bioflux
+1.16 Nutrients
+	
+44.23 Nutrients
+	
+
+Yumako processing2 TIERS
+Biochamber · 4P
+	Biochamber	1
+normal 0.01
+legendary 0.18
+	19.7% busy	—	0	
+0.66 Yumako
+12.42 Nutrients
+8.8 Yumako ★legendary
+	
+0.03 Yumako seed
+3.32 Yumako mash
+0.44 Yumako seed ★legendary
+44 Yumako mash ★legendary
+	
+
+Yumako tree2 TIERS	Agricultural tower	1
+normal 0.07
+legendary 0.93
+	100% busy	—	0.1	
+0.01 Yumako seed
+0.19 Yumako seed ★legendary
+	
+0.66 Yumako
+9.34 Yumako ★legendary
+	
+Raw resources
+RESOURCE	/MIN	OF WORLD MAX	CARRIER
+Outputs
+ITEM	/MIN	CARRIER
+
+Plastic bar ★legendary	60	Belt Mk.1
+Jellynut seed BYPRODUCT	0.01	Belt Mk.1
+Jellynut ★legendary BYPRODUCT	1.44	Belt Mk.1
+Yumako seed BYPRODUCT	0.02	Belt Mk.1
+Yumako seed ★legendary BYPRODUCT	0.25	Belt Mk.1
+Yumako ★legendary BYPRODUCT	0.54	Belt Mk.1

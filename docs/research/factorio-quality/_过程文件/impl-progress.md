@@ -125,7 +125,7 @@ Spec: `../00-最终报告.md` §5. Branch `refactor`, not pushed.
   8 foundries, 2 recyclers, as in review 2 M2); charged → 14 buildings, plain gear assembler, foundry gear
   casting with 4Q.
 
-## Step 8 — integer machines shared across quality tiers (report §5 step 6): design only, not built
+## Step 8 — integer machines shared across quality tiers (report §5 step 6): built 2026-11-22, see progress-int.md
 Why not built now: the change touches every per-column part of the MILP path in `lp.rs` (variables, warm
 start `hint_of`, `restrict`, the re-weighting heuristic `scale`, `finish` rounding), and its speed could not
 be measured reliably today (machine at 100 % CPU from other sessions; a 4 s MILP limit is already the binding

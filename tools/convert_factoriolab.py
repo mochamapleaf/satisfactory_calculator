@@ -13,7 +13,7 @@ Conventions (same as data/game-data.json for Satisfactory):
 - recipes FactorioLab excludes by default (DSP "advanced" recipes) are marked alt;
 - quality (Factorio): `recycling` marks item recycling (reverse or self recycling; scrap recycling
   is a normal recipe since nothing crafts scrap), `catalyst` (per minute), `quality_allowed`;
-  machines carry `base_productivity`; modules carry per-quality values `by_quality` (from
+  machines carry `base_productivity` and `quality_speed` (crafting speed per tier, from `qualityRecord`); modules carry per-quality values `by_quality` (from
   FactorioLab `qualityRecord`, never x1.3); top-level `qualities` lists the tier names.
 - Space Age: `locations` (planets / space platform) on recipes, resources and machines (crusher on
   the platform, captive biter spawner on Nauvis), top-level `locations`;
@@ -113,6 +113,10 @@ def main(game, dataset="2.0"):
                 "base_productivity": base_p,
             })
             b = buildings[-1]
+            rec = m.get("qualityRecord", {})
+            if game == "factorio" and rec and tiers:
+                # machine quality: crafting speed per tier (normal ... legendary) from the data
+                b["quality_speed"] = [b["speed"]] + [rec.get(t, {}).get("speed", b["speed"]) for t in tiers[1:]]
             if heat:
                 b["fuel"] = {"item": "heat", "rate": heat * 60.0 * HEAT_SCALE}
             elif burner:
