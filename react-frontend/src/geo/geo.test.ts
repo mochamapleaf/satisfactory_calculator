@@ -11,6 +11,7 @@ import {
   perMin, platformCap, rtdMin, summarize, thresholdBelts, W_RAW, materials,
 } from './model.ts'
 import { highsSolver } from './highsLp.ts'
+import { runSweep, type SweepRow } from './sweep.ts'
 
 const R = (p: string) => JSON.parse(fs.readFileSync(new URL('../../../' + p, import.meta.url), 'utf8'))
 const game = R('data/game-data.json'), sitesDoc: SitesDoc = R('data/satisfactory-geo/sites.json')
@@ -157,5 +158,26 @@ for (const [name, c] of Object.entries(ref.cases as Record<string, Json>)) {
     assert.deepEqual(s!.lines.map(l => ({ a: l.a, b: l.b, cars: Object.fromEntries(Object.entries(l.dirs).map(([k, v]) => [k, v.cars])) })), c.lines, 'lines and cars')
   })
 }
+test('p sweep equals the Python sweep p_sweep_plate12k.json (12 000 plate at Sm3_0), and resumes after a skipped step', () => {
+  const py = JSON.parse(fs.readFileSync(new URL('../../../docs/research/satisfactory-geo/_过程文件/p_sweep_plate12k.json', import.meta.url), 'utf8'))
+  const geo = { sitesDoc, nodes, transport: tr }
+  const o = { targets: { Desc_IronPlate_C: 12000 }, base: 'Sm3_0', tier: 8, workKm: 0, pmax: 3, timeLimit: 60, recipeIds: null }
+  const rows: SweepRow[] = []
+  runSweep(game, geo, solve, o, e => { if (e.type === 'row') rows.push(e.row); if (e.type === 'error') throw new Error(e.message) })
+  assert.deepEqual(rows.map(r => `${r.fmult}|${r.p}`), ['1|0', '1|1', '1|2', '1|3', '0.5|3', '2|3'])
+  for (const r of rows) {
+    const want = py.rows.find((x: Json) => x.fmult === r.fmult && x.p === r.p)
+    assert.equal(r.status, 'Optimal')
+    assert.ok(Math.abs(r.obj! - want.obj) <= 1e-4 * want.obj, `${r.fmult}|${r.p}: ${r.obj} vs ${want.obj}`)
+    if (r.fmult === 1) assert.ok(Math.abs(r.envelope! - want.envelope) <= 1e-4 * want.envelope)
+    assert.deepEqual(r.hubs, want.hubs)
+  }
+  assert.ok(rows[1].copied)
+  // resume: steps 1|0, 1|1 done elsewhere, envelope carried in
+  const rest: SweepRow[] = []
+  runSweep(game, geo, solve, { ...o, fmults: [], skip: ['1|0', '1|1'], envStart: rows[0].obj }, e => { if (e.type === 'row') rest.push(e.row) })
+  assert.deepEqual(rest.map(r => r.p), [2, 3])
+  assert.ok(Math.abs(rest[1].envelope! - rows[3].envelope!) <= 1e-4 * rows[3].envelope!)
+})
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = any

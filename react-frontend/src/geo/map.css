@@ -57,3 +57,6 @@ p.solving { margin: var(--s2) 0; }
   .geoctl select { width: 100%; }
   .geoctl button { flex: 1 1 100%; }
 }
+.geolinks { table-layout: fixed; }
+.geolinks th:nth-child(1) { width: 46%; } .geolinks th:nth-child(2) { width: 28%; }
+.geolinks td { overflow-wrap: anywhere; white-space: normal; }

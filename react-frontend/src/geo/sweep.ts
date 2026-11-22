@@ -13,6 +13,8 @@ export interface SweepOptions {
   /** recipe ids to use (the plan's), or null for the base-recipe closure as in geo_solve.py */
   recipeIds: string[] | null
   fmults?: number[]
+  /** steps already done (`${fmult}|${p}`), when the page restarts a sweep after a stuck solve; and the envelope so far */
+  skip?: string[]; envStart?: number | null
 }
 export interface SweepRow {
   fmult: number; F: number; p: number; obj: number | null; bound: number | null; gap: number; status: string; time_s: number
@@ -47,7 +49,8 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
   if (!oeCache.has(key)) oeCache.set(key, oreEquivalents(d, materials(), solve))
   const oe = oeCache.get(key)!
   const common = { base: o.base, tier: o.tier, workKm: o.workKm, oe, recipes }
-  let env: number | null = null
+  let env: number | null = o.envStart ?? null
+  const skip = new Set(o.skip ?? [])
   let warm: Map<string, number> | null = null
   let metaSent = false
   const solveOne = (p: number, fmult: number, warmFrom: Map<string, number> | null) => {
@@ -91,9 +94,10 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
   try {
     let best: { named: Map<string, number>; obj: number } | null = null
     for (let p = 0; p <= o.pmax; p++) {
+      if (skip.has(`1|${p}`)) continue
       if (p === 1) {
         // a line needs two open hubs, so one hub only adds F: cost(1) = cost(0)
-        emit({ type: 'row', row: { ...lastRow!, p: 1, copied: true }, summary: lastSummary })
+        if (lastRow) emit({ type: 'row', row: { ...lastRow, p: 1, copied: true }, summary: lastSummary })
         continue
       }
       const r = solveOne(p, 1, warm)
@@ -105,6 +109,7 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
       if (r.named && obj !== null && (warm === null || obj <= env! + 1e-9)) { warm = r.named; best = { named: r.named, obj } }
     }
     for (const fm of o.fmults ?? [0.5, 2]) {
+      if (skip.has(`${fm}|${o.pmax}`)) continue
       const r = solveOne(o.pmax, fm, best?.named ?? null)
       emit({ type: 'row', row: rowOf(o.pmax, fm, r.meta.F, r.res, r.summary, r.res.obj), summary: r.summary })
     }

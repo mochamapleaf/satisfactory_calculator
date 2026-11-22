@@ -53,14 +53,18 @@ export function highsSolver(highs: Highs): LpSolve {
       }
       const cb = highs.constants.callbackType
       let last = 0
-      model.run(opts.progress ? {
-        [cb.mipLogging](e) {
+      // our own stop at the time limit + 2 s, in case HiGHS's clock check is not reached; the interrupt check is
+      // also where progress comes from (mipLogging does not fire with output_flag off)
+      const hard = opts.timeLimit ? t0 + opts.timeLimit * 1000 + 2000 : Infinity
+      model.run({
+        [cb.mipInterrupt](e) {
           const now = performance.now()
-          if (now - last < 500) return
+          if (now > hard) e.interrupt()
+          if (!opts.progress || now - last < 500) return
           last = now
-          opts.progress!({ bound: finite(e.data.mip_dual_bound), best: finite(e.data.objective_function_value), nodes: Number(e.data.mip_node_count ?? 0) })
+          opts.progress({ bound: finite(e.data.mip_dual_bound), best: finite(e.data.mip_primal_bound), nodes: Number(e.data.mip_node_count ?? 0) })
         },
-      } : undefined)
+      })
       const st = model.getModelStatus()
       const names = highs.constants.modelStatus as unknown as Record<string, number>
       const name = Object.entries(names).find(([, v]) => v === st)?.[0] ?? String(st)

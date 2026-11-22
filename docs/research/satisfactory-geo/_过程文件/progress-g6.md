@@ -37,3 +37,21 @@ Branch `worktree-agent-ac4b893018efffcdc` (reset to `refactor` a243811 at start;
   marks, p* at F 0.5/1/2x, links table with the §8.5 break-even per belt link. Watchdog: worker silent > limit+30 s -> stop.
 - Build: `npx tsc -b && npx vite build` ok (MapView chunk 138 kB / 27 kB gzip, geoWorker 149 kB; highs wasm shared).
 - Next: live Playwright test on vite preview :4174 (12 000 plate at Sm3_0, mixed late-game), screenshots, fix, commit.
+
+## 2026-11-22 step 3: live browser test, fixes
+- Live (Playwright, chromium, `vite preview --port 4174`, production build), screenshots in `shots-web/`:
+  * 12 000 Iron Plate/min, base Sm3_0, T8, hubs up to 4, 30 s: p<=2 proven optimal 95 124 OE, "Rail saves 4.3 %
+    against belts only (99 386)", hubs Sm1_2 + Sm3_0, 5 cars, 5 760/min by rail, 3.5 km; p* = 2 / 2 / 0 at F 0.5/1/2x,
+    all proven. Same as Python (report §8.5, p_sweep_plate12k.json). Sweep 17-19 s. Desktop + 390 px (light).
+  * Mixed late game (10 HMF + 5 Computer + 10 Motor + 20 Encased Beam), base S0_m1, base recipes: 56 609 OE, no hub,
+    p* 0 at all F, proven; Python late_mix 56 609.42, same model size (13 509 vars / 950 int). Sweep 91 s.
+  * Same mix with the plan's recipes at Sm3_0 (dark mode): 57 042 OE, no hub (2 belts), proven. Desktop + 390 px.
+  * No console errors.
+- Bugs found live and fixed: (1) results of the last solve were lost when its row and 'done' arrived in one batch
+  (updater checked worker.current at render time) -> UI stuck on "Solving F 2x"; guard now taken at message time.
+  (2) the watchdog interval was re-created on every render and never fired; now one interval per solving period, plus
+  a per-solve stop at limit+20 s that records the point as "stuck" and resumes the sweep in a new worker (sweep.ts
+  skip/envStart, tested in node). (3) HiGHS progress now comes from the mipInterrupt callback (mipLogging does not
+  fire with output_flag off), which also enforces limit+2 s. (4) links table overflow on long flow lists. (5) aria-labels.
+- Not a HiGHS bug: replaying the six sweep models in a Chromium worker and main thread: all 3-5 s.
+- Next: commit; left for later: G7 per-site integer refinement, G9 tech tiers, shared track segments.

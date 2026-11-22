@@ -32,13 +32,13 @@ interface GeoPrefs { base: string; tier: number; workKm: number; pmax: number; t
 let prefs: GeoPrefs = { base: SITES.hubs.find(h => h.reason === 'base')!.site, tier: 8, workKm: 0, pmax: 4, timeLimit: 30, recipes: 'plan' }
 interface RunState {
   key: string; rows: SweepRow[]; sols: Map<string, Summary | null>; meta: SweepMeta | null
-  solving: { label: string; since: number; limit: number; bound: number | null; best: number | null } | null
+  solving: { label: string; step: { fmult: number; p: number } | null; since: number; limit: number; bound: number | null; best: number | null } | null
   done: boolean; stopped: boolean; error: string | null; ms: number
 }
 let last: RunState | null = null
 const solKey = (fmult: number, p: number) => `${fmult}|${p}`
 
-const statusText = (s: string) => (s === 'Optimal' ? 'proven optimal' : s === 'timeLimit' ? 'time limit' : s)
+const statusText = (s: string) => (s === 'Optimal' ? 'proven optimal' : s === 'timeLimit' || s === 'interrupted' ? 'time limit' : s === 'stuck' ? 'solver stuck, skipped' : s)
 const km = (m: number) => `${fmt(m / 1000, 1)} km`
 const oe = (x: number | null | undefined) => (x === null || x === undefined ? '—' : fmt(x, 0))
 
@@ -60,37 +60,78 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
   const itemName = (id: string) => data.items.find(i => i.id === id)?.name ?? id
   const recipeName = (id: string) => data.recipes.find(r => r.id === id)?.name ?? id
 
+  const runRef = useRef(run)
+  runRef.current = run
+  const restarts = useRef(0)
   const stop = (why: string | null = null) => {
     worker.current?.terminate()
     worker.current = null
     setRun(r => (r ? { ...r, solving: null, stopped: !r.done, error: why ?? r.error } : r))
   }
   useEffect(() => () => { worker.current?.terminate(); worker.current = null }, [])
-  // watchdog: the worker posts progress while HiGHS runs; silence past the time limit + 30 s means it hung
+  // Watchdog. HiGHS stops itself at the time limit (and our interrupt callback 2 s later), but in the browser it
+  // was seen to hang now and then where neither is reached. A solve running past its limit + 20 s is killed with
+  // its worker: the point is recorded as not solved and the sweep goes on in a new worker. A worker silent for the
+  // limit + 60 s (no step, no progress) is stopped.
+  // (one interval while solving, reading state through refs: an effect re-created on every render would be cleared
+  // before it fires whenever the page re-renders more often than once a second)
+  const active = !!run?.solving
+  const watch = useRef<() => void>(() => {})
+  watch.current = () => {
+    tick(n => n + 1)
+    const r = runRef.current, s = r?.solving
+    if (!worker.current || !r || !s) return
+    const now = performance.now()
+    if (s.step && now - s.since > (s.limit + 20) * 1000) skipStuck(r, s.step)
+    else if (now - lastMsg.current > (s.limit + 60) * 1000) stop('The solver stopped responding and was stopped.')
+  }
   useEffect(() => {
-    if (!run?.solving) return
-    const t = setInterval(() => {
-      tick(n => n + 1)
-      if (worker.current && performance.now() - lastMsg.current > (p.timeLimit + 30) * 1000) stop('The solver stopped responding (no progress for the time limit + 30 s) and was stopped.')
-    }, 1000)
+    if (!active) return
+    const t = setInterval(() => watch.current(), 1000)
     return () => clearInterval(t)
-  })
+  }, [active])
+
+  const skipStuck = (r: RunState, step: { fmult: number; p: number }) => {
+    worker.current?.terminate()
+    worker.current = null
+    if (++restarts.current > 3) { stop('The solver got stuck repeatedly; the sweep was stopped.'); return }
+    const envOf = (rows: SweepRow[]) => rows.filter(x => x.fmult === 1 && x.obj !== null).reduce<number | null>((m, x) => (m === null ? x.obj! : Math.min(m, x.obj!)), null)
+    const stuck: SweepRow = {
+      fmult: step.fmult, F: (r.meta?.F ?? 0) * step.fmult, p: step.p, obj: null, bound: null, gap: Infinity, status: 'stuck',
+      time_s: r.solving!.limit + 20, envelope: step.fmult === 1 ? envOf(r.rows) : null, hubs: [], n_lines: 0, rail_flow: 0, belts: 0,
+    }
+    const rows = [...r.rows, stuck, ...(step.fmult === 1 && step.p === 0 ? [{ ...stuck, p: 1, copied: true }] : [])]
+    const sols = new Map(r.sols)
+    for (const x of rows) if (!sols.has(solKey(x.fmult, x.p))) sols.set(solKey(x.fmult, x.p), null)
+    const next: RunState = { ...r, rows, sols, solving: { label: 'restarting', step: null, since: performance.now(), limit: r.solving!.limit, bound: null, best: null } }
+    setRun(next)
+    launch({ ...JSON.parse(r.key) as SweepOptions, skip: rows.map(x => solKey(x.fmult, x.p)), envStart: envOf(rows) })
+  }
 
   const start = () => {
+    restarts.current = 0
+    setPick(null); setSite(null)
+    setRun({ key, rows: [], sols: new Map(), meta: null, solving: { label: 'loading HiGHS', step: null, since: performance.now(), limit: p.timeLimit, bound: null, best: null }, done: false, stopped: false, error: null, ms: 0 })
+    launch(opts)
+  }
+
+  const launch = (o: SweepOptions) => {
     worker.current?.terminate()
     const w = new Worker(new URL('./geo/geoWorker.ts', import.meta.url), { type: 'module' })
     worker.current = w
     lastMsg.current = performance.now()
-    setPick(null); setSite(null)
-    setRun({ key, rows: [], sols: new Map(), meta: null, solving: { label: 'loading HiGHS', since: performance.now(), limit: p.timeLimit, bound: null, best: null }, done: false, stopped: false, error: null, ms: 0 })
     w.onmessage = (ev: MessageEvent<SweepEvent>) => {
-      lastMsg.current = performance.now()
+      const now = performance.now()
+      lastMsg.current = now
       const e = ev.data
+      // decide now whether this worker is the live one: the updater runs later, at render time, when the 'done'
+      // below may already have cleared worker.current (the last row and 'done' often arrive in one batch)
+      if (worker.current !== w) return
       setRun(r => {
-        if (!r || worker.current !== w) return r
+        if (!r) return r
         switch (e.type) {
           case 'meta': return { ...r, meta: e.meta }
-          case 'solving': return { ...r, solving: { label: e.label, since: performance.now(), limit: e.limit, bound: null, best: null } }
+          case 'solving': return { ...r, solving: { label: e.label, step: { fmult: e.fmult, p: e.p }, since: now, limit: e.limit, bound: null, best: null } }
           case 'progress': return r.solving ? { ...r, solving: { ...r.solving, bound: e.bound, best: e.best } } : r
           case 'row': {
             const sols = new Map(r.sols); sols.set(solKey(e.row.fmult, e.row.p), e.summary)
@@ -98,18 +139,19 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           }
           case 'done': return { ...r, solving: null, done: true, ms: e.ms }
           case 'error': return { ...r, solving: null, done: true, error: e.message }
+          default: return r
         }
       })
       if (e.type === 'done' || e.type === 'error') { w.terminate(); if (worker.current === w) worker.current = null }
     }
-    w.onerror = ev => { setRun(r => (r ? { ...r, solving: null, done: true, error: `worker failed: ${ev.message}` } : r)); w.terminate() }
+    w.onerror = ev => { setRun(r => (r ? { ...r, solving: null, done: true, error: ev.message ? `The solver worker failed: ${ev.message}` : "The solver worker could not be loaded (offline, or the page is older than the site: reload it)." } : r)); w.terminate() }
     w.postMessage({
       game: {
         items: data.items.map(i => ({ id: i.id, liquid: i.liquid })),
         recipes: data.recipes.map(r => ({ id: r.id, alt: r.alt, building: r.building, in: r.in, out: r.out })),
         resources: data.resources.map(r => ({ item: r.item })),
       },
-      opts,
+      opts: o,
     })
   }
 
@@ -136,27 +178,27 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
       <p className="hint">Where to mine and process this plan on the Satisfactory map: its targets are needed at the base site, ore comes from the nodes of 39 one-km grid sites, products travel by belt or pipe between neighbouring sites or by train between candidate hubs. The solver tries 0 … p hubs and keeps the cheapest plan (one-time build cost in raw-ore equivalents, OE). Machines are fractional here; the Plan tab rounds them.</p>
       <div className="geoctl">
         <label>Base site
-          <select value={p.base} onChange={e => setP({ ...p, base: e.target.value })}>
+          <select aria-label="Base site" value={p.base} onChange={e => setP({ ...p, base: e.target.value })}>
             {GRID.map(s => <option key={s.id} value={s.id}>{s.id}{SITES.hubs.some(h => h.site === s.id) ? ' (hub)' : ''}</option>)}
           </select></label>
         <label>Tier
-          <select value={p.tier} onChange={e => setP({ ...p, tier: +e.target.value })}>
+          <select aria-label="Tier" value={p.tier} onChange={e => setP({ ...p, tier: +e.target.value })}>
             {[0, 2, 4, 5, 6, 7, 8, 9].map(t => <option key={t} value={t}>T{t}{t < 6 ? ' (no rail)' : ''}</option>)}
           </select></label>
         <label>Hubs up to
-          <select value={p.pmax} onChange={e => setP({ ...p, pmax: +e.target.value })}>
+          <select aria-label="Hubs up to" value={p.pmax} onChange={e => setP({ ...p, pmax: +e.target.value })}>
             {[2, 3, 4, 6, 8, 12].map(n => <option key={n} value={n}>{n}</option>)}
           </select></label>
         <label>Player work
-          <select value={p.workKm} onChange={e => setP({ ...p, workKm: +e.target.value })}>
+          <select aria-label="Player work" value={p.workKm} onChange={e => setP({ ...p, workKm: +e.target.value })}>
             {[0, 250, 1000].map(n => <option key={n} value={n}>{n} OE/km</option>)}
           </select></label>
         <label>Time per solve
-          <select value={p.timeLimit} onChange={e => setP({ ...p, timeLimit: +e.target.value })}>
+          <select aria-label="Time per solve" value={p.timeLimit} onChange={e => setP({ ...p, timeLimit: +e.target.value })}>
             {[10, 30, 60, 120].map(n => <option key={n} value={n}>{n} s</option>)}
           </select></label>
         <label>Recipes
-          <select value={p.recipes} onChange={e => setP({ ...p, recipes: e.target.value as GeoPrefs['recipes'] })}>
+          <select aria-label="Recipes" value={p.recipes} onChange={e => setP({ ...p, recipes: e.target.value as GeoPrefs['recipes'] })}>
             <option value="plan">this plan's</option><option value="base">base recipes</option>
           </select></label>
         {run?.solving ? <button onClick={() => stop()}>Stop</button>
@@ -175,7 +217,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           <Legend sol={sol} itemName={itemName} />
         </div>
         <div className="geoside">
-          {!sol && !run?.solving && <p className="muted">{current ? 'No plan found.' : 'Choose the base site and press “Plan sites”.'}</p>}
+          {!sol && !run?.solving && !run?.stopped && <p className="muted">{current && run?.done ? 'No plan found.' : 'Choose the base site and press “Plan sites”.'}</p>}
           {sol && shownRow && meta && <SummaryPanel sol={sol} row={shownRow} beltOnly={beltOnly ?? null} meta={meta} itemName={itemName} />}
           {f1.length > 0 && <>
             <h2>Cost by number of hubs</h2>
@@ -256,7 +298,7 @@ function Links({ sol, meta, itemName }: { sol: Summary; meta: SweepMeta; itemNam
   return (
     <>
       <h2>Links</h2>
-      <div className="tablewrap"><table className="small"><thead><tr><th>Link</th><th>Mode</th><th className="num">/min</th><th className="num">Length</th></tr></thead>
+      <div className="tablewrap"><table className="small geolinks"><thead><tr><th>Link</th><th>Mode</th><th className="num">/min</th><th className="num">Length</th></tr></thead>
         <tbody>{rows.map(r => (
           <tr key={r.key}>
             <td><div>{r.dir}</div><div className="muted">{flowText(r.flow)}</div></td>
@@ -342,7 +384,7 @@ function WorldMap({ sol, hubs, base, site, setSite }: { sol: Summary | null; hub
       {grid.filter(g => g <= 3000).map(g => <line key={`h${g}`} y1={g} y2={g} x1={-3246} x2={4253} className="gridl" />)}
       {grid.map(g => <text key={`tx${g}`} x={g} y={-3600} className="axis" textAnchor="middle">{g / 1000}</text>)}
       {grid.filter(g => g <= 3000).map(g => <text key={`ty${g}`} x={-3180} y={g + 40} className="axis">{g / 1000}</text>)}
-      <text x={4200} y={-3600} className="axis" textAnchor="end">km · north up</text>
+      <text x={4200} y={3680} className="axis" textAnchor="end">km · north up</text>
       {NODES.filter(n => n.type !== 'deposit').map(n => (
         <circle key={n.id} cx={n.x} cy={n.y} r={used.has(n.item) ? 34 : 22} fill={RES_COLOR[n.item] ?? 'gray'} className={used.size && !used.has(n.item) ? 'node dim' : 'node'} />
       ))}
@@ -357,7 +399,7 @@ function WorldMap({ sol, hubs, base, site, setSite }: { sol: Summary | null; hub
         const n = machines(s.id), active = n > 0 || !!sol?.extraction[s.id]
         return <g key={s.id} className="site" onClick={() => setSite(s.id === site ? null : s.id)}>
           <rect x={s.x - 45} y={s.y - 45} width={90} height={90} className={active ? 'sq act' : 'sq'} />
-          {n > 0 && <circle cx={s.x} cy={s.y} r={60 + 22 * Math.sqrt(n)} className="mach" />}
+          {n > 0 && <circle cx={s.x} cy={s.y} r={Math.min(60 + 12 * Math.sqrt(n), 420)} className="mach" />}
           <circle cx={s.x} cy={s.y} r={260} fill="transparent" />
           <title>{`${s.id}${n ? `: ${fmt(n, 1)} machines` : ''}`}</title>
         </g>
