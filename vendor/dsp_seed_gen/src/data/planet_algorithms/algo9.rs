@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use super::super::math::{levelize2, levelize3};
 use super::super::planet::Planet;
 use super::super::random::DspRandom;
@@ -115,12 +117,12 @@ impl PlanetAlgorithm for PlanetAlgorithm9 {
             layer4_noise
         };
 
-        let alt_height = ((layer3_noise + clamped_layer4 + 5.0) * 0.13).powf(6.0) * 24.0 - 24.0;
+        let alt_height = ((layer3_noise + clamped_layer4 + 5.0) * 0.13).powf_d(6.0) * 24.0 - 24.0;
 
         let blend_factor = if stretched_height >= -self.mod_y {
             0.0
         } else {
-            (((stretched_height + self.mod_y).abs() / 5.0).min(1.0)).powf(1.0)
+            (((stretched_height + self.mod_y).abs() / 5.0).min(1.0)).powf_d(1.0)
         };
 
         let blended_height = stretched_height * (1.0 - blend_factor) + alt_height * blend_factor;

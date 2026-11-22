@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use serde::Serialize;
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize)]
@@ -43,10 +45,10 @@ impl Vector3 {
 
     pub fn slerp(lhs: &Vector3, rhs: &Vector3, percent: f64) -> Vector3 {
         let dot = lhs.dot(rhs).clamp(-1.0, 1.0);
-        let theta = dot.acos() * percent;
+        let theta = dot.acos_d() * percent;
         let mut relative_vec = rhs - &(lhs * dot);
         relative_vec.normalize();
-        &(lhs * theta.cos()) + &(&relative_vec * theta.sin())
+        &(lhs * theta.cos_d()) + &(&relative_vec * theta.sin_d())
     }
 }
 

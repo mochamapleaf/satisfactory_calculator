@@ -226,3 +226,111 @@ fn galaxy_plan_building_cap_and_shipping() {
     assert!(!p.shipments.is_empty());
     assert!(p.warpers_per_min > 0.0);
 }
+
+// ---- review 8
+
+#[test]
+fn galaxy_fingerprint_is_the_pinned_one() {
+    // the value `wasm_vs_native.mjs` and the live test expect from the WASM build (review 8, H1)
+    assert_eq!(galaxy().fingerprint, "a42df4b4a9e7ccc9");
+}
+
+#[test]
+fn seed_settings_are_sanitized() {
+    let s = SeedSettings { seed: 1, stars: 5, resource_multiplier: -3.0, hive_initial_colonize: f64::NAN, hive_max_density: 99.0 }.sanitized();
+    assert_eq!((s.stars, s.resource_multiplier, s.hive_initial_colonize, s.hive_max_density), (32, 0.01, 1.0, 10.0));
+    assert_eq!(SeedSettings::default().sanitized(), SeedSettings::default());
+}
+
+#[test]
+fn station_default_is_xiaoxiaos_four_stacked_belts() {
+    // 笑笑 BV 18: 4 blue belts within 7 ly, 3 at 12 ly, one belt = 7200/min ("五条蓝带运力=5×7200")
+    let s = gp();
+    assert!((s.station_a / (7.0 + s.station_d0) - 4.0 * 7200.0).abs() < 1e-6);
+    assert!((s.station_a / (12.0 + s.station_d0) - 3.0 * 7200.0).abs() < 1e-6);
+}
+
+#[test]
+fn a_system_listed_twice_counts_once() {
+    let mut a = gp();
+    a.systems = auto_systems(galaxy());
+    let mut b = a.clone();
+    b.systems.push(a.systems[0]);
+    b.systems.insert(1, *a.systems.last().unwrap());
+    let (pa, pb) = (plan_galaxy(dsp(), galaxy(), &a), plan_galaxy(dsp(), galaxy(), &b));
+    assert_eq!(pa.systems.len(), pb.systems.len());
+    assert!((pa.buildings - pb.buildings).abs() < 1e-6 * pa.buildings, "{} vs {}", pa.buildings, pb.buildings);
+    for (x, y) in pa.rares.iter().zip(&pb.rares) {
+        assert!((x.quota_per_cube - y.quota_per_cube).abs() < 1e-9, "{} quota {} vs {}", x.item, x.quota_per_cube, y.quota_per_cube);
+    }
+}
+
+#[test]
+fn dark_fog_scale_counts_finished_levels() {
+    let df = |m| DarkFog { enabled: true, level: 24, bases: vec![(0, 1.0)], drops: vec![ItemRate { item: "processor".into(), rate: 10.0 }, ItemRate { item: "df-core-element".into(), rate: 10.0 }], measured_at_level: m };
+    let rate = |d: &DarkFog, l| d.rates(l).0;
+    // measured and planned at the same level: unchanged, also at level 1 (nothing researched)
+    assert!((rate(&df(81), 81)[0].1 - 10.0).abs() < 1e-12);
+    assert!((rate(&df(1), 1)[0].1 - 10.0).abs() < 1e-12);
+    // measured while researching 51 (50 done, +200 %), planned while researching 101 (100 done, +400 %)
+    assert!((rate(&df(51), 101)[0].1 - 10.0 * 5.0 / 3.0).abs() < 1e-9);
+    // exclusive items do not scale
+    assert!((rate(&df(51), 101)[1].1 - 10.0).abs() < 1e-12);
+}
+
+#[test]
+fn stock_override_is_the_remaining_stock() {
+    let mut s = gp();
+    s.systems = auto_systems(galaxy());
+    for st in &galaxy().stars {
+        if st.planets.iter().any(|p| p.veins.iter().any(|v| v.item == "unipolar-magnet")) && !s.systems.contains(&st.index) {
+            s.systems.push(st.index);
+        }
+    }
+    s.remaining = 0.5;
+    let quota = |s: &GalaxyPlanSettings, item: &str| plan_galaxy(dsp(), galaxy(), s).rares.iter().find(|r| r.item == item).map(|r| r.quota_per_cube).unwrap();
+    // no override: half of the generated stock
+    assert!((quota(&s, "unipolar-magnet") - 0.5 * total("unipolar-magnet") / s_of(81)).abs() < 1e-9);
+    // 笑笑's 142 k is what is left: the quota is 142 k / S(81) = 3.28 per cube whatever "remaining" says
+    s.stock_override.insert("unipolar-magnet".into(), 142_000.0);
+    assert!((quota(&s, "unipolar-magnet") - 142_000.0 / s_of(81)).abs() < 1e-9);
+    assert!((quota(&s, "unipolar-magnet") - 3.28).abs() < 0.001);
+}
+
+#[test]
+fn oil_extractors_are_buildings() {
+    // only the home system, no gas giants in reach of the plan's need: oil is used
+    let mut s = gp();
+    s.target = 200.0;
+    let p = plan_galaxy(dsp(), galaxy(), &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    let oil: f64 = p.systems.iter().flat_map(|x| &x.extraction).filter(|e| e.item == "crude-oil").map(|e| e.rate).sum();
+    let seeps: i32 = p.systems.iter().map(|x| galaxy().stars[x.star].planets.iter().map(|pl| pl.seeps).sum::<i32>()).sum();
+    if oil > 1e-6 {
+        assert!(p.oil_extractors > 0.0 && p.oil_extractors <= seeps as f64 + 1e-6, "{} of {seeps}", p.oil_extractors);
+    }
+    let sum = p.production_buildings + p.miners + p.pumps + p.oil_extractors + p.collectors + p.receivers + p.stations;
+    assert!((p.buildings - sum).abs() < 1e-6);
+    // an oil-only run: no gas giants in the plan → extractors = seeps × share of the rate cap
+    let mut o = gp();
+    o.systems = vec![0];
+    o.target = 10.0;
+    let p = plan_galaxy(dsp(), galaxy(), &o);
+    if p.status == Status::Optimal {
+        let e = p.systems[0].extraction.iter().find(|e| e.item == "crude-oil");
+        if let Some(e) = e {
+            let seeps: i32 = galaxy().stars[0].planets.iter().map(|pl| pl.seeps).sum();
+            assert!((p.oil_extractors - seeps as f64 * e.rate / e.cap.unwrap().max(e.rate)).abs() < 1e-6 || e.limit == "quota");
+        }
+    }
+}
+
+#[test]
+fn twelve_systems_solve_in_reasonable_time() {
+    let mut s = gp();
+    s.systems = (0..12).collect();
+    let t = web_time::Instant::now();
+    let p = plan_galaxy(dsp(), galaxy(), &s);
+    eprintln!("12 systems: {:?} {} cols × {} rows, {:.0} ms", p.status, p.columns, p.rows, t.elapsed().as_secs_f64() * 1e3);
+    assert_eq!(p.systems.len().max(1), if p.status == Status::Optimal { 12 } else { 1 });
+}

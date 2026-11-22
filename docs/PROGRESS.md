@@ -224,3 +224,9 @@ Step log: `docs/research/dsp-seed/_过程文件/progress-impl.md` (checks vs rep
 - Tests: 10 in `dsp_galaxy_tests.rs` + 1 in the vendored crate; live 24/24 on vite preview, shots in `_过程文件/shots-web/`.
 - Known: the WASM generator differs from native on 1 of 145 planets of the test seed (float maths); not checked against the game.
   Not modelled: energy balance, Dyson power from the seed, multi-period model, building materials, Dark Fog defence cost.
+
+## 2026-11-22 — Review 8: DSP seed work (docs/review/fable-review-8.md)
+- Generator: same galaxy natively and in WASM (`vendor/dsp_seed_gen/src/detmath.rs`, libm on every target; `fingerprint` pinned). Was 26.70 vs 24.12 oil/s on the home planet of seed 12345678.
+- Model: station capacity 432 000/(d+8) (笑笑 belt 7200/min), oil extractors counted, Dark Fog scale on finished levels, stock override not × remaining, real system dedup, seed settings sanitized.
+- Galaxy tab: number fields apply on Enter / blur, out-of-date marks on results, worker error handling, licence + notice shipped in `licenses/`, no 10× setting.
+- Tests: 105 debug / 106 release; live `live_review8.py` 41/41 and `live_galaxy.py` 24/24 on :4175. Not committed to refactor: branch worktree-agent-a993b9de598a620ce.

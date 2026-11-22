@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use super::super::planet::Planet;
 use super::super::random::DspRandom;
 use super::super::simplex_noise::SimplexNoise;
@@ -49,10 +51,10 @@ impl PlanetAlgorithm for PlanetAlgorithm8 {
             .clamp(0.0, 2.0);
 
         let shaped_height = if noise_val < 1.0 {
-            let f = (noise_val * std::f64::consts::PI).cos() * 1.1;
+            let f = (noise_val * std::f64::consts::PI).cos_d() * 1.1;
             1.0 - ((f.signum() * f.powi(4)).clamp(-1.0, 1.0) + 1.0) * 0.5
         } else {
-            let f = ((noise_val - 1.0) * std::f64::consts::PI).cos() * 1.1;
+            let f = ((noise_val - 1.0) * std::f64::consts::PI).cos_d() * 1.1;
             2.0 - ((f.signum() * f.powi(4)).clamp(-1.0, 1.0) + 1.0) * 0.5
         };
 

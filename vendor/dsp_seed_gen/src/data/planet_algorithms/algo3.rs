@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use super::super::math::{levelize2, levelize4};
 use super::super::planet::Planet;
 use super::super::random::DspRandom;
@@ -45,9 +47,9 @@ impl PlanetAlgorithm for PlanetAlgorithm3 {
         let world_y = (v.1 as f64) * self.radius;
         let world_z = (v.2 as f64) * self.radius;
 
-        let warped_x = world_x + (world_y * 0.15).sin() * 3.0;
-        let warped_y = world_y + (world_z * 0.15).sin() * 3.0;
-        let warped_z = world_z + (warped_x * 0.15).sin() * 3.0;
+        let warped_x = world_x + (world_y * 0.15).sin_d() * 3.0;
+        let warped_y = world_y + (world_z * 0.15).sin_d() * 3.0;
+        let warped_z = world_z + (warped_x * 0.15).sin_d() * 3.0;
 
         let primary_noise = self.noise1.noise_3d_fbm(
             warped_x * freq_scale_x * 1.0,

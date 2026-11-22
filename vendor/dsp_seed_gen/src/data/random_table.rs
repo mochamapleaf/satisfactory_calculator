@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use std::sync::LazyLock;
 
 use super::random::DspRandom;
@@ -19,7 +21,7 @@ static RANDOM_TABLE: LazyLock<RandomTable> = LazyLock::new(|| RandomTable::gener
 fn normal(rand: &mut DspRandom) -> f64 {
     let num = rand.next_f64();
     let a = rand.next_f64() * std::f64::consts::PI * 2.0;
-    (-2.0 * (1.0 - num).ln()).sqrt() * a.sin()
+    (-2.0 * (1.0 - num).ln_d()).sqrt() * a.sin_d()
 }
 
 impl RandomTable {

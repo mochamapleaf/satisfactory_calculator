@@ -1,3 +1,4 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): `ActualVein::nodes` added; see NOTICE.md
 use super::enums::VeinType;
 use serde::Serialize;
 

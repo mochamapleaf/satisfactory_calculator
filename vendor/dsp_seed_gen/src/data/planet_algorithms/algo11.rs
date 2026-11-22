@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use super::super::math::{levelize2, levelize3};
 use super::super::planet::Planet;
 use super::super::random::DspRandom;
@@ -76,7 +78,7 @@ impl PlanetAlgorithm for PlanetAlgorithm11 {
             + detail_noise * 0.05;
 
         let primary_shaped = levelize2(
-            (remap(-1.0, 1.0, 0.0, 1.0, inner)).powf(self.mod_y) + 1.0,
+            (remap(-1.0, 1.0, 0.0, 1.0, inner)).powf_d(self.mod_y) + 1.0,
             1.0,
             0.0,
         );
@@ -90,7 +92,7 @@ impl PlanetAlgorithm for PlanetAlgorithm11 {
             2.0,
         );
         let secondary_shaped =
-            levelize3((remap(-1.0, 1.0, 0.0, 1.0, inner2)).powf(0.65), 1.0, 0.0) * primary_shaped;
+            levelize3((remap(-1.0, 1.0, 0.0, 1.0, inner2)).powf_d(0.65), 1.0, 0.0) * primary_shaped;
 
         let final_height = ((secondary_shaped - 0.4) * 0.9).max(-0.3);
 

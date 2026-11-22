@@ -470,6 +470,10 @@ svg.belt { display: block; font-family: var(--font-ui); }
 .galaxy .tag { margin-left: var(--s1); }
 .galaxy .threshold th[colspan] { text-align: center; border-bottom: 1px solid var(--rule); }
 .galaxy .solving { margin: var(--s2) 0; }
+/* a result computed from other settings than the ones on screen */
+.galaxy .staleresult { opacity: 0.5; }
+.galaxy .warn.stale { margin: var(--s2) 0; }
+.galaxy .hint code { font-size: inherit; }
 .dfbox { margin: var(--s5) 0 0; padding: var(--s2) 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .dfbox > summary { font-size: var(--t-lg); font-weight: 600; }
 .dfbox ul.plain li { gap: var(--s2); align-items: center; margin: var(--s1) 0; }

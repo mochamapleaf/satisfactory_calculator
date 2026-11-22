@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 /// f32-based 3D vector, used for birth point generation
@@ -85,10 +87,10 @@ impl VectorF3 {
 
     pub fn slerp(lhs: &VectorF3, rhs: &VectorF3, percent: f32) -> VectorF3 {
         let dot = VectorF3::dot(lhs, rhs).clamp(-1.0, 1.0);
-        let theta = dot.acos() * percent;
+        let theta = dot.acos_d() * percent;
         let mut relative_vec = rhs - &(lhs * dot);
         relative_vec.normalize();
-        &(lhs * theta.cos()) + &(&relative_vec * theta.sin())
+        &(lhs * theta.cos_d()) + &(&relative_vec * theta.sin_d())
     }
 }
 

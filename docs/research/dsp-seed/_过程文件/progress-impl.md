@@ -36,3 +36,10 @@ Plan: S1 vendor DoubleUTH generator (Apache-2.0, c050ff0) → S2 galaxy resource
 
 ## Known
 - WASM vs native generator: on seed 12345678 one planet of 145 (star 0 P2, the home ocean planet) differs: oil 24.12 vs 26.70/s, coal 0.80 vs 1.06 M (5 of 717 values; `wasm_vs_native.mjs`). Floating-point maths (wasm libm vs Windows CRT) on a terrain height test; the browser total oil is 402.3/s. Neither build is checked against the game; shown as a note in the tab.
+
+## Review 8 (2026-11-22, docs/review/fable-review-8.md) — what changed here
+- WASM vs native: FIXED. Cause: `std` sin/cos/acos/pow = Windows CRT natively, Rust libm in WASM; the planet grid differed in the last bit. `vendor/dsp_seed_gen/src/detmath.rs` (libm crate on every target). Both builds now give the native numbers (26.70 oil/s); `fingerprint` pinned in tests and checked by `wasm_vs_native.mjs` (pass/fail) and `live_review8.py`.
+- MINE corrected: stations A = 432 000 (笑笑's belt in BV 18 is 7200/min: 「五条蓝带运力=5×7200」), was 108 000.
+- Oil extractors count as buildings; Dark Fog scale uses finished levels (L−1) for both levels; a stock override is not multiplied by "remaining".
+- Still MINE / open: systems pooled (笑笑 opens one planet per system), vessel 400 + 2 warpers per trip (episode 11) next to episode-18 belts, miner 60/min × speed, heat values, no override field in the tab.
+- Published values checked (pre-Dark-Fog posts): 4 seeds star luminosity + distance, seed 29031989 home iron 2.3 M and oil 49.78/s match; its coal 8.3 M vs 8.59 M does not.

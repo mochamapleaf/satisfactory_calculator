@@ -1,0 +1,15 @@
+# progress-review8
+- start 2026-11-22: read progress-impl.md, report, review-4 format. Next: build native+wasm, reproduce generator diff.
+- baseline: cargo test -q at 41508da passes (debug). Trace harness in scratchpad/r8trace (native example + bare wasm32 cdylib run in node).
+- H1 root cause FOUND: std f32/f64 sin/cos/acos/pow = Windows CRT natively, Rust libm on wasm32; planet grid vertices (slerp) differ in last bit -> all height fields differ -> home planet vein threshold flips. Star direction/pose identical, so not the birth-point code.
+- H1 FIX (uncommitted): vendor/dsp_seed_gen/src/detmath.rs (libm crate, f32 via f64 like Unity Mathf), 14 upstream files now call .sin_d() etc. (header notice added), Cargo.toml + libm. Trace after fix: native == wasm on grid, all heights, all veins; native values unchanged (26.70 oil/s), wasm moved to native.
+- next: regression test (golden fingerprint), read dsp_galaxy.rs for model review, licence, UI, live test.
+- community check (subagent, log scratchpad/progress-seedverify.md): Gamersky 2021 seeds 13636977/38734423/39497430/46676919 O-star luminosity+distance match; Steam thread 2022 seed 29031989 home planet iron 2.3M / oil 49.78/s match (oil exact), coal 8.3M vs 8.59M differs. All pre-Dark-Fog posts.
+- model review notes so far: station capacity fit uses 1800/belt but 笑笑 says 蓝带=7200 (stations x4 too many); sys.dedup() only consecutive; Dark Fog scale uses L not L-1; stock_override x remaining inconsistent; UI numIn clamps while typing (cannot type 48 stars); stale results not marked; worker has no onerror.
+- Rust fixes done + tests (cargo test --release dsp_galaxy: 18 pass; -p dsp_seed_gen: 3 pass): Galaxy.fingerprint (pinned a42df4b4a9e7ccc9 for 12345678/32/0.1, 0ac61e60b96eab08 for 29031989/64/1), published_in_game_values test, SeedSettings::sanitized, station_a 432000, real system dedup, Dark Fog scale on finished levels, override not x remaining, oil extractors counted, level clamp, cache borrow. 12 systems LP: 9606 cols x 807 rows 241 ms native.
+- next: NOTICE/licence headers + licence copy in dist, UI (NumField, stale banner, worker onerror, remove 10x + native/wasm hint), wasm build, live test, review doc.
+- UI fixes done (Galaxy.tsx NumField, stale banners, worker onerror, licence links, fingerprint, no 10x, gas tag, oil extractors), licence copies in react-frontend/public/licenses. tsc + eslint clean, wasm-pack + vite build OK. wasm_vs_native.mjs: 717 values 0 differ, fingerprints equal for both seeds (PASS). WASM 3,588,739 B (refactor 4a86664 without the generator: 3,309,696).
+- next: cargo test -q debug + release full, live browser test on :4175 (extend live_galaxy.py), write fable-review-8.md, commit.
+- cargo test -q debug + release after fixes: pass (counts in review doc). Live: live_review8.py 41/41 on :4175 (preview already running from this worktree's dist), shots in shots-web/review8; old live_galaxy.py rerun as regression.
+- next: look at screenshots, write docs/review/fable-review-8.md (+ Resolution), update progress-impl MINE + PROGRESS.md, commit.
+- review doc written, progress-impl + PROGRESS.md updated, libm pinned =0.2.11; committing.

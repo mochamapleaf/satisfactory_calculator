@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): per-vein node counts (`nodes`), maths through crate::detmath; see NOTICE.md
+use crate::detmath::DetMath;
 use crate::data::birth_points::BirthPoints;
 use crate::data::game_desc::GameDesc;
 use crate::data::planet_raw_data::PlanetRawData;
@@ -175,10 +177,10 @@ impl<'a> Planet<'a> {
 
     pub fn get_orbital_radius(&self) -> f32 {
         *self.orbital_radius.get_or_init(|| {
-            let a = 1.2_f32.powf(self.orbit_radius_factor as f32);
+            let a = 1.2_f32.powf_d(self.orbit_radius_factor as f32);
             if let Some(orbit_planet) = self.orbit_around.borrow().as_deref() {
                 (((1600.0 * (self.orbit_index as f64) + 200.0)
-                    * (self.star.get_orbit_scaler().powf(0.3) as f64)
+                    * (self.star.get_orbit_scaler().powf_d(0.3) as f64)
                     * ((a + (1.0 - a) * 0.5) as f64)
                     + (orbit_planet.real_radius() as f64))
                     / 40000.0) as f32
@@ -221,7 +223,7 @@ impl<'a> Planet<'a> {
         } else {
             let habitable_radius = self.star.get_habitable_radius();
             let distance_log_factor = if habitable_radius > 0.0 {
-                (self.get_sun_distance() / habitable_radius).ln().abs()
+                (self.get_sun_distance() / habitable_radius).ln_d().abs()
             } else {
                 1000.0
             };
@@ -241,11 +243,11 @@ impl<'a> Planet<'a> {
 
     fn get_luminosity(&self) -> f32 {
         let mut luminosity =
-            (self.star.get_light_balance_radius() / (self.get_sun_distance() + 0.01)).powf(0.6);
+            (self.star.get_light_balance_radius() / (self.get_sun_distance() + 0.01)).powf_d(0.6);
         if luminosity > 1.0 {
-            luminosity = luminosity.ln() + 1.0;
-            luminosity = luminosity.ln() + 1.0;
-            luminosity = luminosity.ln() + 1.0;
+            luminosity = luminosity.ln_d() + 1.0;
+            luminosity = luminosity.ln_d() + 1.0;
+            luminosity = luminosity.ln_d() + 1.0;
         }
         (luminosity * 100.0).round_ties_even() / 100.0
     }
@@ -274,7 +276,7 @@ impl<'a> Planet<'a> {
                     (remaining_ratio + (0.35 - remaining_ratio) * 0.5).clamp(0.08, 0.8);
                 let habitable_bias_threshold = (self.get_habitable_bias() / allocation_probability)
                     .clamp(0.0, 1.1)
-                    .powf(allocation_probability * 10.0);
+                    .powf_d(allocation_probability * 10.0);
                 if self.habitable_factor > (habitable_bias_threshold as f64) {
                     self.increment_habitable_count();
                     return PlanetType::Ocean;
@@ -407,7 +409,7 @@ impl<'a> Planet<'a> {
                 * (if self.has_orbit_around() {
                     1.0
                 } else {
-                    self.get_orbital_radius().powf(0.25) as f64
+                    self.get_orbital_radius().powf_d(0.25) as f64
                 });
             rotation_period = 1.0 / (1.0 / self.get_sun_orbital_period() + 1.0 / rotation_period);
             if self.rotation_param > 0.85 && self.rotation_param <= 0.9 {
@@ -522,7 +524,7 @@ impl<'a> Planet<'a> {
             let gas_coef = self.game_desc.gas_coef();
             let mut rand = DspRandom::new(self.theme_seed);
             let theme_proto = self.get_theme();
-            let coef = self.star.get_resource_coef().powf(0.3);
+            let coef = self.star.get_resource_coef().powf_d(0.3);
             for (item, speed) in theme_proto
                 .gas_items
                 .iter()
@@ -633,8 +635,8 @@ impl<'a> Planet<'a> {
                 let rare_setting_1 = theme.rare_settings[index1 * 4 + 2];
                 let rare_setting_2 = theme.rare_settings[index1 * 4 + 3];
                 let adjusted_rare_chance =
-                    1.0 - (1.0 - rare_vein_chance).powf(star_type_multiplier);
-                let adjust_rare_count = 1.0 - (1.0 - rare_setting_2).powf(star_type_multiplier);
+                    1.0 - (1.0 - rare_vein_chance).powf_d(star_type_multiplier);
+                let adjust_rare_count = 1.0 - (1.0 - rare_setting_2).powf_d(star_type_multiplier);
                 if rand1.next_f64() < (adjusted_rare_chance as f64) {
                     vein_spots[rare_vein] += 1;
                     vein_counts[rare_vein] = adjust_rare_count;
@@ -655,7 +657,7 @@ impl<'a> Planet<'a> {
                 resource_coef *= 2.0 / 3.0;
             } else if is_rare_resource {
                 if resource_coef > 1.0 {
-                    resource_coef = resource_coef.powf(0.8)
+                    resource_coef = resource_coef.powf_d(0.8)
                 }
                 resource_coef *= 0.7;
             }
@@ -702,7 +704,7 @@ impl<'a> Planet<'a> {
             1
         } else {
             let total_amount_factor = if is_oil {
-                resource_coef.powf(0.5)
+                resource_coef.powf_d(0.5)
             } else {
                 *resource_coef
             };
@@ -761,7 +763,7 @@ impl<'a> Planet<'a> {
                         vein.max_patch = (vein_count_factor * 24.0).round_ties_even() as i32;
                     }
                     let total_amount_factor = if vein.vein_type == VeinType::Oil {
-                        resource_coef.powf(0.5)
+                        resource_coef.powf_d(0.5)
                     } else {
                         *resource_coef
                     };
@@ -823,9 +825,9 @@ impl<'a> Planet<'a> {
 
         let orbit_radius = self.get_orbital_radius() as f64;
         let local_pos = VectorF3(
-            (orbit_angle.cos() * orbit_radius) as f32,
+            (orbit_angle.cos_d() * orbit_radius) as f32,
             0.0,
-            (orbit_angle.sin() * orbit_radius) as f32,
+            (orbit_angle.sin_d() * orbit_radius) as f32,
         );
 
         let orbit_rot = self.get_runtime_orbit_rotation();
@@ -1086,8 +1088,8 @@ impl<'a> Planet<'a> {
                         if existing_node.magnitude_sq() <= 36.0 {
                             let random_angle_radians = rand2.next_f64() * PI * 2.0;
                             let mut random_dir = VectorF2::new(
-                                random_angle_radians.cos() as f32,
-                                random_angle_radians.sin() as f32,
+                                random_angle_radians.cos_d() as f32,
+                                random_angle_radians.sin_d() as f32,
                             );
                             random_dir += existing_node * 0.2;
                             random_dir.normalize();
@@ -1105,7 +1107,7 @@ impl<'a> Planet<'a> {
                     }
                 }
                 let adjusted_resource_coef = if is_oil {
-                    resource_coef.powf(0.5)
+                    resource_coef.powf_d(0.5)
                 } else {
                     *resource_coef
                 };
@@ -1174,8 +1176,8 @@ impl<'a> Planet<'a> {
         let segment = ((self.radius / 4.0 + 0.1) as i32 * 4) as f32;
         let two_pi = PI as f32 * 2.0;
         let pos = pos.normalized();
-        let latitude_angle = pos.1.asin();
-        let mut longitude_angle = pos.0.atan2(-pos.2);
+        let latitude_angle = pos.1.asin_d();
+        let mut longitude_angle = pos.0.atan2_d(-pos.2);
         let mut latitude_index_raw = latitude_angle / two_pi * segment;
         let latitude_index = (latitude_index_raw.abs() - 0.1).max(0.0) as i32;
         let longitude_segment_count =
@@ -1185,10 +1187,10 @@ impl<'a> Planet<'a> {
         longitude_index_raw = (longitude_index_raw * 5.0).round_ties_even() / 5.0;
         let latitude_radians = latitude_index_raw / segment * two_pi;
         longitude_angle = longitude_index_raw / longitude_segment_count * two_pi;
-        let latitude_sin = latitude_radians.sin();
-        let latitude_cos = latitude_radians.cos();
-        let longitude_sin = longitude_angle.sin();
-        let longitude_cos = longitude_angle.cos();
+        let latitude_sin = latitude_radians.sin_d();
+        let latitude_cos = latitude_radians.cos_d();
+        let longitude_sin = longitude_angle.sin_d();
+        let longitude_cos = longitude_angle.cos_d();
         VectorF3(
             latitude_cos * longitude_sin,
             latitude_sin,
@@ -1199,7 +1201,7 @@ impl<'a> Planet<'a> {
 
 fn determine_longitude_segment_count(latitude_index: i32, segment: f32) -> i32 {
     let candidate_segment_count = (((latitude_index as f32) / (segment / 4.0) * PI as f32 * 0.5)
-        .cos()
+        .cos_d()
         .abs()
         * segment)
         .ceil() as usize;

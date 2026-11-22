@@ -65,6 +65,21 @@ impl Default for SeedSettings {
     }
 }
 
+impl SeedSettings {
+    /// The settings the generator really runs with: 32–64 stars, a positive finite resource multiplier
+    /// (≥ 99.5 = infinite), hive settings ≥ 0. `Galaxy::settings` holds this form (review 8, L5).
+    pub fn sanitized(&self) -> Self {
+        let fin = |x: f64, lo: f64, hi: f64, d: f64| if x.is_finite() { x.clamp(lo, hi) } else { d };
+        Self {
+            seed: self.seed,
+            stars: self.stars.clamp(32, 64),
+            resource_multiplier: fin(self.resource_multiplier, 0.01, 100.0, 1.0),
+            hive_initial_colonize: fin(self.hive_initial_colonize, 0.0, 10.0, 1.0),
+            hive_max_density: fin(self.hive_max_density, 0.0, 10.0, 1.0),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vein {
     pub item: String,
@@ -133,6 +148,8 @@ pub struct Galaxy {
     pub oil_rate: f64,
     pub seeps: i32,
     pub generate_ms: f64,
+    /// `dsp_seed_gen::fingerprint` in hex: the same on every target for the same settings (review 8, H1).
+    pub fingerprint: String,
 }
 
 pub fn vein_item(kind: &str) -> Option<&'static str> {
@@ -186,8 +203,9 @@ pub fn points_per_unit(item: &str, multiplier: f64) -> f64 {
 
 pub fn generate(s: &SeedSettings) -> Galaxy {
     let t0 = web_time::Instant::now();
+    let s = &s.sanitized();
     let desc = dsp_seed_gen::GameDesc {
-        star_count: s.stars.clamp(32, 64),
+        star_count: s.stars,
         resource_multiplier: s.resource_multiplier as f32,
         hive_initial_colonize: s.hive_initial_colonize,
         hive_max_density: s.hive_max_density,
@@ -282,6 +300,7 @@ pub fn generate(s: &SeedSettings) -> Galaxy {
         oil_rate,
         seeps,
         generate_ms: t0.elapsed().as_secs_f64() * 1e3,
+        fingerprint: format!("{:016x}", dsp_seed_gen::fingerprint(&raw)),
     }
 }
 
@@ -376,19 +395,22 @@ pub struct DarkFog {
     pub bases: Vec<(usize, f64)>,
     /// Measured drops per base per minute (no public data: in-game measurement, report §5.4).
     pub drops: Vec<ItemRate>,
-    /// Vein-utilisation level at which `drops` were measured; normal items scale by (1+0.04L)/(1+0.04L_m).
+    /// Vein-utilisation level being researched when `drops` were measured (L_m − 1 levels done, the same
+    /// convention as the plan's level L); normal items scale by (1+0.04(L−1))/(1+0.04(L_m−1)).
     pub measured_at_level: u32,
 }
 
 impl DarkFog {
-    /// Drops per base per minute at vein-utilisation level `level`, after the unlock gate.
+    /// Drops per base per minute while level `level` is researched (`level − 1` done, like the mining
+    /// speed), after the unlock gate.
     pub fn rates(&self, level: u32) -> (Vec<(String, f64)>, Vec<String>) {
         let mut out = vec![];
         let mut warn = vec![];
         if !self.enabled {
             return (out, warn);
         }
-        let scale = (1.0 + 0.04 * level as f64) / (1.0 + 0.04 * self.measured_at_level as f64);
+        let done = |l: u32| l.saturating_sub(1) as f64;
+        let scale = (1.0 + 0.04 * done(level)) / (1.0 + 0.04 * done(self.measured_at_level));
         for d in &self.drops {
             if !(d.rate.is_finite() && d.rate > 0.0) {
                 continue;
@@ -628,15 +650,17 @@ pub struct GalaxyPlanSettings {
     /// Active star indices (empty = automatic pick, `auto_systems`).
     pub systems: Vec<usize>,
     pub oil: OilRate,
-    /// Total buildings cap (production + miners + pumps + collectors + receivers + stations).
+    /// Total buildings cap (production + miners + pumps + oil extractors + collectors + receivers + stations).
     pub building_cap: Option<f64>,
     /// Ray-receiver power available, GW, over all systems (Dyson spheres; not computed from the seed).
     pub photon_gw: Option<f64>,
     /// Items per logistics vessel trip; warpers per item shipped = `warpers_per_trip` / capacity.
     pub vessel_capacity: f64,
     pub warpers_per_trip: f64,
-    /// Interstellar station capacity A / (d + d0) items/min per station at d ly (fit to 笑笑: 4 blue belts
-    /// at 7 ly, 3 at 12 ly); stations at both ends.
+    /// Interstellar station capacity A / (d + d0) items/min per station at d ly; stations at both ends.
+    /// MINE fit to 笑笑 (BV 18, 76:44–88:32): "7 光年内可达 4 条蓝带，12 光年 3 条蓝带" with his belt of
+    /// that episode, "五条蓝带运力=5×7200" (four-stacked, 7200/min): 28 800/min at 7 ly, 21 600 at 12 ly
+    /// → A = 432 000, d0 = 8 (review 8, M1: 108 000 took the belt as 1800/min, four times too many stations).
     pub station_a: f64,
     pub station_d0: f64,
     pub dark_fog: DarkFog,
@@ -663,7 +687,7 @@ impl Default for GalaxyPlanSettings {
             photon_gw: None,
             vessel_capacity: 400.0,
             warpers_per_trip: 2.0,
-            station_a: 108_000.0,
+            station_a: 432_000.0,
             station_d0: 8.0,
             dark_fog: DarkFog::default(),
         }
@@ -737,6 +761,7 @@ pub struct SystemResult {
     pub production_buildings: f64,
     pub miners: f64,
     pub pumps: f64,
+    pub oil_extractors: f64,
     pub collectors: f64,
     pub receivers: f64,
     pub stations: f64,
@@ -776,6 +801,7 @@ pub struct GalaxyPlan {
     pub production_buildings: f64,
     pub miners: f64,
     pub pumps: f64,
+    pub oil_extractors: f64,
     pub collectors: f64,
     pub receivers: f64,
     pub stations: f64,
@@ -842,14 +868,16 @@ fn dist(a: &StarInfo, b: &StarInfo) -> f64 {
 
 pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> GalaxyPlan {
     let t0 = web_time::Instant::now();
-    let mut out = GalaxyPlan { level: gs.level.max(1), ..Default::default() };
+    let mut out = GalaxyPlan { level: gs.level.clamp(1, 10_000), ..Default::default() };
     let level = out.level;
     let speed = speed_at(level);
     out.speed = speed;
     out.s_level = s_of(level);
     let mut sys: Vec<usize> = if gs.systems.is_empty() { auto_systems(g) } else { gs.systems.clone() };
     sys.retain(|i| *i < g.stars.len());
-    sys.dedup();
+    // a star listed twice would count its stock twice (`dedup` only drops neighbours)
+    let mut seen = BTreeSet::new();
+    sys.retain(|i| seen.insert(*i));
     if sys.len() > MAX_SYSTEMS {
         out.warnings.push(format!("{} systems chosen; only the first {MAX_SYSTEMS} are planned", sys.len()));
         sys.truncate(MAX_SYSTEMS);
@@ -892,7 +920,10 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let mut bal: Vec<Vec<Vec<(Variable, f64)>>> = vec![vec![vec![]; ns]; items.len()];
     let mut bld_terms: Vec<(Variable, f64)> = vec![];
     let z = if target_mode {
-        let t = gs.target.max(0.0);
+        let t = if gs.target.is_finite() { gs.target.max(0.0) } else { 0.0 };
+        if !gs.target.is_finite() {
+            out.warnings.push("target is not a number: planned 0 cubes/min".into());
+        }
         p.add_var(0.0, (t, t))
     } else {
         p.add_var(1.0, (0.0, f64::INFINITY))
@@ -925,7 +956,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         item: String,
         v: Variable,
         per_bld: f64,
-        kind: u8, // 0 miner, 1 pump, 2 receiver, 3 oil (no building count), 4 drop
+        kind: u8, // 0 miner, 1 pump, 2 receiver, 3 oil extractor, 4 drop
         quota: Option<f64>,
         rate_cap: Option<f64>,
     }
@@ -941,7 +972,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         let mut oceans = BTreeSet::new();
         for pl in &st.planets {
             for v in &pl.veins {
-                *stock.entry(v.item.clone()).or_default() += stock_of(v) * stocks_scale;
+                *stock.entry(v.item.clone()).or_default() += stock_of(v);
             }
             oil_rate += pl.oil_rate;
             seeps += pl.seeps;
@@ -974,8 +1005,21 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
             } else {
                 None
             };
-            let b = gs.stock_override.get(item).map(|o| o * b / total_stock(g, item).max(1e-9)).unwrap_or(*b);
-            let per_bld = if item == "crude-oil" { 0.0 } else { 1.0 / miner_rate };
+            // an override is the remaining galaxy stock itself (as in `thresholds`): this system's share of
+            // it; otherwise the generated stock × the remaining share
+            let b = match gs.stock_override.get(item).filter(|o| o.is_finite() && **o >= 0.0) {
+                Some(o) => o * b / total_stock(g, item).max(1e-9),
+                None => b * stocks_scale,
+            };
+            // oil: one extractor per seep, used in proportion to the rate taken (review 8, L3)
+            let per_bld = if item == "crude-oil" {
+                match rate_cap {
+                    Some(c) if c > 0.0 => seeps as f64 / c,
+                    _ => 0.0,
+                }
+            } else {
+                1.0 / miner_rate
+            };
             let v = p.add_var(bld_w * per_bld + tb * 1e-6, (0.0, rate_cap.unwrap_or(f64::INFINITY)));
             if per_bld > 0.0 {
                 bld_terms.push((v, per_bld));
@@ -989,7 +1033,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
             } else {
                 None
             };
-            ext.push(Ext { s, item: item.clone(), v, per_bld, kind: if per_bld > 0.0 { 0 } else { 3 }, quota, rate_cap });
+            ext.push(Ext { s, item: item.clone(), v, per_bld, kind: if item == "crude-oil" { 3 } else { 0 }, quota, rate_cap });
         }
         for o in &oceans {
             if let Some(&k) = idx.get(o.as_str()) {
@@ -1107,6 +1151,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
             production_buildings: 0.0,
             miners: 0.0,
             pumps: 0.0,
+            oil_extractors: 0.0,
             collectors: 0.0,
             receivers: 0.0,
             stations: 0.0,
@@ -1151,6 +1196,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
                 sr.receivers += r * e.per_bld;
                 out.photons_per_min += r;
             }
+            3 => sr.oil_extractors += r * e.per_bld,
             _ => {}
         }
         if e.kind == 4 {
@@ -1194,12 +1240,14 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         out.production_buildings += sr.production_buildings;
         out.miners += sr.miners;
         out.pumps += sr.pumps;
+        out.oil_extractors += sr.oil_extractors;
         out.collectors += sr.collectors;
         out.receivers += sr.receivers;
         out.stations += sr.stations;
         out.power_mw += sr.power_mw;
     }
-    out.buildings = out.production_buildings + out.miners + out.pumps + out.collectors + out.receivers + out.stations;
+    out.buildings =
+        out.production_buildings + out.miners + out.pumps + out.oil_extractors + out.collectors + out.receivers + out.stations;
     out.receiver_gw = out.photons_per_min * PHOTON_MJ / 60.0 / 1000.0;
     if zv > 1e-9 {
         out.raw_per_cube = mined.iter().map(|(i, r)| ItemRate { item: i.clone(), rate: r / zv }).collect();

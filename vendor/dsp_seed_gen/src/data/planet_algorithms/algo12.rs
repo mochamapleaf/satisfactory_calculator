@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use super::super::math::clamp01;
 use super::super::planet::Planet;
 use super::super::random::DspRandom;
@@ -53,7 +55,7 @@ impl PlanetAlgorithm for PlanetAlgorithm12 {
         let pi = std::f64::consts::PI;
 
         let v = self.grid.get_vertex(index);
-        let latitude_factor = ((v.1 as f64).abs().asin()) * 2.0 / pi;
+        let latitude_factor = ((v.1 as f64).abs().asin_d()) * 2.0 / pi;
         let x_pos = v.0 as f64;
         let y_pos_mod = (v.1 as f64) * 2.5 * self.mod_y;
         let z_pos = v.2 as f64;
@@ -93,7 +95,7 @@ impl PlanetAlgorithm for PlanetAlgorithm12 {
             1.0,
             ridge_amplitude + height_multiplier * combined_noise * ridged + 0.5,
         )) + 0.5)
-            .powf(1.5)
+            .powf_d(1.5)
             - curve_evaluate(latitude_factor * 0.9))
             * 2.0;
 

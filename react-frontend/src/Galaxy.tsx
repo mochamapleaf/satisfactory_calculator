@@ -16,18 +16,18 @@ interface StarInfo {
 }
 interface Galaxy {
   settings: SeedSettings; rare_tier: boolean; infinite: boolean; stars: StarInfo[]; totals: { item: string; stock: number; planets: number }[]
-  gas_giants: number; gas_totals: GasRate[]; oil_rate: number; seeps: number; generate_ms: number; auto_systems: number[]; error?: string
+  gas_giants: number; gas_totals: GasRate[]; oil_rate: number; seeps: number; generate_ms: number; fingerprint: string; auto_systems: number[]; error?: string
 }
 interface DarkFog { enabled: boolean; level: number; bases: [number, number][]; drops: ItemRate[]; measured_at_level: number }
 interface ThresholdRow { item: string; stock: number; per_cube: number; level: (number | null)[]; cubes: (number | null)[]; hours: (number | null)[]; quota_at_level: number }
 interface ThresholdReport { rows: ThresholdRow[]; feasible_from: (number | null)[]; raw_at_feasible: ItemRate[]; raw_at_level: ItemRate[]; level: number; s_level: number; warnings: string[]; error?: string }
 interface SystemResult {
-  star: number; name: string; distance: number; cubes: number; production_buildings: number; miners: number; pumps: number; collectors: number
+  star: number; name: string; distance: number; cubes: number; production_buildings: number; miners: number; pumps: number; oil_extractors: number; collectors: number
   receivers: number; stations: number; power_mw: number; recipes: { recipe: string; mode: string; building: string; machines: number }[]
   extraction: { item: string; rate: number; cap: number | null; limit: string }[]; drops: ItemRate[]
 }
 interface GalaxyPlan {
-  status: string; z: number; level: number; speed: number; s_level: number; buildings: number; production_buildings: number; miners: number; pumps: number
+  status: string; z: number; level: number; speed: number; s_level: number; buildings: number; production_buildings: number; miners: number; pumps: number; oil_extractors: number
   collectors: number; receivers: number; stations: number; photons_per_min: number; receiver_gw: number; warpers_per_min: number; power_mw: number
   systems: SystemResult[]; shipments: { item: string; from: number; to: number; rate: number; ly: number }[]
   rares: { item: string; per_cube: number; quota_per_cube: number; binding: boolean }[]; raw_per_cube: ItemRate[]
@@ -54,12 +54,17 @@ const KEY = 'dspGalaxy.v1'
 function loadOpts(): Opts {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Partial<Opts> | null
-    if (raw && typeof raw === 'object') return { ...DEFAULTS, ...raw, seed: { ...DEFAULTS.seed, ...raw.seed }, dark_fog: { ...DEFAULTS.dark_fog, ...raw.dark_fog } }
+    if (raw && typeof raw === 'object') {
+      const o = { ...DEFAULTS, ...raw, seed: { ...DEFAULTS.seed, ...raw.seed }, dark_fog: { ...DEFAULTS.dark_fog, ...raw.dark_fog } }
+      if (!MULTS.some(([v]) => v === o.seed.resource_multiplier)) o.seed.resource_multiplier = 1
+      return o
+    }
   } catch { /* private mode or bad JSON: defaults */ }
   return DEFAULTS
 }
 
-const MULTS: [number, string][] = [[0.1, '0.1× 极少'], [0.5, '0.5×'], [0.8, '0.8×'], [1, '1×'], [1.5, '1.5×'], [2, '2×'], [3, '3×'], [5, '5×'], [8, '8×'], [10, '10×'], [100, '无限 infinite']]
+// the game's ten settings (the same list as DSP-Seed-Finder web/src/util.ts; there is no 10×)
+const MULTS: [number, string][] = [[0.1, '0.1× 极少'], [0.5, '0.5×'], [0.8, '0.8×'], [1, '1×'], [1.5, '1.5×'], [2, '2×'], [3, '3×'], [5, '5×'], [8, '8×'], [100, '无限 infinite']]
 /** BWIKI 黑雾掉落 unlock levels (same table as dsp_galaxy.rs `drop_unlock_level`). */
 const DROPS: [string, number][] = [
   ['processor', 9], ['graphene', 9], ['carbon-nanotube', 12], ['df-dark-fog-matrix', 12], ['optical-grating-crystal', 15], ['particle-container', 15],
@@ -74,9 +79,26 @@ const num = (x: number, d = 0) => (Number.isFinite(x) ? (Number(x.toFixed(d)) + 
 /** Compact: 1.23 M, 456 k. */
 const compact = (x: number) => (Math.abs(x) >= 1e6 ? `${fmt(x / 1e6, 2)} M` : Math.abs(x) >= 1e4 ? `${fmt(x / 1e3, 0)} k` : num(x, 1))
 const lv = (l: number | null | undefined) => (l === null || l === undefined ? '—' : `L${l}`)
-const numIn = (v: string, lo: number, hi: number, fallback: number) => {
-  const x = Number(v)
-  return Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : fallback
+
+/** Number field: typing is free; the value is clamped and applied on Enter or when the field is left
+ *  (clamping on every keystroke made "48" untypeable in a 32–64 field: "4" became 32). An empty
+ *  `nullable` field means "none". */
+function NumField({ value, onCommit, lo, hi, integer, nullable, ...rest }: {
+  value: number | null; onCommit: (v: number | null) => void; lo: number; hi: number; integer?: boolean; nullable?: boolean
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'>) {
+  const show = (v: number | null) => (v === null ? '' : String(v))
+  const [draft, setDraft] = useState(show(value))
+  useEffect(() => setDraft(show(value)), [value])
+  const commit = () => {
+    if (draft.trim() === '' && nullable) { if (value !== null) onCommit(null); return }
+    const x = Number(draft)
+    if (draft.trim() === '' || !Number.isFinite(x)) { setDraft(show(value)); return }
+    const v = Math.min(hi, Math.max(lo, integer ? Math.round(x) : x))
+    setDraft(show(v))
+    if (v !== value) onCommit(v)
+  }
+  return <input type="number" min={lo} max={hi} {...rest} value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit}
+    onKeyDown={e => { if (e.key === 'Enter') commit() }} />
 }
 
 // one worker for all calls; answers matched by id
@@ -89,6 +111,15 @@ function call<T>(fn: 'galaxy' | 'thresholds' | 'plan', payload: unknown): Promis
     worker.onmessage = (e: MessageEvent<{ id: number; out: string }>) => {
       waiting.get(e.data.id)?.(e.data.out)
       waiting.delete(e.data.id)
+    }
+    // a worker that fails to load or dies answers nothing: end every pending call with an error and
+    // start a fresh worker on the next call, so the tab never stays on "Solving…"
+    worker.onerror = e => {
+      const out = JSON.stringify({ error: `the galaxy worker failed: ${e.message || 'could not load'}` })
+      waiting.forEach(res => res(out))
+      waiting.clear()
+      worker?.terminate()
+      worker = null
     }
   }
   const id = nextId++
@@ -132,36 +163,47 @@ export default function GalaxyTab({ data, settings }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { importSeed(o.seed) }, [])
 
-  const systems = g ? (o.systems ?? g.auto_systems) : []
+  const systems = useMemo(() => (g && !g.error ? (o.systems ?? g.auto_systems) : []), [g, o.systems])
   const toggleSystem = (i: number) => {
     const cur = new Set(systems)
     if (cur.has(i)) cur.delete(i); else cur.add(i)
     set({ systems: [...cur].sort((a, b) => a - b) })
   }
 
+  // what each button sends; a result is shown as out of date when this no longer equals what it was computed from
+  const thPayload = useMemo(() => JSON.stringify({
+    seed: o.seed, plan, rate: o.rate, remaining: o.remaining / 100, stock_override: {}, dark_fog: darkFog, level: Math.max(6, o.level),
+  }), [o.seed, plan, o.rate, o.remaining, darkFog, o.level])
+  const gpPayload = useMemo(() => JSON.stringify({
+    seed: o.seed, plan, goal: o.goal, target: o.target, objective: o.objective, level: o.level, rho: o.rho, phi: o.phi / 100,
+    stock_quotas: true, remaining: o.remaining / 100, systems, oil: o.oil, building_cap: o.building_cap, photon_gw: o.photon_gw,
+    vessel_capacity: o.vessel_capacity, warpers_per_trip: o.warpers_per_trip, dark_fog: darkFog,
+  }), [o, plan, systems, darkFog])
+  const [thKey, setThKey] = useState('')
+  const [gpKey, setGpKey] = useState('')
   const runThresholds = () => {
+    const t = gen.current, sent = thPayload
     setBusy('Computing thresholds…')
-    const so: Record<string, number> = {}
-    void call<ThresholdReport>('thresholds', {
-      seed: o.seed, plan, rate: o.rate, remaining: o.remaining / 100, stock_override: so, dark_fog: darkFog, level: o.level,
-    }).then(r => { setBusy(''); setTh(r) })
+    void call<ThresholdReport>('thresholds', JSON.parse(sent)).then(r => { if (t !== gen.current) return; setBusy(''); setTh(r); setThKey(sent) })
   }
   const runPlan = () => {
+    const t = gen.current, sent = gpPayload
     setBusy('Solving the galaxy LP…')
-    void call<GalaxyPlan>('plan', {
-      seed: o.seed, plan, goal: o.goal, target: o.target, objective: o.objective, level: o.level, rho: o.rho, phi: o.phi / 100,
-      stock_quotas: true, remaining: o.remaining / 100, systems, oil: o.oil, building_cap: o.building_cap, photon_gw: o.photon_gw,
-      vessel_capacity: o.vessel_capacity, warpers_per_trip: o.warpers_per_trip, dark_fog: darkFog,
-    }).then(r => { setBusy(''); setGp(r) })
+    void call<GalaxyPlan>('plan', JSON.parse(sent)).then(r => { if (t !== gen.current) return; setBusy(''); setGp(r); setGpKey(sent) })
   }
+  const thStale = !!th && !th.error && thKey !== thPayload
+  const gpStale = !!gp && !gp.error && gpKey !== gpPayload
 
   const starName = (i: number) => g?.stars[i]?.name ?? `#${i}`
+  const seedDirty = JSON.stringify(seedDraft) !== JSON.stringify(o.seed)
   const prolif = settings.effects.find(e => e.startsWith('proliferator'))
 
   return (
     <div className="mixedbelt galaxy">
       <p className="hint">
-        星区规划 Galaxy planning: generate the galaxy of a seed (DoubleUTH/DSP-Seed-Finder generator, Apache-2.0, not yet checked against a save),
+        星区规划 Galaxy planning: generate the galaxy of a seed (generator: <a href="https://github.com/DoubleUTH/DSP-Seed-Finder" target="_blank" rel="noreferrer">DoubleUTH/DSP-Seed-Finder</a>, modified,{' '}
+        <a href={`${import.meta.env.BASE_URL}licenses/DSP-Seed-Finder-LICENSE.txt`} target="_blank" rel="noreferrer">Apache-2.0</a>,{' '}
+        <a href={`${import.meta.env.BASE_URL}licenses/DSP-Seed-Finder-NOTICE.txt`} target="_blank" rel="noreferrer">changes</a>),
         find when each finite resource can be used forever (矿物利用 0.94<sup>L</sup>), and split production over star systems.
         Recipe options come from the sidebar: {settings.allow_all_alternates ? 'all alternates' : `${settings.enabled_alternates.length} alternates`},
         {prolif ? ` proliferator ${settings.effects.filter(e => e.startsWith('proliferator')).join(' + ')}` : ' no proliferator'}
@@ -171,8 +213,8 @@ export default function GalaxyTab({ data, settings }: Props) {
       {/* ---- seed import */}
       <h3>种子 Seed</h3>
       <div className="mbsettings">
-        <label>Seed<input type="number" value={seedDraft.seed} onChange={e => setSeedDraft(x => ({ ...x, seed: Math.trunc(numIn(e.target.value, 0, 99999999, x.seed)) }))} style={{ width: 110 }} /></label>
-        <label>Stars<input type="number" min={32} max={64} value={seedDraft.stars} onChange={e => setSeedDraft(x => ({ ...x, stars: Math.round(numIn(e.target.value, 32, 64, x.stars)) }))} /></label>
+        <label>Seed<NumField value={seedDraft.seed} lo={0} hi={99999999} integer onCommit={v => setSeedDraft(x => ({ ...x, seed: v ?? x.seed }))} style={{ width: 110 }} /></label>
+        <label>Stars<NumField value={seedDraft.stars} lo={32} hi={64} integer onCommit={v => setSeedDraft(x => ({ ...x, stars: v ?? x.stars }))} /></label>
         <label>Resources
           <select value={seedDraft.resource_multiplier} onChange={e => setSeedDraft(x => ({ ...x, resource_multiplier: Number(e.target.value) }))}>
             {MULTS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
@@ -182,12 +224,17 @@ export default function GalaxyTab({ data, settings }: Props) {
         <details>
           <summary>Dark Fog generation settings (hive counts)</summary>
           <div className="mbsettings">
-            <label>Initial colonize<input type="number" step={0.25} value={seedDraft.hive_initial_colonize} onChange={e => setSeedDraft(x => ({ ...x, hive_initial_colonize: numIn(e.target.value, 0, 2, 1) }))} /></label>
-            <label>Max density<input type="number" step={0.25} value={seedDraft.hive_max_density} onChange={e => setSeedDraft(x => ({ ...x, hive_max_density: numIn(e.target.value, 0, 3, 1) }))} /></label>
+            <label>Initial colonize<NumField step={0.25} value={seedDraft.hive_initial_colonize} lo={0} hi={2} onCommit={v => setSeedDraft(x => ({ ...x, hive_initial_colonize: v ?? 1 }))} /></label>
+            <label>Max density<NumField step={0.25} value={seedDraft.hive_max_density} lo={0} hi={3} onCommit={v => setSeedDraft(x => ({ ...x, hive_max_density: v ?? 1 }))} /></label>
           </div>
         </details>
       </div>
-      <p className="hint">The generator is not checked against the game yet. In the browser its floating-point maths can differ from the desktop build on a few planets (seed 12345678: one of 145 planets, the home ocean planet, 24.1 vs 26.7 oil/s).</p>
+      <p className="hint">
+        The browser and the desktop build give the same galaxy{g && !g.error ? <> (fingerprint <code>{g.fingerprint}</code>)</> : null}. Against the game it is spot-checked only:
+        values players posted before the Dark Fog update match (star luminosity and distance for four seeds; home-planet iron and oil for one, its coal 8.3 M vs 8.59 M here).
+        Check a planet of your own save before relying on a stock.
+        {seedDirty && <> <b>The fields above differ from the imported galaxy</b> (seed {o.seed.seed}, {o.seed.stars} stars, {o.seed.resource_multiplier}×): press Import seed.</>}
+      </p>
       {busy && <p className="solving" role="status">{busy}</p>}
       {g?.error && <p className="warn">{g.error}</p>}
       {g && !g.error && <GalaxyTables g={g} name={name} systems={systems} toggle={toggleSystem} open={open} setOpen={setOpen}
@@ -199,16 +246,17 @@ export default function GalaxyTab({ data, settings }: Props) {
         <p className="hint">
           Level L at which a resource can be used at its unconstrained rate forever, if every cube from then on goes into vein utilisation:
           a·ρ·S(L) ≤ B, S(L) = Σ<sub>n≥L</sub> 4000(n−5)·0.94<sup>n−1</sup> (S(6) = 815 449). ρ = 0.8 if research labs are sprayed with Mk.III (×1.25 hashes, 存疑).
-          B is the remaining stock: oil counts seep points above the 2500 floor.
+          B is the remaining stock: oil counts seep points above the 2500 floor. 笑笑 waits about five levels past the release level as a buffer (L80 → L85).
         </p>
         <div className="mbsettings">
-          <label>Cubes/min (for hours)<input type="number" value={o.rate} onChange={e => set({ rate: numIn(e.target.value, 1, 1e7, 750) })} /></label>
-          <label>Stock remaining %<input type="number" value={o.remaining} onChange={e => set({ remaining: numIn(e.target.value, 0, 100, 100) })} /></label>
-          <label>Quota level L<input type="number" value={o.level} onChange={e => set({ level: Math.round(numIn(e.target.value, 6, 2000, 81)) })} /></label>
+          <label>Cubes/min (for hours)<NumField value={o.rate} lo={1} hi={1e7} onCommit={v => set({ rate: v ?? 750 })} /></label>
+          <label>Stock remaining %<NumField value={o.remaining} lo={0} hi={100} onCommit={v => set({ remaining: v ?? 100 })} /></label>
+          <label>Quota level L<NumField value={o.level} lo={1} hi={2000} integer onCommit={v => set({ level: v ?? 81 })} /></label>
           <button onClick={runThresholds} disabled={!!busy}>Compute thresholds</button>
         </div>
         {th?.error && <p className="warn">{th.error}</p>}
-        {th && !th.error && <ThresholdTable th={th} name={name} />}
+        {thStale && <p className="warn stale" role="status"><b>Out of date</b> — settings changed since these thresholds were computed. Press Compute thresholds.</p>}
+        {th && !th.error && <div className={thStale ? 'staleresult' : undefined}><ThresholdTable th={th} name={name} gas={new Set(g.gas_totals.map(x => x.item))} /></div>}
       </>}
 
       {/* ---- Dark Fog */}
@@ -218,7 +266,8 @@ export default function GalaxyTab({ data, settings }: Props) {
       {g && !g.error && <>
         <h3>多星系规划 Multi-system plan</h3>
         <p className="hint">
-          One LP over the {systems.length} systems ticked above: production per system, interstellar shipping (stations ∝ distance, warpers per trip),
+          One LP over the {systems.length} systems ticked above (all planets of a system are pooled; 笑笑 opens one planet per system under a full-strength Dark Fog): production per system,
+          interstellar shipping (stations ∝ distance, fitted to 笑笑's 4 four-stacked blue belts per tower at 7 ly and 3 at 12 ly; warpers per trip),
           finite stocks as quotas m·ρ·S(L) ≤ B·z per system, oil and gas giants at level-L rates (×{fmt(1 + 0.1 * (o.level - 1), 1)}), water and acid where the system has that ocean.
           Power plants are not modelled; photons are free unless capped.
         </p>
@@ -229,22 +278,22 @@ export default function GalaxyTab({ data, settings }: Props) {
               <option value="max">Maximum z (终局最大白糖)</option>
             </select>
           </label>
-          {o.goal === 'target' && <label>Target cubes/min<input type="number" value={o.target} onChange={e => set({ target: numIn(e.target.value, 0, 1e7, 1000) })} /></label>}
+          {o.goal === 'target' && <label>Target cubes/min<NumField value={o.target} lo={0} hi={1e7} onCommit={v => set({ target: v ?? 1000 })} /></label>}
           {o.goal === 'target' && <label>Minimise
             <select value={o.objective} onChange={e => set({ objective: e.target.value as Opts['objective'] })}>
               <option value="buildings">buildings</option>
               <option value="photons">photons, then buildings</option>
             </select>
           </label>}
-          <label>Level L<input type="number" value={o.level} onChange={e => set({ level: Math.round(numIn(e.target.value, 1, 2000, 81)) })} /></label>
+          <label>Level L<NumField value={o.level} lo={1} hi={2000} integer onCommit={v => set({ level: v ?? 81 })} /></label>
           <label>ρ research
             <select value={o.rho} onChange={e => set({ rho: Number(e.target.value) })}>
               <option value={1}>1 (labs not sprayed)</option>
               <option value={0.8}>0.8 (Mk.III sprayed)</option>
             </select>
           </label>
-          <label>Building cap<input type="number" placeholder="none" value={o.building_cap ?? ''} onChange={e => set({ building_cap: e.target.value === '' ? null : numIn(e.target.value, 0, 1e8, 0) })} /></label>
-          <label>Dyson GW<input type="number" placeholder="none" value={o.photon_gw ?? ''} onChange={e => set({ photon_gw: e.target.value === '' ? null : numIn(e.target.value, 0, 1e6, 0) })} /></label>
+          <label>Building cap<NumField placeholder="none" nullable value={o.building_cap} lo={0} hi={1e8} onCommit={v => set({ building_cap: v })} /></label>
+          <label>Dyson GW<NumField placeholder="none" nullable value={o.photon_gw} lo={0} hi={1e6} onCommit={v => set({ photon_gw: v })} /></label>
           <button onClick={runPlan} disabled={!!busy || systems.length === 0}>Plan galaxy</button>
           <details>
             <summary>More: oil, cubes not researched, logistics</summary>
@@ -255,14 +304,15 @@ export default function GalaxyTab({ data, settings }: Props) {
                   <option value="floor">depleted floor 0.1/s per seep</option>
                 </select>
               </label>
-              <label>φ cubes elsewhere %<input type="number" value={o.phi} onChange={e => set({ phi: numIn(e.target.value, 0, 95, 0) })} /></label>
-              <label>Vessel capacity<input type="number" value={o.vessel_capacity} onChange={e => set({ vessel_capacity: numIn(e.target.value, 1, 10000, 400) })} /></label>
-              <label>Warpers per trip<input type="number" step={1} value={o.warpers_per_trip} onChange={e => set({ warpers_per_trip: numIn(e.target.value, 0, 4, 2) })} /></label>
+              <label>φ cubes elsewhere %<NumField value={o.phi} lo={0} hi={95} onCommit={v => set({ phi: v ?? 0 })} /></label>
+              <label>Vessel capacity<NumField value={o.vessel_capacity} lo={1} hi={10000} onCommit={v => set({ vessel_capacity: v ?? 400 })} /></label>
+              <label>Warpers per trip<NumField step={1} value={o.warpers_per_trip} lo={0} hi={4} onCommit={v => set({ warpers_per_trip: v ?? 2 })} /></label>
             </div>
           </details>
         </div>
         {gp?.error && <p className="warn">{gp.error}</p>}
-        {gp && !gp.error && <PlanView gp={gp} name={name} starName={starName} recipeName={id => { const r = data.recipes.find(x => x.id === id); return r ? (r.name_zh ?? r.name) : id }} />}
+        {gpStale && <p className="warn stale" role="status"><b>Out of date</b> — settings changed since this plan was solved. Press Plan galaxy.</p>}
+        {gp && !gp.error && <div className={gpStale ? 'staleresult' : undefined}><PlanView gp={gp} name={name} starName={starName} recipeName={id => { const r = data.recipes.find(x => x.id === id); return r ? (r.name_zh ?? r.name) : id }} /></div>}
       </>}
     </div>
   )
@@ -331,7 +381,7 @@ function GalaxyTables({ g, name, systems, toggle, open, setOpen, resetSystems }:
   </>
 }
 
-function ThresholdTable({ th, name }: { th: ThresholdReport; name: (id: string) => string }) {
+function ThresholdTable({ th, name, gas }: { th: ThresholdReport; name: (id: string) => string; gas: Set<string> }) {
   const rows = th.rows.filter(r => r.stock > 0 || r.per_cube > 0)
   return <>
     <p>
@@ -350,7 +400,7 @@ function ThresholdTable({ th, name }: { th: ThresholdReport; name: (id: string) 
         <tbody>
           {rows.map(r => (
             <tr key={r.item}>
-              <td><Icon id={r.item} size={18} />{name(r.item)}</td>
+              <td><Icon id={r.item} size={18} />{name(r.item)}{gas.has(r.item) ? <span className="tag" title="Gas giants also give it at a rate that never runs out; this row counts the vein stock only">+ gas giants</span> : null}</td>
               <td className="num">{compact(r.stock)}</td>
               <td className="num">{fmt(r.per_cube, 3)}</td>
               {[0, 1].map(j => [
@@ -375,13 +425,13 @@ function DarkFogBox({ g, df, set, name }: { g: Galaxy; df: DarkFog; set: (d: Dar
       <summary>黑雾 Dark Fog drops as sources {df.enabled ? `· on, ${df.bases.reduce((a, b) => a + b[1], 0)} bases` : '· off'}</summary>
       <p className="hint">
         No drop rates are published (report §5.4): enter what you measure in game per farmed ground base per minute, and the level of vein utilisation
-        you measured at. Normal items scale with (1 + 0.04 L); df-* items do not. Items drop only from their Dark Fog level (BWIKI 黑雾掉落).
+        you measured at (L = the level being researched, as in the plan: L − 1 levels done). Normal items scale with (1 + 0.04 (L − 1)); df-* items do not. Items drop only from their Dark Fog level (BWIKI 黑雾掉落).
         Used by the threshold table (drops lower the mined amount per cube at the cubes/min given) and by the plan (a source at the base's system).
       </p>
       <div className="mbsettings">
         <label className="row"><input type="checkbox" checked={df.enabled} onChange={e => set({ ...df, enabled: e.target.checked })} /> Use drops</label>
-        <label>Dark Fog level<input type="number" value={df.level} onChange={e => set({ ...df, level: Math.round(numIn(e.target.value, 0, 30, 24)) })} /></label>
-        <label>Measured at L<input type="number" value={df.measured_at_level} onChange={e => set({ ...df, measured_at_level: Math.round(numIn(e.target.value, 0, 2000, 0)) })} /></label>
+        <label>Dark Fog level<NumField value={df.level} lo={0} hi={30} integer onCommit={v => set({ ...df, level: v ?? 24 })} /></label>
+        <label>Measured at L<NumField value={df.measured_at_level} lo={1} hi={2000} integer onCommit={v => set({ ...df, measured_at_level: v ?? 1 })} /></label>
       </div>
       <h4>Farmed bases</h4>
       <ul className="plain">
@@ -390,7 +440,7 @@ function DarkFogBox({ g, df, set, name }: { g: Galaxy; df: DarkFog; set: (d: Dar
             <select value={s} onChange={e => set({ ...df, bases: df.bases.map((b, j) => j === k ? [Number(e.target.value), b[1]] : b) })}>
               {g.stars.map(st => <option key={st.index} value={st.index}>{st.name} ({st.initial_hives}/{st.max_hives} hives)</option>)}
             </select>
-            <input type="number" value={n} aria-label="bases" onChange={e => set({ ...df, bases: df.bases.map((b, j) => j === k ? [b[0], numIn(e.target.value, 0, 1000, 0)] : b) })} />
+            <NumField value={n} lo={0} hi={1000} aria-label="bases" onCommit={v => set({ ...df, bases: df.bases.map((b, j) => j === k ? [b[0], v ?? 0] : b) })} />
             <button className="x" aria-label="Remove" onClick={() => set({ ...df, bases: df.bases.filter((_, j) => j !== k) })}>×</button>
           </li>
         ))}
@@ -400,7 +450,7 @@ function DarkFogBox({ g, df, set, name }: { g: Galaxy; df: DarkFog; set: (d: Dar
       <ul className="plain">
         {df.drops.map((d, k) => (
           <li key={k} className="row small"><Icon id={d.item} size={18} />{name(d.item)} <span className="muted">from Lv{DROPS.find(x => x[0] === d.item)?.[1] ?? 0}</span>
-            <input type="number" step={0.1} value={d.rate} aria-label={`${name(d.item)} per base per minute`} onChange={e => set({ ...df, drops: df.drops.map((x, j) => j === k ? { ...x, rate: numIn(e.target.value, 0, 1e6, 0) } : x) })} />
+            <NumField step={0.1} value={d.rate} lo={0} hi={1e6} aria-label={`${name(d.item)} per base per minute`} onCommit={v => set({ ...df, drops: df.drops.map((x, j) => j === k ? { ...x, rate: v ?? 0 } : x) })} />
             <button className="x" aria-label="Remove" onClick={() => set({ ...df, drops: df.drops.filter((_, j) => j !== k) })}>×</button>
           </li>
         ))}
@@ -430,7 +480,7 @@ function PlanView({ gp, name, starName, recipeName }: { gp: GalaxyPlan; name: (i
     </div>
     <p className="small muted">
       L{gp.level}: speed ×{fmt(gp.speed, 1)}, S(L) = {num(gp.s_level, 0)}. Buildings: production {num(gp.production_buildings, 0)}, miners {num(gp.miners, 0)},
-      pumps {num(gp.pumps, 0)}, orbital collectors {num(gp.collectors, 0)}, ray receivers {num(gp.receivers, 0)}, stations {num(gp.stations, 1)}.
+      pumps {num(gp.pumps, 0)}, oil extractors {num(gp.oil_extractors, 0)}, orbital collectors {num(gp.collectors, 0)}, ray receivers {num(gp.receivers, 0)}, stations {num(gp.stations, 1)}.
       LP {num(gp.columns, 0)} columns × {num(gp.rows, 0)} rows, {fmt(gp.solve_ms / 1000, 2)} s.
     </p>
     {gp.warnings.map((w, i) => <p key={i} className="warn">{w}</p>)}

@@ -1,3 +1,5 @@
+// planner fork: modified from DoubleUTH/DSP-Seed-Finder @ c050ff02 (Apache-2.0): transcendental functions go through crate::detmath (same result on every target); see NOTICE.md
+use crate::detmath::DetMath;
 use super::vector_f3::VectorF3;
 use std::ops::Mul;
 
@@ -28,13 +30,13 @@ impl Quaternion {
     /// `angle_degrees` is in degrees (same as Unity's AngleAxis).
     pub fn angle_axis(angle_degrees: f32, axis: &VectorF3) -> Self {
         let half_rad = (angle_degrees * std::f32::consts::PI / 180.0) * 0.5;
-        let s = half_rad.sin();
+        let s = half_rad.sin_d();
         let axis_norm = axis.normalized();
         Self {
             x: axis_norm.0 * s,
             y: axis_norm.1 * s,
             z: axis_norm.2 * s,
-            w: half_rad.cos(),
+            w: half_rad.cos_d(),
         }
     }
 

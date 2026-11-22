@@ -203,17 +203,17 @@ thread_local! {
 
 /// The galaxy of a seed, generated once per `SeedSettings` (the generator takes ~0.1–1 s).
 fn galaxy_for(s: &planner::dsp_galaxy::SeedSettings) -> std::rc::Rc<planner::dsp_galaxy::Galaxy> {
-    GALAXY.with(|g| {
-        let mut g = g.borrow_mut();
-        if let Some(cur) = g.as_ref() {
-            if cur.settings == *s {
-                return cur.clone();
-            }
+    // compared in the form the generator runs with (`Galaxy::settings` is sanitized); the cell is not
+    // borrowed while the generator runs, so a trap inside it cannot leave the cache locked
+    let s = s.sanitized();
+    if let Some(cur) = GALAXY.with(|g| g.borrow().clone()) {
+        if cur.settings == s {
+            return cur;
         }
-        let new = std::rc::Rc::new(planner::dsp_galaxy::generate(s));
-        *g = Some(new.clone());
-        new
-    })
+    }
+    let new = std::rc::Rc::new(planner::dsp_galaxy::generate(&s));
+    GALAXY.with(|g| *g.borrow_mut() = Some(new.clone()));
+    new
 }
 
 fn bad(e: impl std::fmt::Display) -> String {
