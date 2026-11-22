@@ -194,3 +194,66 @@ pub fn mixed_belt_json(settings_json: &str, plan_json: &str) -> String {
     let rep = planner::mixed_belt::layout_for_plan(&plan, data(&settings.game, &settings.dataset), &settings);
     serde_json::to_string(&rep).unwrap()
 }
+
+// ---- DSP seed planning (docs/research/dsp-seed/00-最终报告.md §9 steps 1–4, 7)
+
+thread_local! {
+    static GALAXY: std::cell::RefCell<Option<std::rc::Rc<planner::dsp_galaxy::Galaxy>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The galaxy of a seed, generated once per `SeedSettings` (the generator takes ~0.1–1 s).
+fn galaxy_for(s: &planner::dsp_galaxy::SeedSettings) -> std::rc::Rc<planner::dsp_galaxy::Galaxy> {
+    GALAXY.with(|g| {
+        let mut g = g.borrow_mut();
+        if let Some(cur) = g.as_ref() {
+            if cur.settings == *s {
+                return cur.clone();
+            }
+        }
+        let new = std::rc::Rc::new(planner::dsp_galaxy::generate(s));
+        *g = Some(new.clone());
+        new
+    })
+}
+
+fn bad(e: impl std::fmt::Display) -> String {
+    serde_json::json!({"error": format!("bad settings: {e}")}).to_string()
+}
+
+/// Seed import: `SeedSettings` JSON → `Galaxy` JSON (stars, planets, veins, gas giants, totals).
+#[wasm_bindgen]
+pub fn dsp_galaxy_json(seed_json: &str) -> String {
+    match serde_json::from_str::<planner::dsp_galaxy::SeedSettings>(seed_json) {
+        Ok(s) => {
+            let g = galaxy_for(&s);
+            let mut v = serde_json::to_value(&*g).unwrap();
+            v["auto_systems"] = serde_json::json!(planner::dsp_galaxy::auto_systems(&g));
+            v.to_string()
+        }
+        Err(e) => bad(e),
+    }
+}
+
+/// Threshold button: `ThresholdSettings` JSON → `ThresholdReport` JSON.
+#[wasm_bindgen]
+pub fn dsp_thresholds_json(settings_json: &str) -> String {
+    match serde_json::from_str::<planner::dsp_galaxy::ThresholdSettings>(settings_json) {
+        Ok(ts) => {
+            let g = galaxy_for(&ts.seed);
+            serde_json::to_string(&planner::dsp_galaxy::thresholds(data("dsp", ""), &g, &ts)).unwrap()
+        }
+        Err(e) => bad(e),
+    }
+}
+
+/// Multi-system LP: `GalaxyPlanSettings` JSON → `GalaxyPlan` JSON.
+#[wasm_bindgen]
+pub fn dsp_galaxy_plan_json(settings_json: &str) -> String {
+    match serde_json::from_str::<planner::dsp_galaxy::GalaxyPlanSettings>(settings_json) {
+        Ok(gs) => {
+            let g = galaxy_for(&gs.seed);
+            serde_json::to_string(&planner::dsp_galaxy::plan_galaxy(data("dsp", ""), &g, &gs)).unwrap()
+        }
+        Err(e) => bad(e),
+    }
+}
