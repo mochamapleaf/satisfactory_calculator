@@ -5,6 +5,7 @@ pub mod data;
 pub mod flows;
 pub mod lp;
 pub mod matrix;
+pub mod mixed_belt;
 pub mod quality;
 pub mod rules;
 #[cfg(test)]
@@ -13,6 +14,8 @@ mod quality_tests;
 mod tests;
 #[cfg(test)]
 mod solve_tests;
+#[cfg(test)]
+mod mixed_belt_tests;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -175,6 +178,9 @@ pub struct PlanSettings {
     /// quality tier (normal … legendary; a shorter list repeats its last value). Empty = modules are
     /// free. Added to the cost function under every objective, in its units (Raw: 1 = one ore/min).
     pub module_costs: Vec<f64>,
+    /// DSP mixed-belt (混带) layout tab (`mixed_belt.rs`). Not used by the solver; not named
+    /// `mixed_belt` because `mixed_belts` above is the solver's sorter-cost switch.
+    pub belt_layout: mixed_belt::BeltLayoutSettings,
 }
 
 impl Default for PlanSettings {
@@ -216,6 +222,7 @@ impl Default for PlanSettings {
             beacon_quality: 0,
             beacon_share: 1.0,
             module_costs: vec![],
+            belt_layout: Default::default(),
         }
     }
 }

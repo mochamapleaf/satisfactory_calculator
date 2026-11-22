@@ -1,5 +1,5 @@
 // Typed wrapper around the Rust/WASM planner (src/wasm_api.rs).
-import init, { compute_weights_json, game_data_json, solve_json } from './wasm-pkg/satisfactory_calculator.js'
+import init, { compute_weights_json, game_data_json, mixed_belt_json, solve_json } from './wasm-pkg/satisfactory_calculator.js'
 
 export type Game = 'satisfactory' | 'dsp' | 'factorio'
 export const GAMES: { id: Game; name: string }[] = [
@@ -160,6 +160,71 @@ export interface Settings {
   module_costs: number[]
   /** Solver guard: models with more columns are not solved (0 = no limit). Set per request, not saved. */
   max_columns?: number
+  /** DSP mixed-belt tab (src/planner/mixed_belt.rs). Not part of the solve. */
+  belt_layout: BeltLayoutSettings
+}
+
+// ---- DSP mixed-belt (混带) layout, docs/research/dsp-mixed-belt/00-最终报告.md (src/planner/mixed_belt.rs)
+export interface TwoOverride { period?: number | null; first?: number | null; k?: number | null; sigma5?: number | null }
+export interface BeltLayoutSettings {
+  /** 0 yellow, 1 green, 2 blue */
+  belt: number
+  stack: number
+  /** machine rows fed by one belt (1 | 2) */
+  rows: number
+  row_len: number | null
+  unit_max: number | null
+  sorter_max: number
+  pile_level: number
+  margin: number
+  ladder_rho: number
+  ladder_short: number
+  ladder_cap: number
+  unit_cap: number | null
+  hint_items: number
+  hint_machines: number
+  end_pile_a: number
+  end_pile_b: number
+  /** per "recipe|mode" */
+  overrides: Record<string, TwoOverride>
+}
+export const defaultBeltLayout = (): BeltLayoutSettings => ({
+  belt: 2, stack: 4, rows: 1, row_len: null, unit_max: null, sorter_max: 2, pile_level: 0, margin: 1.5,
+  ladder_rho: 1 / 12, ladder_short: 12, ladder_cap: 24, unit_cap: null, hint_items: 12, hint_machines: 60,
+  end_pile_a: 2, end_pile_b: 3, overrides: {},
+})
+export interface BeltNote { level: 'fail' | 'warn' | 'info'; text: string; cite: string }
+export interface BeltRate { item: string; name: string; items: number; stacks: number }
+export interface TracePoint { pos: number; kind: 'unit' | 'machine' | 'fill' | 'feed' | 'recover' | 'coater'; item: number | null; amount: number; flows: number[] }
+export interface Trace { capacity: number; points: TracePoint[]; mins: number[]; returns: number[]; passes: number; converged: boolean; violations: string[] }
+export interface Candidate { period: number; n: [number, number]; sum: number; unit: number; best: number | null; feasible: boolean; reason: string }
+export interface TwoItemDesign {
+  c: [number, number]; p: number; q: number; ratio_dev: number; period: number; n: [number, number]; sum: number
+  sigma5: number; first: number; k: number; best: number; best_mins: [number, number]; line_mins: [number, number]
+  candidates: Candidate[]; recommended: [number, number, number, number, number] | null; overridden: boolean
+  feeds: { pos: number; item: number; amount: number }[]; returns: [number, number]; shares: [number, number]
+  jump: number; limiter_lane: string; unit: 'standard' | 'double' | 'unknown'; complete_add: number
+  tower_belts: [number, number]; units: number; machines_per_unit: number
+}
+export interface LadderDesign {
+  group: number; groups: number; last_group: number; rho: number; total: number; c: number[]
+  feeds: { item: number; need: number; rate: number; combo: string }[]; recover_sorters: number[]
+}
+export interface SorterPlan {
+  input: string; input_items: number; end_pile: number; mixed: number; separate: number; lp_estimate: number
+  outputs: { item: string; name: string; rate: number; sized_for: number; tier: string; full_at: number }[]
+}
+export interface RecipeLayout {
+  key: string; id: string; mode: string; mode_label: string; name: string; building: string; machines: number
+  inputs: BeltRate[]; outputs: BeltRate[]; scheme: 'A' | 'B' | 'none'; status: 'ok' | 'warn' | 'fail'; notes: BeltNote[]
+  two: TwoItemDesign | null; ladder: LadderDesign | null; sorters: SorterPlan
+  coaters: { coaters: number; sprays_per_s: number; proliferator_per_s: number; proliferator: string } | null
+  trace: Trace
+}
+export interface MixedBeltReport { capacity: number; stack: number; margin: number; recipes: RecipeLayout[]; single: string[]; warnings: string[]; error?: string }
+/** Mixed-belt layout of a solved plan (fast, runs on the page thread; no re-solve). */
+export function mixedBelt(s: Settings, plan: Plan): MixedBeltReport {
+  return JSON.parse(mixed_belt_json(JSON.stringify(s), JSON.stringify(plan))) as MixedBeltReport
 }
 
 export interface RateLine { item: string; name: string; rate: number }
@@ -243,6 +308,7 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   beacon_quality: 0,
   beacon_share: 1,
   module_costs: [],
+  belt_layout: defaultBeltLayout(),
 })
 
 let wasm: Promise<unknown> | null = null

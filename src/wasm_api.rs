@@ -175,3 +175,22 @@ pub fn solve_finish() -> String {
         update(run, None)
     })
 }
+
+// ---- DSP mixed-belt layout (docs/research/dsp-mixed-belt/00-最终报告.md §4 P2)
+
+/// Mixed-belt (混带) layout of a solved plan. `settings_json` is the `PlanSettings` the plan was
+/// solved with (its `belt_layout` holds the tab's settings); `plan_json` the `Plan`. Separate from
+/// the solve, so changing belt settings does not re-solve. Returns a `MixedBeltReport` as JSON.
+#[wasm_bindgen]
+pub fn mixed_belt_json(settings_json: &str, plan_json: &str) -> String {
+    let settings: PlanSettings = match serde_json::from_str(settings_json) {
+        Ok(s) => s,
+        Err(e) => return serde_json::json!({"error": format!("bad settings: {e}")}).to_string(),
+    };
+    let plan: planner::Plan = match serde_json::from_str(plan_json) {
+        Ok(p) => p,
+        Err(e) => return serde_json::json!({"error": format!("bad plan: {e}")}).to_string(),
+    };
+    let rep = planner::mixed_belt::layout_for_plan(&plan, data(&settings.game, &settings.dataset), &settings);
+    serde_json::to_string(&rep).unwrap()
+}

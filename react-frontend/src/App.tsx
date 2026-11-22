@@ -7,10 +7,11 @@ import TimeInput from './TimeInput'
 import FlowGraph from './FlowGraph'
 import ItemValues from './ItemValues'
 import ItemFlow from './ItemFlow'
+import MixedBelt from './MixedBelt'
 import { ICON_STYLES, IconProvider, loadIconStyle, saveIconStyle, type IconStyle } from './Icon'
 
-type Tab = 'table' | 'flow' | 'graph' | 'values'
-const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values']]
+type Tab = 'table' | 'flow' | 'graph' | 'values' | 'mixed'
+const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values'], ['mixed', 'Mixed belts']]
 
 export default function App() {
   const [data, setData] = useState<GameData | null>(null)
@@ -46,8 +47,11 @@ export default function App() {
   // Large models (e.g. Factorio "recycle everything", ~16 000 columns, minutes in WASM) are not
   // solved automatically, also when they come from saved settings or a link: the solver returns
   // their size and the user starts the solve (`approved` = the settings it was started for).
-  const key = JSON.stringify(settings)
-  const modelKey = JSON.stringify({ ...settings, time_limit_ms: 0, engine: 'auto' })
+  // the mixed-belt tab's settings are not part of the solve: changing them only re-runs the layout
+  const solveSettings: Partial<Settings> = { ...settings }
+  delete solveSettings.belt_layout
+  const key = JSON.stringify(solveSettings)
+  const modelKey = JSON.stringify({ ...solveSettings, time_limit_ms: 0, engine: 'auto' })
   const [big, setBig] = useState<{ columns: number; rows: number; key: string } | null>(null)
   const [approved, setApproved] = useState<string | null>(null)
   const [stopped, setStopped] = useState(false)
@@ -114,7 +118,7 @@ export default function App() {
     }, run ? 0 : 150)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, settings, approved, key, rerun])
+  }, [data, approved, key, rerun])
   const cancel = () => {
     cancelSolve()
     setSolving(false)
@@ -166,7 +170,7 @@ export default function App() {
         <Sidebar data={data} settings={settings} setSettings={setSettings} />
         <main>
           <div className="tabs" role="tablist">
-            {TABS.map(([id, name]) => (
+            {TABS.filter(([id]) => id !== 'mixed' || data.game === 'dsp').map(([id, name]) => (
               <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{name}</button>
             ))}
             {solving && <span className="solving" role="status">Solving{elapsed >= 1 ? ` ${elapsed} s` : ''}{settings.integer && !bigRun ? ` of ≤ ${fmt((progress?.deadline_ms ?? settings.time_limit_ms) / 1000, 1)} s` : ''}{unproven && plan ? ` · best plan so far, within ${gapPct(plan.gap)} % of the bound` : ''}</span>}
@@ -216,6 +220,7 @@ export default function App() {
           {plan && tab === 'flow' && <ItemFlow data={data} plan={plan} />}
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}
           {plan && tab === 'values' && <ItemValues plan={plan} settings={settings} />}
+          {plan && !pending && tab === 'mixed' && data.game === 'dsp' && <MixedBelt data={data} plan={plan} settings={settings} setSettings={setSettings} />}
         </main>
       </div>
     </div>

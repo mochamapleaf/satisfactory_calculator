@@ -179,3 +179,19 @@ Plan: `docs/research/solver-speed/00-最终报告.md` §6 steps 0–3; results `
   0.95 % → 0.06 %, 41 better / 1 worse (Somersloop Resources). +3.5 MB wasm (gzip 1.22 MB), downloaded only when used.
 - Regression fix: the Somersloop budget fallback plan is no longer the MILP warm start (Resources 5725 → 5275, as before).
   4 s native: 0 of 105 scenarios worse than 058f17c by > 0.1 %; browser: Auto never worse than microlp.
+
+## 2026-11-22 — DSP mixed belts (混带) tab, report P1–P4
+Spec: `docs/research/dsp-mixed-belt/00-最终报告.md` §2–4; step log `docs/research/dsp-mixed-belt/_过程文件/progress-impl.md`.
+- `src/planner/mixed_belt.rs`: per DSP recipe with ≥ 2 ingredients (from the game data, never `PlanRecipe.inputs`, so
+  proliferator / fuel are not ingredients). Two ingredients: control unit + direct refills, S = C − P(a²+ab+b²)/(a+b),
+  (σ, first item, k) searched, even positions for two rows per belt, largest feasible period within lcm(P, R) ≤ 4R,
+  return-flow rule → standard / two-green-belt / unknown unit; ties broken by returns within shares, equal minima,
+  smaller return (MINE). Three or more: ladder groups (belt + ≤ 2 sorters, 1/12 surplus above 12 machines, cap 24).
+  1D ring simulator as checker; sorter tiers, output belt fill, sorter counts (P4, report only), coaters, tower belts.
+- `PlanSettings.belt_layout` (not in the solve key: changing it never re-solves); WASM `mixed_belt_json`; tab
+  "Mixed belts" for DSP (`MixedBelt.tsx`): settings bar, recipe table, belt diagram + flow lines (m, C), sequence
+  text, manual override vs recommendation, checks with 笑笑 timestamps; fitted parameters labelled as fitted.
+- Tests: 14 (all prototype asserts, his worked cases, plan level). Live: 26 checks on vite preview, shots in
+  `docs/research/dsp-mixed-belt/_过程文件/shots/`. Note: processors with two rows reach 1/2 at interval 9 positions
+  (report §2.3(b) says 1.5/1.5, which holds for one row); the planner picks interval 8.
+- P5 (in-game calibration) 「需要 Xinyu」.

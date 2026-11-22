@@ -1,4 +1,4 @@
-import { DATASETS, defaultSettings, withDataset, type Game, type Settings } from './solver'
+import { DATASETS, defaultBeltLayout, defaultSettings, withDataset, type BeltLayoutSettings, type Game, type Settings } from './solver'
 
 // Settings live in the URL hash (shareable links) and localStorage (last session).
 const KEY = 'sf-planner-settings'
@@ -24,7 +24,7 @@ function sanitize(def: Settings, raw: Record<string, unknown>): Record<string, u
       else out[k] = v.filter(x => typeof x === 'string')
     } else if (isRecord(d)) {
       if (!isRecord(v)) continue
-      if (k === 'cost') { out[k] = v; continue } // merged with the preset below
+      if (k === 'cost' || k === 'belt_layout') { out[k] = v; continue } // merged with the defaults below
       out[k] = Object.fromEntries(Object.entries(v).filter(([, x]) => x === null || (typeof x === 'number' && Number.isFinite(x))))
     } else if (typeof d === 'number') {
       if (typeof v === 'number' && Number.isFinite(v)) out[k] = v
@@ -43,6 +43,18 @@ function upgrade(input: Record<string, unknown>): Settings {
     delete s.clock_percent
   }
   s.cost = { ...defaultSettings(game).cost, ...(s.cost ?? {}) }
+  {
+    // mixed-belt settings: defaults for missing or mistyped fields
+    const def = defaultBeltLayout() as unknown as Record<string, unknown>
+    const bl: Record<string, unknown> = { ...def }
+    for (const [k, v] of Object.entries((s.belt_layout ?? {}) as unknown as Record<string, unknown>)) {
+      if (k === 'overrides') { if (isRecord(v)) bl[k] = v; continue }
+      if (!(k in def)) continue
+      if (typeof v === 'number' && Number.isFinite(v)) bl[k] = v
+      else if (v === null && def[k] === null) bl[k] = null
+    }
+    s.belt_layout = bl as unknown as BeltLayoutSettings
+  }
   if (s.objective === 'compute' && game !== 'dsp') s.objective = 'buildings' // DSP-only preset
   delete s.max_columns // a per-request guard, never taken from a link
   if (game === 'factorio') {
