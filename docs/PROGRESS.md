@@ -177,3 +177,5 @@ Plan: `docs/research/solver-speed/00-最终报告.md` §6 steps 0–3; results `
   gets the reduced model + best plan as MIP start, every incumbent is row/budget-checked back in Rust. Setting
   "Solver engine: Auto / microlp / HiGHS", Auto = HiGHS. Browser bench 4 s: proven 45 → 63, median gap to best known
   0.95 % → 0.06 %, 41 better / 1 worse (Somersloop Resources). +3.5 MB wasm (gzip 1.22 MB), downloaded only when used.
+- Regression fix: the Somersloop budget fallback plan is no longer the MILP warm start (Resources 5725 → 5275, as before).
+  4 s native: 0 of 105 scenarios worse than 058f17c by > 0.1 %; browser: Auto never worse than microlp.

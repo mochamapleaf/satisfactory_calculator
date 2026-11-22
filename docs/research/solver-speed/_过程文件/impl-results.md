@@ -99,3 +99,34 @@ Node 26,WASM,各 2 轮(`data/impl_wasm_opt_s_vs_3.txt`):
 | 同上 10 s,1.5 s 时 Stop(HiGHS 正在跑) | 保留 1 % 的方案;Keep solving 重新求解(20 s),界面一直显示保留的方案,直到新运行找到更好的(0.7 %) |
 | Somersloop 预算 20,Buildings | 0.31 s 首个方案;4 s 时 139 栋、20 个 Somersloop、差距 10 %(microlp:147 栋、27 %) |
 | DSP Compute | 0.21 s 首个方案,0.56 s **证明最优**(microlp 4 s 仍差 1 %) |
+
+---
+
+# 回归修复(2026-11-22):Somersloop 预算 Resources
+
+**原因**(原生实验,逐个开关验证):预算保底方案(6239)被当作全量 MILP 的 warm start。microlp 从它出发 4 s 只找到 5725;不给起点(058f17c 的行为:它的 hint 因超预算被拒)能找到 5275。另外保底方案的配方被加进受限 MILP 的邻域,让受限 MILP 白跑 1 s。删支配列、分段续跑都不是原因(Satisfactory 没有被删的列;不分段的 `plan()` 同样复现)。
+
+**修法**(`lp.rs`,`fallback_version`):最好方案还是预算保底时,它只留在手里显示,不当全量 MILP 的起点,也不扩大受限 MILP 的邻域。
+
+**Auto**:改成两个 Worker 同时跑 microlp 和 HiGHS,界面每时每刻显示两者中较好的方案,任何一方证明最优就结束两者。所以 Auto 不会比只用 microlp 差。Keep solving 时,已经停掉的一方的方案仍参与比较。
+
+## 复测
+
+原生 4 s,105 个场景(`data/impl_after_fix4s.jsonl`,`bench/regressions.py`):**相对 058f17c 基线,差 0.1 % 以上的场景:0 个**。
+
+| | 有方案 | 4 s 内证明 | 差距中位 | 平均 | >1 % | 首个方案中位 |
+|---|---|---|---|---|---|---|
+| 基线 058f17c | 104 | 43 | +1.00 % | +2.67 % | 31 | 4 s |
+| 修复后 | 105 | 47 | +0.93 % | +2.46 % | 29 | 5 ms |
+
+Somersloop Resources 原生:基线 3 次都是 5275;修复后 5275 / 5251 / 5309(分段计时的抖动,±0.6 %)。
+
+浏览器 4 s(`data/browser_microlp4s.jsonl`、`data/browser_auto4s.jsonl`,`browser_table.md`):**Auto 比 microlp 差 0.1 % 以上的场景:0 个**。
+
+| 引擎 | 有方案 | 4 s 内证明 | 差距中位 | 平均 | >1 % |
+|---|---|---|---|---|---|
+| microlp | 105 | 45 | +0.95 % | +2.55 % | 30 |
+| HiGHS 单独(修复前测) | 105 | 63 | +0.06 % | +1.22 % | 14 |
+| **Auto(两者并行)** | 105 | **63** | +0.11 % | **+1.01 %** | 15 |
+
+浏览器手动复查(`shots/regression-fix/`):Somersloop 预算 Resources,Auto 与 microlp 都是 5309.06(HiGHS 单独时是 6239);太空电梯计划 Stop 后保留 1 % 的方案,Keep solving 期间和结束时都不会换成更差的方案;Somersloop Buildings、DSP Compute 正常。

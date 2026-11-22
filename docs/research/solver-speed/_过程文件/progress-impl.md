@@ -54,3 +54,14 @@ Plan: `../00-最终报告.md` §6 + review `00-最终报告.review.md` (S1: hint
 ## HiGHS done (to commit)
 - Browser bench done (`data/browser_*4s.jsonl`, `browser_table.md`), Auto = HiGHS. Live test `shots/highs/` (fixes: busy signal before HiGHS
   blocks, stopped elapsed, restarted Keep solving keeps the better plan, gap tightened by any same-model bound). cargo test 64 pass.
+
+## Regression fix (coordinator 2026-11-22): Somersloop Resources 5275 -> 5725
+- Cause (experiments with env switches, native): the budget fallback plan (6239) was used as the full-MILP warm start; microlp
+  searching from it found 5725 in 4 s, searching without a start (as 058f17c did, whose hint was rejected) finds 5275.
+  Also the fallback's columns enlarged the restricted MILP (spent its 1 s for nothing).
+- Fix in `lp.rs`: `fallback_version`; while the best plan is the fallback, no warm start for the full MILP and the restricted
+  MILP does not add the fallback's columns. Native: 5275 / 5251 (3 runs).
+- Auto: `solver.ts` now races two workers (lane 0 microlp, lane 1 HiGHS) and shows the better plan at every moment; a proof by
+  either ends both. tsc ok. Running: full native bench (after_fix2). Next: wasm rebuild, browser bench microlp vs auto, live check.
+- Done: native 105 scenarios 0 regressions > 0.1 % vs 058f17c; browser Auto vs microlp 0 regressions; Auto = race of two workers.
+  Live re-check `shots/regression-fix/` (race Keep solving keeps the stopped lane's plan: `raceBest`). cargo test 64 pass.
