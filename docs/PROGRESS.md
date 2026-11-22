@@ -240,3 +240,21 @@ Design: `docs/research/factorio-quality/00-最终报告.md` §2.1 / §5 step 6, 
   beacons and beacon MW at whole machines. Links: quality tiers clamped to 0 … 4. Machine graph sums loadouts.
 - Cover cuts for the shared model measured and not kept (no consistent gain).
 - `cargo test -q --release` 95 pass / 5 ignored; `cargo test -q` 94 / 6. Live: `docs/review/scripts/live_test_review7.py`.
+
+## 2026-11-22 — DSP seed planning (memo step 13; report docs/research/dsp-seed/00-最终报告.md §9 steps 1–4, 7)
+Step log: `docs/research/dsp-seed/_过程文件/progress-impl.md` (checks vs report, MINE choices, known issues).
+- Seed import: `vendor/dsp_seed_gen` = data/ + worldgen/ of DoubleUTH/DSP-Seed-Finder @c050ff02 (Apache-2.0, LICENSE.txt +
+  NOTICE.md), fork exposes vein node counts (oil seeps). Seed 12345678 / 32 / 0.1× equals the research prototype natively.
+- `src/planner/dsp_galaxy.rs`: S(L), release level per finite resource (ρ 1 / 0.8), first level of the all-quota LP (binary search),
+  multi-system LP (star systems, pairwise shipping with stations ∝ distance and warpers, quotas m·ρ·S(L) ≤ B·z, oil / gas-giant /
+  photon rates, target z or max z under building / Dyson caps), Dark Fog drops as user-rated sources (BWIKI unlock levels).
+- WASM `dsp_galaxy_json`, `dsp_thresholds_json`, `dsp_galaxy_plan_json`; DSP tab "Galaxy" (lazy, own worker, own settings).
+- Tests: 10 in `dsp_galaxy_tests.rs` + 1 in the vendored crate; live 24/24 on vite preview, shots in `_过程文件/shots-web/`.
+- Known: the WASM generator differs from native on 1 of 145 planets of the test seed (float maths); not checked against the game.
+  Not modelled: energy balance, Dyson power from the seed, multi-period model, building materials, Dark Fog defence cost.
+
+## 2026-11-22 — Review 8: DSP seed work (docs/review/fable-review-8.md)
+- Generator: same galaxy natively and in WASM (`vendor/dsp_seed_gen/src/detmath.rs`, libm on every target; `fingerprint` pinned). Was 26.70 vs 24.12 oil/s on the home planet of seed 12345678.
+- Model: station capacity 432 000/(d+8) (笑笑 belt 7200/min), oil extractors counted, Dark Fog scale on finished levels, stock override not × remaining, real system dedup, seed settings sanitized.
+- Galaxy tab: number fields apply on Enter / blur, out-of-date marks on results, worker error handling, licence + notice shipped in `licenses/`, no 10× setting.
+- Tests: 105 debug / 106 release; live `live_review8.py` 41/41 and `live_galaxy.py` 24/24 on :4175. Not committed to refactor: branch worktree-agent-a993b9de598a620ce.

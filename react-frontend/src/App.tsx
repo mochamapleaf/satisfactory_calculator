@@ -12,9 +12,11 @@ import { ICON_STYLES, IconProvider, loadIconStyle, saveIconStyle, type IconStyle
 
 // the map view (Satisfactory only) and its geo data load on first use
 const MapView = lazy(() => import('./MapView'))
+// the DSP galaxy tab (seed generator + its worker) loads on first use too
+const GalaxyTab = lazy(() => import('./Galaxy'))
 
-type Tab = 'table' | 'flow' | 'graph' | 'values' | 'mixed' | 'map'
-const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values'], ['mixed', 'Mixed belts'], ['map', 'Map']]
+type Tab = 'table' | 'flow' | 'graph' | 'values' | 'mixed' | 'galaxy' | 'map'
+const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values'], ['mixed', 'Mixed belts'], ['galaxy', 'Galaxy'], ['map', 'Map']]
 
 export default function App() {
   const [data, setData] = useState<GameData | null>(null)
@@ -177,7 +179,7 @@ export default function App() {
         <Sidebar data={data} settings={settings} setSettings={setSettings} />
         <main>
           <div className="tabs" role="tablist">
-            {TABS.filter(([id]) => (id !== 'mixed' || data.game === 'dsp') && (id !== 'map' || data.game === 'satisfactory')).map(([id, name]) => (
+            {TABS.filter(([id]) => (id !== 'mixed' || data.game === 'dsp') && (id !== 'galaxy' || data.game === 'dsp') && (id !== 'map' || data.game === 'satisfactory')).map(([id, name]) => (
               <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{name}</button>
             ))}
             {solving && <span className="solving" role="status">Solving{elapsed >= 1 ? ` ${elapsed} s` : ''}{settings.integer && !bigRun ? ` of ≤ ${fmt((progress?.deadline_ms ?? settings.time_limit_ms) / 1000, 1)} s` : ''}{unproven && plan ? ` · best plan so far, within ${gapPct(plan.gap)} % of the bound` : ''}</span>}
@@ -228,6 +230,7 @@ export default function App() {
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}
           {plan && tab === 'values' && <ItemValues plan={plan} settings={settings} />}
           {!pending && tab === 'mixed' && data.game === 'dsp' && <MixedBelt plan={plan} planSettings={planSettings} current={current} settings={settings} setSettings={setSettings} />}
+          {tab === 'galaxy' && data.game === 'dsp' && <Suspense fallback={<p className="muted">Loading the galaxy planner…</p>}><GalaxyTab data={data} settings={settings} /></Suspense>}
           {plan && tab === 'map' && data.game === 'satisfactory' && <Suspense fallback={<p className="muted">Loading the map…</p>}><MapView data={data} plan={plan} /></Suspense>}
         </main>
       </div>

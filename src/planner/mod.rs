@@ -1,6 +1,9 @@
 //! Production planner: data model, the original square incidence-matrix solver, and the
 //! LP solver that generalises it (multiple recipes per item, byproducts, limits).
 pub mod compute;
+pub mod dsp_galaxy;
+#[cfg(test)]
+mod dsp_galaxy_tests;
 pub mod data;
 pub mod flows;
 pub mod lp;
