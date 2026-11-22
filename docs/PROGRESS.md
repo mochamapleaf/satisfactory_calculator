@@ -191,7 +191,7 @@ Spec: `docs/research/dsp-mixed-belt/00-最终报告.md` §2–4; step log `docs/
 - `PlanSettings.belt_layout` (not in the solve key: changing it never re-solves); WASM `mixed_belt_json`; tab
   "Mixed belts" for DSP (`MixedBelt.tsx`): settings bar, recipe table, belt diagram + flow lines (m, C), sequence
   text, manual override vs recommendation, checks with 笑笑 timestamps; fitted parameters labelled as fitted.
-- Tests: 14 (all prototype asserts, his worked cases, plan level). Live: 26 checks on vite preview, shots in
+- Tests: 13 (all prototype asserts, his worked cases, plan level). Live: 26 checks on vite preview, shots in
   `docs/research/dsp-mixed-belt/_过程文件/shots/`. Note: processors with two rows reach 1/2 at interval 9 positions
   (report §2.3(b) says 1.5/1.5, which holds for one row); the planner picks interval 8.
 - P5 (in-game calibration) 「需要 Xinyu」.
