@@ -299,6 +299,8 @@ export interface Plan {
   /** Buildings to place per building name (sums to `buildings`). */
   building_counts?: { building: string; count: number }[]
   shards: number; somersloops: number; proven_optimal: boolean; gap: number | null; lp_bound: number; solve_ms: number
+  /** The gap in objective weights of the cheapest building the plan uses (a better plan may also trade resources or power); null when the building rule is off. */
+  gap_buildings?: number | null
   item_values: ItemValue[]; flows: Flow[]; warnings: string[]
   compute?: ComputeSummary | null
   /** Model size: solver columns and item rows; quality = item@q expansion was used. */
@@ -505,7 +507,9 @@ export const better = (a: Plan | null, b: Plan | null) => {
 }
 /** A proof by either lane covers the cheaper plan of the two: it is within the same gap. */
 export const asProven = (p: Plan): Plan =>
-  p.status !== 'optimal' || p.proven_optimal ? p : { ...p, proven_optimal: true, gap: null, warnings: p.warnings.filter(w => !w.startsWith('Time limit reached')) }
+  // the tolerance depends on the plan's own cheapest building: a plan more than one of its buildings
+  // above its bound stays unproven (its own bound is no higher than the proof's, so this is safe)
+  p.status !== 'optimal' || p.proven_optimal || (p.gap_buildings ?? 0) >= 0.99 ? p : { ...p, proven_optimal: true, gap: null, gap_buildings: null, warnings: p.warnings.filter(w => !w.startsWith('Time limit reached')) }
 
 /** Auto: microlp and HiGHS solve the same plan in two workers; the page sees the better plan at
  *  every moment, so Auto is never worse than microlp alone. A proof by either ends both. */

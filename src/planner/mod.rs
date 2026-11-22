@@ -381,6 +381,10 @@ pub struct Plan {
     pub proven_optimal: bool,
     /// Relative gap to the best bound when not proven optimal.
     pub gap: Option<f64>,
+    /// The same gap in objective weights of the cheapest building the plan uses (not a count of
+    /// buildings a better plan saves: it may also trade resources). None when proven or when no
+    /// building costs anything.
+    pub gap_buildings: Option<f64>,
     /// Objective of the continuous relaxation (a lower bound).
     pub lp_bound: f64,
     pub solve_ms: f64,

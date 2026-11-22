@@ -293,3 +293,70 @@ fn somersloop_budget_without_a_plan_names_the_budget() {
     assert_eq!(p.status, Status::Infeasible);
     assert!(p.warnings.iter().any(|w| w.contains("Somersloop")), "{:?}", p.warnings);
 }
+
+/// Nuclear Pasta 7.3/min, Power objective, 250 % clocks: objective about 16 300, so MIP_GAP alone
+/// (1e-4) would accept a plan 1.6 buildings above the bound.
+fn pasta_power() -> (GameData, PlanSettings) {
+    let (d, mut s) = sf(&[("Nuclear Pasta", 7.3)], Objective::Power, false);
+    s.max_clock_percent = 250.0;
+    s.integer = true;
+    s.time_limit_ms = 60_000;
+    (d, s)
+}
+
+/// Under Power (buildings weigh 1 each, plus MW) a proven plan is less than one building above the
+/// bound, though MIP_GAP alone would allow 1.6; and HiGHS-style proofs from outside are checked
+/// against the same rule, with the 2x slack on the relative part only.
+#[test]
+#[cfg_attr(debug_assertions, ignore)] // needs the release build to prove within 60 s
+fn proven_building_plans_are_within_one_building() {
+    let (d, s) = pasta_power();
+    let Start::Running(mut run) = lp::start(&d, &s) else { panic!("whole-building plans run a search") };
+    while !run.step(None) {}
+    let p = run.plan();
+    let g = run.progress();
+    assert!(p.proven_optimal, "{:?}", p.warnings);
+    let (o, b) = (g.objective.unwrap(), g.bound);
+    assert!(o > 1e4 && o - b < 0.99, "{o} vs bound {b}");
+    assert!(run.engine_gap() <= 1.0 / o, "engine gap {} is MIP_GAP", run.engine_gap());
+
+    // an engine's proof 1.5 buildings above the bound: within 2x MIP_GAP, not within a building
+    let vals = run.best_values();
+    let Start::Running(mut fresh) = lp::start(&d, &s) else { panic!() };
+    fresh.offer_values(&vals, Some(o - 1.5), true);
+    assert!(!fresh.progress().proven, "1.5 buildings above the bound accepted as optimal");
+    let mut fresh2 = match lp::start(&d, &s) { Start::Running(r) => r, _ => panic!() };
+    fresh2.offer_values(&vals, Some(o - 0.5), true);
+    assert!(fresh2.progress().proven, "half a building above the bound refused");
+}
+
+/// Under Resources buildings are a 0.01 tie-break: the relative gap alone decides and the plan
+/// carries no gap in buildings. Shared-machine (Factorio quality) plans under Buildings count
+/// their group columns: the tolerance is on (gap_buildings when not proven).
+#[test]
+fn building_rule_only_where_buildings_are_a_main_cost() {
+    let (d, mut s) = sf(&[("Turbo Motor", 7.3)], Objective::Resources, false);
+    s.max_clock_percent = 250.0;
+    s.integer = true;
+    s.time_limit_ms = 300;
+    let p = plan(&d, &s);
+    assert_eq!(p.gap_buildings, None, "Resources: {:?}", p.gap);
+
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = st("factorio", &[("iron-gear-wheel@4", 10.0)]);
+    s.dataset = "2x1".into();
+    s.objective = Objective::Buildings;
+    s.module_quality = 4;
+    s.integer = true;
+    s.time_limit_ms = 2000;
+    let Start::Running(mut run) = lp::start(&d, &s) else { panic!() };
+    // shared mode: the units' counts cost nothing, the group columns carry the building weight
+    assert!(run.unit().is_finite() && run.unit() > 0.0, "group columns not counted: unit {}", run.unit());
+    while !run.step(None) {}
+    let p = run.plan();
+    let g = run.progress();
+    assert!(p.proven_optimal || p.gap_buildings.is_some(), "shared plan without the building rule");
+    if p.proven_optimal {
+        assert!(g.objective.unwrap() - g.bound < 0.99 * run.unit() + 1e-9);
+    }
+}

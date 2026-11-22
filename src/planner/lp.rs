@@ -44,7 +44,8 @@ const DEFAULT_WATER_WEIGHT: f64 = 0.001;
 /// Iron Ore world limit: scarcity weights are relative to it (Iron Ore = 1).
 const SCARCITY_REF: f64 = 92_100.0;
 const MAX_BUILDINGS: i32 = 1_000_000;
-/// Relative gap at which a whole-building plan counts as optimal.
+/// Relative gap at which a whole-building plan counts as optimal, unless that is more than one of
+/// its cheapest buildings in objective units (`Run::unit_tol`).
 const MIP_GAP: f64 = 1e-4;
 
 /// Recipes allowed by the settings.
@@ -620,20 +621,20 @@ fn restrict(inp: &Inputs, keep: &BTreeSet<String>) -> Inputs {
 
 /// First MILP call: root LP and warm-start check with no time limit and no branching. A deadline
 /// inside the hint's LP completion would silently drop the hint (report §3.4).
-fn milp_root(hint: Vec<(Variable, f64)>) -> SolveOptions {
+fn milp_root(hint: Vec<(Variable, f64)>, gap: f64) -> SolveOptions {
     let mut o = SolveOptions::default();
     o.time_limit = None;
     o.node_limit = Some(0);
-    o.mip_gap = MIP_GAP;
+    o.mip_gap = gap;
     o.warm_start = Some(hint);
     o
 }
 
-fn resume_options(ms: f64) -> microlp::ResumeOptions {
+fn resume_options(ms: f64, gap: f64) -> microlp::ResumeOptions {
     let mut o = microlp::ResumeOptions::default();
     o.time_limit = Some(Duration::from_secs_f64(ms.clamp(5.0, 1e9) / 1e3));
     o.node_limit = None;
-    o.mip_gap = Some(MIP_GAP);
+    o.mip_gap = Some(gap);
     o
 }
 
@@ -1041,6 +1042,32 @@ pub struct Run<'a> {
     nodes: u64,
     /// `version` right after the budget fallback became the best plan (it still is while equal)
     fallback_version: Option<u32>,
+    /// Objective weight of the cheapest whole building in the model (infinite when no building
+    /// costs anything): the unit before there is a plan.
+    model_unit: f64,
+    /// Objective weight of one of the cheapest buildings the best plan uses (`model_unit` without a
+    /// plan): a plan less than this above the bound has no rival that saves one of its buildings.
+    unit: f64,
+    /// Buildings are a main cost: weight at least the resource weight and a tenth of the MW weight.
+    buildings_primary: bool,
+    /// (gap, version) of the last MipGap stop that did not prove (see `step_full`).
+    last_mipgap: Option<(f64, u32)>,
+}
+
+/// The whole-building columns of a model: each unit's building count, or in shared mode each
+/// group's machines (the units' counts are then continuous shares with no cost). Shards and
+/// Somersloops carry tie-break weights and do not count.
+fn building_cols(m: &Model) -> Vec<usize> {
+    m.rv.iter()
+        .map(|v| v.n.idx())
+        .chain(m.groups.iter().map(|(_, v)| v.idx()))
+        .filter(|&j| m.bounds[j].2 && m.cost[j] > 1e-12)
+        .collect()
+}
+
+/// Smallest objective weight of one whole building among `cols` where `used` (infinite if none).
+fn cheapest(m: &Model, cols: &[usize], used: impl Fn(usize) -> bool) -> f64 {
+    cols.iter().filter(|&&j| used(j)).map(|&j| m.cost[j]).fold(f64::INFINITY, f64::min)
 }
 
 impl<'a> Run<'a> {
@@ -1050,6 +1077,50 @@ impl<'a> Run<'a> {
 
     fn gap(&self) -> Option<f64> {
         self.best.as_ref().map(|(o, _)| (o - self.bound).max(0.0) / o.abs().max(1e-10))
+    }
+
+    /// Absolute tolerance when buildings are a main term of the objective (Buildings, Power,
+    /// Compute: `buildings_primary`): just under one of the cheapest
+    /// buildings the plan uses, so a plan called optimal has no rival that is the same but for one
+    /// building fewer (MIP_GAP alone let Ballistic Warp Drive under Power be "optimal" 6 buildings
+    /// above the plan found with this rule). Infinite under Resources, where buildings are only a
+    /// 0.01 tie-break: there the point is the resources, and MIP_GAP alone decides.
+    fn unit_tol(&self) -> f64 {
+        if self.buildings_primary { 0.99 * self.unit } else { f64::INFINITY }
+    }
+
+    /// Objective weight of the building the tolerance is measured in (tests).
+    #[cfg(test)]
+    pub fn unit(&self) -> f64 {
+        self.unit
+    }
+
+    /// The plan in hand is optimal to tolerance (`tol`).
+    fn closed(&self, slack: f64) -> bool {
+        self.best.as_ref().is_some_and(|(o, _)| o - self.bound <= self.tol(*o, slack))
+    }
+
+    /// Absolute tolerance at objective `o`: MIP_GAP relative (x `slack` for engines that measure it
+    /// differently), and where buildings are a main cost also just under one building; never below
+    /// 1e-6 relative, the size of the objective error the engines' feasibility tolerances allow.
+    /// (The building rule alone, without MIP_GAP, made small plans worse: Heavy Modular Frame
+    /// under Power 450 buildings instead of 446.)
+    fn tol(&self, o: f64, slack: f64) -> f64 {
+        (slack * MIP_GAP * o.abs()).min(self.unit_tol()).max(1e-6 * o.abs()).max(1e-9)
+    }
+
+    /// The relative gap an engine stops at: `tol` for a plan of the size in hand (or of the LP
+    /// bound before there is one).
+    pub fn engine_gap(&self) -> f64 {
+        let o = self.best.as_ref().map(|b| b.0).unwrap_or(self.bound).abs().max(1e-10);
+        (self.tol(o, 1.0) / o).clamp(1e-6, 0.5)
+    }
+
+    /// The best plan's gap to the bound in objective weights of the cheapest building it uses
+    /// (None without a plan, or when the building rule is off: `unit_tol`).
+    fn gap_units(&self) -> Option<f64> {
+        let (o, _) = self.best.as_ref()?;
+        self.unit_tol().is_finite().then(|| (o - self.bound).max(0.0) / self.unit)
     }
 
     /// Takes `pt` (whole buildings) as the best plan when it fits the budgets and is cheaper.
@@ -1068,6 +1139,11 @@ impl<'a> Run<'a> {
             return;
         }
         if self.best.as_ref().is_none_or(|(b, _)| obj < b - 1e-9 * b.abs().max(1.0)) {
+            // the cheapest building this plan uses
+            let vals: HashMap<usize, f64> =
+                values_of(&self.m, &self.inp, &pt).into_iter().map(|(v, x)| (v.idx(), x)).collect();
+            let u = cheapest(&self.m, &building_cols(&self.m), |j| vals.get(&j).is_some_and(|x| *x > 0.5));
+            self.unit = if u.is_finite() { u } else { self.model_unit };
             self.best = Some((obj, pt));
             self.version += 1;
         }
@@ -1131,7 +1207,7 @@ impl<'a> Run<'a> {
     /// Runs the next piece of work, about `slice_ms` long (`None`: each phase to its end).
     /// Returns true when the solve is finished (proven, out of time, or failed).
     pub fn step(&mut self, slice_ms: Option<f64>) -> bool {
-        if self.phase != Phase::Done && self.gap().is_some_and(|g| g <= MIP_GAP) {
+        if self.phase != Phase::Done && self.closed(1.0) {
             self.proven = true;
             self.phase = Phase::Done;
         }
@@ -1141,7 +1217,7 @@ impl<'a> Run<'a> {
             Phase::Full => self.step_full(slice_ms),
             Phase::Done => {}
         }
-        if self.phase != Phase::Done && self.gap().is_some_and(|g| g <= MIP_GAP) {
+        if self.phase != Phase::Done && self.closed(1.0) {
             self.proven = true;
             self.phase = Phase::Done;
         }
@@ -1198,7 +1274,7 @@ impl<'a> Run<'a> {
                     self.phase = Phase::Full;
                     return;
                 }
-                match sub.out.resume_with(resume_options(slice_ms.unwrap_or(f64::INFINITY).min(left))) {
+                match sub.out.resume_with(resume_options(slice_ms.unwrap_or(f64::INFINITY).min(left), MIP_GAP)) {
                     Ok(out) => {
                         sub.out = out;
                         Some(sub)
@@ -1222,7 +1298,7 @@ impl<'a> Run<'a> {
                 let from = self.best.as_ref().map(|b| b.1.clone()).unwrap_or_else(|| rounded(&self.inp, &self.lp_pt, self.c_max, true));
                 let hint = int_hint(&m, &sub_inp, &from);
                 let until = now + self.budget / 4.0;
-                match m.p.solve_with(milp_root(hint)) {
+                match m.p.solve_with(milp_root(hint, MIP_GAP)) {
                     Ok(out) => Some(SubRun { inp: sub_inp, m, out, until }),
                     Err(_) => None,
                 }
@@ -1247,6 +1323,7 @@ impl<'a> Run<'a> {
     /// The full MILP, warm-started from the best plan, resumed in slices until the deadline.
     fn step_full(&mut self, slice_ms: Option<f64>) {
         let now = self.ms();
+        let gap = self.engine_gap();
         let res = match self.full.take() {
             Some(out) => {
                 let left = self.deadline - now;
@@ -1255,7 +1332,7 @@ impl<'a> Run<'a> {
                     self.phase = Phase::Done;
                     return;
                 }
-                out.resume_with(resume_options(slice_ms.unwrap_or(f64::INFINITY).min(left)))
+                out.resume_with(resume_options(slice_ms.unwrap_or(f64::INFINITY).min(left), gap))
             }
             None => {
                 if now >= self.deadline {
@@ -1267,7 +1344,7 @@ impl<'a> Run<'a> {
                 // optimal, and searching from it found worse plans in 4 s than searching without a
                 // start (Somersloop budget, Resources: 5725 vs 5275, as the code before the fallback).
                 let hint = if self.fallback_version == Some(self.version) { vec![] } else { int_hint(&self.m, &self.inp, &from) };
-                self.m.p.solve_with(milp_root(hint))
+                self.m.p.solve_with(milp_root(hint, gap))
             }
         };
         match res {
@@ -1282,16 +1359,31 @@ impl<'a> Run<'a> {
                     self.offer(pt);
                 }
                 match out.termination_reason() {
-                    TerminationReason::TimeLimit | TerminationReason::NodeLimit => {
+                    // microlp met the relative gap it was given; that gap came from the plan in hand
+                    // when the call started, so the proof stands only if the building rule holds
+                    // for the plan in hand now (a stale gap would prove too early)
+                    TerminationReason::MipGap if self.closed(1.0) => {
+                        self.proven = true;
+                        self.phase = Phase::Done;
+                    }
+                    TerminationReason::MipGap if self.last_mipgap == Some((gap, self.version)) => {
+                        // the same gap again and no better plan (microlp's incumbent refused): a
+                        // further resume would return at once, so the run ends unproven
+                        self.phase = Phase::Done;
+                    }
+                    TerminationReason::ProvenOptimal => {
+                        // proven optimal (tree exhausted): the best plan is at least as good as the engine's
+                        self.proven = self.best.is_some();
+                        self.phase = Phase::Done;
+                    }
+                    reason => {
+                        if reason == TerminationReason::MipGap {
+                            self.last_mipgap = Some((gap, self.version));
+                        }
                         self.full = Some(out);
                         if self.ms() >= self.deadline {
                             self.phase = Phase::Done;
                         }
-                    }
-                    _ => {
-                        // proven optimal (within MIP_GAP); the best plan is at least as good
-                        self.proven = self.best.is_some();
-                        self.phase = Phase::Done;
                     }
                 }
             }
@@ -1352,7 +1444,7 @@ impl<'a> Run<'a> {
             let cap = self.best.as_ref().map(|b| b.0).unwrap_or(f64::INFINITY);
             self.bound = self.bound.max(b.min(cap));
         }
-        if proven && self.gap().is_some_and(|g| g <= 2.0 * MIP_GAP) {
+        if proven && self.closed(2.0) {
             self.proven = true;
             self.phase = Phase::Done;
         }
@@ -1429,9 +1521,14 @@ impl<'a> Run<'a> {
         plan.proven_optimal = self.proven;
         let gap = self.gap().unwrap_or(0.0);
         plan.gap = if gap > 0.0 { Some(gap) } else { None };
+        plan.gap_buildings = if self.proven { None } else { self.gap_units() };
         if done && !self.proven {
+            let units = match self.gap_units() {
+                Some(u) => format!(", about {u:.1} of the cheapest building"),
+                None => String::new(),
+            };
             plan.warnings.push(format!(
-                "Time limit reached: best whole-building plan found, not proven optimal (within {:.1} % of the bound).",
+                "Time limit reached: best whole-building plan found, not proven optimal (within {:.2} % of the bound{units}).",
                 gap * 100.0
             ));
         }
@@ -1721,7 +1818,18 @@ fn start_units<'b>(
         failure: None,
         nodes: 0,
         fallback_version: None,
+        model_unit: f64::INFINITY,
+        unit: f64::INFINITY,
+        // buildings a main cost: not below the resource weight, nor below a tenth of the MW weight
+        // (Power preset 1 vs 1: on; buildings as a 0.01 tie-break to power or resources: off)
+        last_mipgap: None,
+        buildings_primary: {
+            let w = s.weights();
+            w.buildings > 0.0 && w.buildings >= w.resources && w.buildings >= 0.1 * w.power
+        },
     };
+    run.model_unit = cheapest(&run.m, &building_cols(&run.m), |_| true);
+    run.unit = run.model_unit;
     let first = rounded(&run.inp, &run.lp_pt, c_max, true);
     if within_budgets(s, &run.inp, &first) {
         run.offer(first);
@@ -1729,7 +1837,7 @@ fn start_units<'b>(
         run.offer(pt);
         run.fallback_version = Some(run.version);
     }
-    if run.gap().is_some_and(|g| g <= MIP_GAP) {
+    if run.closed(1.0) {
         run.proven = true;
         run.phase = Phase::Done;
     }

@@ -258,3 +258,22 @@ Step log: `docs/research/dsp-seed/_过程文件/progress-impl.md` (checks vs rep
 - Model: station capacity 432 000/(d+8) (笑笑 belt 7200/min), oil extractors counted, Dark Fog scale on finished levels, stock override not × remaining, real system dedup, seed settings sanitized.
 - Galaxy tab: number fields apply on Enter / blur, out-of-date marks on results, worker error handling, licence + notice shipped in `licenses/`, no 10× setting.
 - Tests: 105 debug / 106 release; live `live_review8.py` 41/41 and `live_galaxy.py` 24/24 on :4175. Not committed to refactor: branch worktree-agent-a993b9de598a620ce.
+
+## 2026-11-22 · "Optimal" also within one building (review 7 L4)
+- Under Buildings, Power and Compute (`buildings_primary`), a whole-building plan counts as proven only when it is
+  within 0.01 % of the bound and also less than one of its cheapest buildings above it. Building columns include
+  the shared-machine group columns. Under Resources, where a building weighs only a 0.01 tie-break, the 0.01 % rule
+  alone still decides. Never below a 1e-6 relative floor.
+- Engines get the matching relative gap (`engine_gap`: microlp root/resume, HiGHS via `solve_engine_gap`). A microlp
+  MipGap stop or a HiGHS proof counts only if the rule holds for the plan in hand; otherwise the search resumes
+  (HiGHS: up to 4 rounds with a fresh gap). The restricted sub-MILP keeps MIP_GAP.
+- Plans carry `gap_buildings`. The card shows "gap ≈ N bldg", or "≈ optimal" below one building.
+- Bench (42 Satisfactory plans, 4 s, native): 26 proven vs 28. No plan is worse.
+  - Nuclear Pasta under Power: 1675 → 1671 buildings, still proven.
+  - Ballistic Warp Drive under Power: 4797 → 4791, now unproven at 4 s.
+  - Making the building rule replace the 0.01 % rule (tried) made small plans worse (Heavy Modular Frame under Power
+    446 → 450 buildings), so both rules apply.
+- Tests 115 pass (new: within one building under Power; HiGHS-style proofs at 0.5 / 1.5 buildings; Resources has no
+  gap in buildings; shared-mode unit). Browser checked: Pasta under Power is optimal at 1671 buildings in 0.2 s;
+  Turbo Motor with all alternates under Buildings shows "gap ≈ 16 bldg" with tooltip; Resources still proves.
+  Fable 5.2 reviewed it twice; fixes applied.

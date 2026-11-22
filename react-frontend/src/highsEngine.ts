@@ -40,7 +40,7 @@ export interface HighsRun {
 /** Solve the LP text (columns v0..v{n-1}) from `start`, within `seconds`. `improving` gets each
  *  new incumbent (model column order) and the current bound; `progress` the bound and gap. */
 export function runHighs(
-  highs: Highs, lp: string, start: Float64Array, seconds: number,
+  highs: Highs, lp: string, start: Float64Array, seconds: number, relGap: number,
   improving: (values: Float64Array, bound: number | null) => void,
   progress: (bound: number | null, nodes: number) => void,
 ): HighsRun {
@@ -53,9 +53,10 @@ export function runHighs(
     for (let j = 0; j < n; j++) col[j] = model.getColByName(`v${j}`)
     const toModel = (x: Float64Array) => { const y = new Float64Array(n); for (let j = 0; j < n; j++) y[col[j]] = x[j]; return y }
     const fromModel = (y: Float64Array) => { const x = new Float64Array(n); for (let j = 0; j < n; j++) x[j] = y[col[j]]; return x }
-    // the relative gap alone decides (lp.rs MIP_GAP): HiGHS's default absolute gap of 1e-6 would call
-    // plans with a small objective (DSP: 0.01 per building) optimal at a larger relative gap
-    model.options.set({ output_flag: false, time_limit: Math.max(0.05, seconds), mip_rel_gap: 1e-4, mip_abs_gap: 1e-10 })
+    // the relative gap alone decides (lp.rs Run::engine_gap: one building where buildings are a main
+    // cost, else MIP_GAP): HiGHS's default absolute gap of 1e-6 would call plans with a small
+    // objective (DSP: 0.01 per building) optimal at a larger relative gap
+    model.options.set({ output_flag: false, time_limit: Math.max(0.05, seconds), mip_rel_gap: relGap, mip_abs_gap: 1e-10 })
     if (start.length && start.some(v => v !== 0)) {
       try { model.setSolution({ colValue: toModel(start) }) } catch { /* start refused: solve without */ }
     }

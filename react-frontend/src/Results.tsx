@@ -122,8 +122,8 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
             <div className="muted">CPU / tick <span className="nocase">({fmtUs(plan.compute.us_low)}–{fmtUs(plan.compute.us_high)})</span></div>
           </div>
         )}
-        <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}`}>
-          <div className="big">{!whole ? 'LP' : plan.proven_optimal ? 'optimal' : (plan.gap ?? 1) < 0.0005 ? '≈ optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
+        <div className="card" title={`cost ${fmt(plan.objective, 3)} · continuous bound ${fmt(plan.lp_bound, 3)}${whole && plan.proven_optimal ? ' · optimal: within 0.01 % of the bound, and when buildings are a main cost (Buildings, Power, Compute) also less than one of its cheapest buildings above it' : ''}${whole && !plan.proven_optimal ? ` · within ${fmt(100 * (plan.gap ?? 0), 3)} % of the bound${plan.gap_buildings != null ? `, about ${fmt(plan.gap_buildings, 1)}× the weight of its cheapest building (a better plan may also trade resources or power)` : ''}` : ''}`}>
+          <div className="big">{!whole ? 'LP' : plan.proven_optimal ? 'optimal' : plan.gap_buildings != null ? (plan.gap_buildings < 0.99 ? '≈ optimal' : `gap ≈ ${fmt(plan.gap_buildings, plan.gap_buildings < 10 ? 1 : 0)} bldg`) : (plan.gap ?? 1) < 0.0005 ? '≈ optimal' : `≤ ${fmt(100 * (plan.gap ?? 0), 1)}% gap`}</div>
           <div className="muted" title={plan.columns ? `${plan.columns} solver columns (recipe × machine × modules), ${plan.rows} item rows` : undefined}>
             {whole ? 'whole buildings' : 'fractional buildings'} · {fmt(plan.solve_ms, 0)} ms
           </div>

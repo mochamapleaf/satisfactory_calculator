@@ -135,6 +135,13 @@ pub fn solve_model_lp() -> String {
     RUN.with(|r| r.borrow().as_ref().map(|run| run.model_lp()).unwrap_or_default())
 }
 
+/// The relative MIP gap an external engine should stop at (lp.rs `Run::engine_gap`: one building
+/// where buildings are a main cost, else MIP_GAP).
+#[wasm_bindgen]
+pub fn solve_engine_gap() -> f64 {
+    RUN.with(|r| r.borrow().as_ref().map(|run| run.engine_gap()).unwrap_or(1e-4))
+}
+
 /// The best plan in hand as one value per model column (empty without one): the engine's start.
 #[wasm_bindgen]
 pub fn solve_best_values() -> Vec<f64> {

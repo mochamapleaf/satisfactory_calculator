@@ -5,7 +5,7 @@
 // engine the full search then goes to HiGHS (loaded on first use, in parallel with microlp's
 // first steps), whose incumbents go back through microlp's run (budget and row check).
 import init, {
-  solve_best_values, solve_extend, solve_finish, solve_heuristics_done, solve_model_lp, solve_offer, solve_start, solve_step,
+  solve_best_values, solve_engine_gap, solve_extend, solve_finish, solve_heuristics_done, solve_model_lp, solve_offer, solve_start, solve_step,
 } from './wasm-pkg/satisfactory_calculator.js'
 import { highsLoadMs, loadHighs, resetHighs, runHighs } from './highsEngine'
 import type { Highs } from 'highs'
@@ -33,15 +33,29 @@ const engineInfo = () => (wantHighs ? { engine: useHighs && highsTried ? 'highs'
 function highsSearch(id: number, h: Highs, seconds: number): string | null {
   highsTried = true
   const lp = solve_model_lp()
-  const start = new Float64Array(solve_best_values())
   const busy = { engine_busy: true, ...engineInfo() }
   // tell the page before blocking: a stop now has to terminate the worker
   post(id, solve_offer(new Float64Array(), NaN, false), busy)
-  let r
+  const t0 = performance.now()
+  let out = ''
   try {
-    r = runHighs(h, lp, start, seconds,
-      (values, bound) => post(id, solve_offer(values, bound ?? NaN, false), busy),
-      bound => { if (bound !== null) post(id, solve_offer(new Float64Array(), bound, false), busy) })
+    // HiGHS stops at the relative gap of the plan in hand when it starts (lp.rs engine_gap); a
+    // better plan found on the way can need a tighter one, so a proof the run does not accept
+    // (still within MIP_GAP, not under one building) starts HiGHS again from that plan
+    let prevGap = NaN
+    for (let round = 0; round < 4; round++) {
+      const left = seconds - (performance.now() - t0) / 1000
+      const gap = solve_engine_gap()
+      // refused for another reason (row or budget check): the same gap would repeat the same solve
+      if (round > 0 && (left <= 0.05 || gap === prevGap)) break
+      prevGap = gap
+      const r = runHighs(h, lp, new Float64Array(solve_best_values()), left, gap,
+        (values, bound) => post(id, solve_offer(values, bound ?? NaN, false), busy),
+        bound => { if (bound !== null) post(id, solve_offer(new Float64Array(), bound, false), busy) })
+      highsStatus = r.status
+      out = solve_offer(r.values ?? new Float64Array(), r.bound ?? NaN, r.proven)
+      if (JSON.parse(out).done || !r.proven) break
+    }
   } catch (err) {
     // the instance may be unusable after an abort: the next solve loads a new one
     highs = null
@@ -50,8 +64,6 @@ function highsSearch(id: number, h: Highs, seconds: number): string | null {
     highsStatus = `failed: ${err}`
     return null
   }
-  highsStatus = r.status
-  const out = solve_offer(r.values ?? new Float64Array(), r.bound ?? NaN, r.proven)
   return JSON.parse(out).done ? out : solve_finish()
 }
 

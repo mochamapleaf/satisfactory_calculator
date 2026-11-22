@@ -77,7 +77,10 @@ export default function App() {
   const tighten = (p: Plan | null, bound: number | undefined): Plan | null => {
     if (!p || p.proven_optimal || p.status !== 'optimal' || bound === undefined || !Number.isFinite(bound)) return p
     const g = Math.max(0, (p.objective - bound) / Math.max(Math.abs(p.objective), 1e-10))
-    return g < (p.gap ?? Infinity) ? { ...p, gap: g } : p
+    if (g >= (p.gap ?? Infinity)) return p
+    // the gap in buildings shrinks with the gap (same plan, same cheapest building)
+    const gb = p.gap_buildings != null && p.gap ? p.gap_buildings * g / p.gap : p.gap_buildings
+    return { ...p, gap: g, gap_buildings: gb }
   }
   // one handler per solve: plans and progress as they stream in
   const onUpdate = (k: string, model: string, more: number, token: number) => (u: SolveUpdate) => {
