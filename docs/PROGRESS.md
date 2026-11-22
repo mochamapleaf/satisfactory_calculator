@@ -162,3 +162,14 @@ Step log: `docs/research/factorio-quality/_过程文件/impl-progress.md` (steps
   are as before. Satisfactory / DSP / base Factorio plans unchanged (10-plan regression vs b34e62c).
 - Open: integer machines shared across quality tiers (design in impl-progress step 8), machine quality,
   quality mining.
+
+## 2026-11-22 — Whole-building solver: plan at once, never "no plan", model shrink
+Plan: `docs/research/solver-speed/00-最终报告.md` §6 steps 0–3; results `docs/research/solver-speed/_过程文件/impl-results.md`.
+- `lp::Run`: the rounded-up LP plan is in hand right after the LP; reweighted LPs, restricted MILP and full MILP only
+  improve it (budget-checked). Somersloop / shard budgets get a fallback plan. MILP root call runs without time limit
+  so the warm start is always checked. Exact model reductions: no power variables for linear power, dominated tier /
+  mode columns dropped (display tie-break keeps the lowest-MW tier at equal buildings).
+- WASM `solve_start / solve_step / solve_extend`; the worker streams the best plan every 150 ms; UI: "best plan so far,
+  within x %", Stop keeps the plan, "Keep solving" continues the same search. `opt-level = 3` (+193 KB .wasm).
+- 4 s bench (105 scenarios): plans 104 → 105, proven 43 → 46, first plan median 6 ms (max 279 ms native; 0.24–0.4 s
+  in the browser). Known: Somersloop Resources plan 5275 → 5725. HiGHS engine: next.

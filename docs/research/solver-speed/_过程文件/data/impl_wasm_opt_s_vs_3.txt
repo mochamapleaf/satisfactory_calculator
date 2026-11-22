@@ -1,0 +1,25 @@
+npkg-s sf_rip10_alt_bld 1386.1 True 2.8898719975000473e-05
+npkg-s sf_rip10_alt_pow 919.9 True 8.488632034094192e-05
+npkg-s sf_hmf7_alt_pow 610.7 True 9.98261978638756e-05
+npkg-s lp_fx_sci6_mod_b4_pow 80.3 True None
+npkg-s lp_dsp_multi_pall_cmp 44.8 True None
+npkg-s dsp_um60_plain_bld_4s 8.1 True None
+npkg-3 sf_rip10_alt_bld 1159.2 True 2.8898719975000473e-05
+npkg-3 sf_rip10_alt_pow 649.5 True 8.488632034094192e-05
+npkg-3 sf_hmf7_alt_pow 477.7 True 9.98261978638756e-05
+npkg-3 lp_fx_sci6_mod_b4_pow 69.8 True None
+npkg-3 lp_dsp_multi_pall_cmp 34.7 True None
+npkg-3 dsp_um60_plain_bld_4s 6.3 True None
+npkg-s sf_rip10_alt_bld 1169.5 True 2.8898719975000473e-05
+npkg-s sf_rip10_alt_pow 792.6 True 8.488632034094192e-05
+npkg-s sf_hmf7_alt_pow 541.7 True 9.98261978638756e-05
+npkg-s lp_fx_sci6_mod_b4_pow 80.3 True None
+npkg-s lp_dsp_multi_pall_cmp 43 True None
+npkg-s dsp_um60_plain_bld_4s 6 True None
+npkg-3 sf_rip10_alt_bld 1128 True 2.8898719975000473e-05
+npkg-3 sf_rip10_alt_pow 591.8 True 8.488632034094192e-05
+npkg-3 sf_hmf7_alt_pow 441.6 True 9.98261978638756e-05
+npkg-3 lp_fx_sci6_mod_b4_pow 56.8 True None
+npkg-3 lp_dsp_multi_pall_cmp 32.8 True None
+npkg-3 dsp_um60_plain_bld_4s 5.3 True None
+sizes (web target .wasm): s 1876002 B (gzip -9 441278, brotli 306576); 3 2068757 B (gzip -9 504892, brotli 349106)
