@@ -131,6 +131,8 @@ export interface Settings {
   shard_budget: number | null
   cost: CostWeights
   time_limit_ms: number
+  /** Whole-building MILP engine: microlp (built in) or HiGHS (loaded on first use); auto picks. */
+  engine: Engine
   generator: Generator
   mixed_belts: boolean
   /** Factorio data set ('' = 2.0 base). */
@@ -224,6 +226,7 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   shard_budget: null,
   cost: preset('resources'),
   time_limit_ms: 4000,
+  engine: 'auto',
   generator: 'artificial_star',
   mixed_belts: false,
   dataset: game === 'factorio' ? '2.0' : '',
@@ -271,6 +274,7 @@ export function solve(s: Settings): Plan {
 // ones: WASM cannot be interrupted inside a step, so a busy worker is terminated and the next
 // request starts a fresh one. A cancel after the first plan stops the worker between steps and
 // keeps its search, so "Keep solving" can resume the same tree.
+export type Engine = 'auto' | 'microlp' | 'highs'
 export interface SolveUpdate {
   /** The best plan, when it changed (the final update of a solve always has it). */
   plan: Plan | null
@@ -286,11 +290,17 @@ export interface SolveUpdate {
   deadline_ms?: number
   /** resume: the worker no longer holds this solve */
   gone?: boolean
+  /** HiGHS is running (the worker cannot take messages until it returns) */
+  engine_busy?: boolean
+  /** engine that ran the search, HiGHS load time and final status */
+  engine?: string
+  highs_load_ms?: number
+  highs_status?: string
 }
 type OnUpdate = (u: SolveUpdate) => void
 let worker: Worker | null = null
 let seq = 0
-let running: { id: number; onUpdate: OnUpdate; gotPlan: boolean } | null = null
+let running: { id: number; onUpdate: OnUpdate; gotPlan: boolean; busy: boolean } | null = null
 let idle: number | null = null // solve whose search the idle worker still holds
 function newWorker() {
   worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
@@ -299,6 +309,7 @@ function newWorker() {
     if (r?.id !== e.data.id) return
     const u = JSON.parse(e.data.update) as SolveUpdate
     if (u.plan) r.gotPlan = true
+    r.busy = !!u.engine_busy
     if (u.done) { running = null; idle = u.gone ? null : r.id }
     r.onUpdate(u)
   }
@@ -314,7 +325,7 @@ export function solveStream(s: Settings, onUpdate: OnUpdate): number {
   if (running) stopWorker()
   if (!worker) newWorker()
   const id = ++seq
-  running = { id, onUpdate, gotPlan: false }
+  running = { id, onUpdate, gotPlan: false, busy: false }
   idle = null
   worker!.postMessage({ type: 'solve', id, settings: JSON.stringify(s) })
   return id
@@ -326,7 +337,7 @@ export function solveAsync(s: Settings): Promise<Plan> {
 /** Resume solve `id` for `ms` more where it stopped. False when the worker no longer holds it. */
 export function keepSolving(id: number, ms: number, onUpdate: OnUpdate): boolean {
   if (running || idle !== id || !worker) return false
-  running = { id, onUpdate, gotPlan: true }
+  running = { id, onUpdate, gotPlan: true, busy: false }
   idle = null
   worker.postMessage({ type: 'resume', id, ms })
   return true
@@ -336,7 +347,8 @@ export function keepSolving(id: number, ms: number, onUpdate: OnUpdate): boolean
 export function cancelSolve() {
   const r = running
   if (!r) return
-  if (r.gotPlan && worker) {
+  // HiGHS runs synchronously: the worker would see the stop only when it returns
+  if (r.gotPlan && worker && !r.busy) {
     worker.postMessage({ type: 'stop', id: r.id })
     running = null
     idle = r.id

@@ -14,6 +14,7 @@
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",
     "@xyflow/react": "^12.12.1",
+    "highs": "1.15.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

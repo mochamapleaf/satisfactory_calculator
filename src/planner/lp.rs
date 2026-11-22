@@ -192,6 +192,9 @@ struct Model {
     p: Problem,
     /// Objective coefficient of every variable, by index (objective of a point without a solve).
     cost: Vec<f64>,
+    /// Bounds and integrality of every variable, and every row (for `lp_text`).
+    bounds: Vec<(f64, f64, bool)>,
+    rows: Vec<(Vec<(usize, f64)>, ComparisonOp, f64)>,
     rv: Vec<RecipeVars>,
     raw: Vec<(String, Variable)>,
     sup: Vec<(String, Variable)>,
@@ -271,8 +274,15 @@ fn build_scaled(
     let k_max = shards_per_machine(c_max);
     let mut p = Problem::new(OptimizationDirection::Minimize);
     let mut cost: Vec<f64> = Vec::new();
+    let mut bounds: Vec<(f64, f64, bool)> = Vec::new();
+    let rows_out = std::cell::RefCell::new(Vec::new());
+    let con = |p: &mut Problem, terms: &[(Variable, f64)], op: ComparisonOp, rhs: f64| {
+        rows_out.borrow_mut().push((terms.iter().map(|(v, a)| (v.idx(), *a)).collect::<Vec<_>>(), op, rhs));
+        p.add_constraint(terms, op, rhs)
+    };
     let mut var = |p: &mut Problem, c: f64, b: (f64, f64), int: bool| {
         cost.push(c);
+        bounds.push((b.0, if int { b.1.min(MAX_BUILDINGS as f64) } else { b.1 }, int));
         if int {
             p.add_integer_var(c, (b.0 as i32, b.1.min(MAX_BUILDINGS as f64) as i32))
         } else {
@@ -295,11 +305,11 @@ fn build_scaled(
         let (c_max, k_max) = if f.overclock { (c_max, k_max) } else { (1.0, 0) };
         let cap = n_cap.get(&u.key).copied().unwrap_or(f64::INFINITY);
         let n = var(&mut p, wb, (0.0, cap), integer);
-        p.add_constraint(&[(x, 1.0), (n, -c_max * f.speed)], ComparisonOp::Le, 0.0);
+        con(&mut p, &[(x, 1.0), (n, -c_max * f.speed)], ComparisonOp::Le, 0.0);
         let sv = if k_max > 0 {
             let sv = var(&mut p, w.shards, (0.0, f64::INFINITY), integer);
-            p.add_constraint(&[(x, 1.0), (n, -f.speed), (sv, -0.5 * f.speed)], ComparisonOp::Le, 0.0);
-            p.add_constraint(&[(sv, 1.0), (n, -(k_max as f64))], ComparisonOp::Le, 0.0);
+            con(&mut p, &[(x, 1.0), (n, -f.speed), (sv, -0.5 * f.speed)], ComparisonOp::Le, 0.0);
+            con(&mut p, &[(sv, 1.0), (n, -(k_max as f64))], ComparisonOp::Le, 0.0);
             Some(sv)
         } else {
             None
@@ -309,7 +319,8 @@ fn build_scaled(
             let pv = var(&mut p, w.power, (0.0, f64::INFINITY), false);
             for (a, b) in &segs {
                 // p ≥ P·(a·x + b·n) + beacons·n (beacons draw full power whatever the clock)
-                p.add_constraint(
+                con(
+                    &mut p,
                     &[(pv, 1.0), (x, -f.power_base * a / f.speed), (n, -f.power_base * b - f.beacon_power)],
                     ComparisonOp::Ge,
                     0.0,
@@ -331,13 +342,13 @@ fn build_scaled(
             .filter_map(|(u, v)| u.mode.held.iter().find(|(i, _)| *i == item).map(|(_, q)| (v.n, *q)))
             .collect();
         if !row.is_empty() {
-            p.add_constraint(row.as_slice(), ComparisonOp::Le, budget);
+            con(&mut p, row.as_slice(), ComparisonOp::Le, budget);
         }
     }
     if let (Some(budget), true) = (s.shard_budget, k_max > 0) {
         let row: Vec<(Variable, f64)> = rv.iter().filter_map(|v| v.s.map(|s| (s, 1.0))).collect();
         if !row.is_empty() {
-            p.add_constraint(row.as_slice(), ComparisonOp::Le, budget as f64);
+            con(&mut p, row.as_slice(), ComparisonOp::Le, budget as f64);
         }
     }
 
@@ -388,9 +399,9 @@ fn build_scaled(
     for it in &inp.items {
         let row = rows.remove(it.as_str()).unwrap_or_default();
         let b = inp.targets.get(it).copied().unwrap_or(0.0);
-        balance.push((it.clone(), p.add_constraint(row.as_slice(), ComparisonOp::Eq, b)));
+        balance.push((it.clone(), con(&mut p, row.as_slice(), ComparisonOp::Eq, b)));
     }
-    Model { p, cost, rv, raw, sup, surplus, balance, segments }
+    Model { p, cost, bounds, rows: rows_out.into_inner(), rv, raw, sup, surplus, balance, segments }
 }
 
 /// Solver-independent snapshot of a solution, keyed by recipe / item id.
@@ -401,14 +412,18 @@ struct Point {
 }
 
 fn point_of(m: &Model, inp: &Inputs, sol: &Solution) -> Point {
+    point_from(m, inp, |v| sol[v])
+}
+
+fn point_from(m: &Model, inp: &Inputs, sol: impl Fn(Variable) -> f64) -> Point {
     let mut pt = Point::default();
     for (u, v) in inp.units.iter().zip(&m.rv) {
-        let sh = v.s.map(|s| sol[s]).unwrap_or(0.0);
-        pt.rec.insert(u.key.clone(), (sol[v.x].max(0.0), sol[v.n].max(0.0), sh.max(0.0)));
+        let sh = v.s.map(&sol).unwrap_or(0.0);
+        pt.rec.insert(u.key.clone(), (sol(v.x).max(0.0), sol(v.n).max(0.0), sh.max(0.0)));
     }
     for (k, list) in [(0u8, &m.raw), (1, &m.sup), (2, &m.surplus)] {
         for (it, v) in list {
-            pt.flows.insert((k, it.clone()), sol[*v].max(0.0));
+            pt.flows.insert((k, it.clone()), sol(*v).max(0.0));
         }
     }
     pt
@@ -1156,6 +1171,78 @@ impl<'a> Run<'a> {
         }
     }
 
+    /// The whole-building model (after the exact reductions) as CPLEX LP text, columns `v0, v1, …`
+    /// in model order, for an external MILP engine (HiGHS in the browser).
+    pub fn model_lp(&self) -> String {
+        lp_text(&self.m)
+    }
+
+    /// Current best plan as a value per model column (`v0, v1, …`), for an engine's initial
+    /// solution; empty without one.
+    pub fn best_values(&self) -> Vec<f64> {
+        let Some((_, pt)) = &self.best else { return vec![] };
+        let mut out = vec![0.0; self.m.cost.len()];
+        for (v, x) in values_of(&self.m, &self.inp, pt) {
+            out[v.idx()] = x;
+        }
+        out
+    }
+
+    /// A whole-building solution from an external engine (values per column of `model_lp`): taken
+    /// as the best plan when it fits the budgets and is cheaper. `bound`: the engine's proven lower
+    /// bound (its optimum when it proved optimality); `proven` ends the solve.
+    pub fn offer_values(&mut self, values: &[f64], bound: Option<f64>, proven: bool) {
+        if values.len() == self.m.cost.len() && values.iter().all(|v| v.is_finite()) {
+            let m = &self.m;
+            let pt = point_from(m, &self.inp, |v| values[v.idx()]);
+            let pt = Point { rec: pt.rec.into_iter().map(|(k, (x, n, s))| (k, (x, n.round(), s.round()))).collect(), flows: pt.flows };
+            if self.rows_hold(&pt) {
+                self.offer(pt);
+            }
+        }
+        if let Some(b) = bound.filter(|b| b.is_finite()) {
+            // the engine's bound is over the same model; never above the plan in hand
+            let cap = self.best.as_ref().map(|b| b.0).unwrap_or(f64::INFINITY);
+            self.bound = self.bound.max(b.min(cap));
+        }
+        if proven && self.best.is_some() {
+            self.proven = true;
+            self.phase = Phase::Done;
+        }
+    }
+
+    /// Every row and bound of the whole-building model holds at `pt` (to 1e-6 relative): an
+    /// external engine's values are checked before they become a plan.
+    fn rows_hold(&self, pt: &Point) -> bool {
+        let vals = values_of(&self.m, &self.inp, pt);
+        let mut x = vec![0.0; self.m.cost.len()];
+        for (v, a) in vals {
+            x[v.idx()] = a;
+        }
+        let tol = |r: f64| 1e-6 * (1.0 + r.abs());
+        let bounds_ok = self.m.bounds.iter().zip(&x).all(|((lo, hi, _), v)| *v >= lo - tol(*lo) && *v <= hi + tol(*hi));
+        bounds_ok
+            && self.m.rows.iter().all(|(terms, op, rhs)| {
+                let lhs: f64 = terms.iter().map(|(i, a)| a * x[*i]).sum();
+                let t = tol(*rhs).max(1e-6 * terms.iter().map(|(i, a)| (a * x[*i]).abs()).fold(0.0, f64::max));
+                match op {
+                    ComparisonOp::Le => lhs <= rhs + t,
+                    ComparisonOp::Ge => lhs >= rhs - t,
+                    ComparisonOp::Eq => (lhs - rhs).abs() <= t,
+                }
+            })
+    }
+
+    /// Ends the microlp search: the plan in hand is final (an external engine took over).
+    pub fn finish_now(&mut self) {
+        self.phase = Phase::Done;
+    }
+
+    /// Runs the heuristic phases (reweighted LPs, restricted MILP) only, leaving the full search.
+    pub fn heuristics_done(&self) -> bool {
+        matches!(self.phase, Phase::Full | Phase::Done)
+    }
+
     pub fn progress(&self) -> Progress {
         Progress {
             elapsed_ms: self.ms(),
@@ -1207,6 +1294,60 @@ impl<'a> Run<'a> {
         }
         plan
     }
+}
+
+/// CPLEX LP text of a model (columns v0, v1, …).
+fn lp_text(m: &Model) -> String {
+    use std::fmt::Write;
+    let mut s = String::from("Minimize\n obj:");
+    let mut k = 0;
+    for (i, c) in m.cost.iter().enumerate() {
+        if *c != 0.0 {
+            write!(s, " {:+.17e} v{}", c, i).unwrap();
+            k += 1;
+            if k % 8 == 0 {
+                s.push('\n');
+            }
+        }
+    }
+    if k == 0 {
+        s.push_str(" 0 v0");
+    }
+    s.push_str("\nSubject To\n");
+    for (r, (terms, op, rhs)) in m.rows.iter().enumerate() {
+        if terms.is_empty() {
+            continue;
+        }
+        write!(s, " c{}:", r).unwrap();
+        for (j, (v, a)) in terms.iter().enumerate() {
+            write!(s, " {:+.17e} v{}", a, v).unwrap();
+            if j % 8 == 7 {
+                s.push('\n');
+            }
+        }
+        let op = match op {
+            ComparisonOp::Le => "<=",
+            ComparisonOp::Eq => "=",
+            ComparisonOp::Ge => ">=",
+        };
+        writeln!(s, " {} {:.17e}", op, rhs).unwrap();
+    }
+    s.push_str("Bounds\n");
+    for (i, (lo, hi, _)) in m.bounds.iter().enumerate() {
+        if hi.is_finite() {
+            writeln!(s, " {:.17e} <= v{} <= {:.17e}", lo, i, hi).unwrap();
+        } else if *lo != 0.0 {
+            writeln!(s, " v{} >= {:.17e}", i, lo).unwrap();
+        }
+    }
+    s.push_str("General\n");
+    for (i, (_, _, int)) in m.bounds.iter().enumerate() {
+        if *int {
+            writeln!(s, " v{}", i).unwrap();
+        }
+    }
+    s.push_str("End\n");
+    s
 }
 
 /// Sets up a solve: model, LP relaxation, and (whole buildings) the first plan in hand.

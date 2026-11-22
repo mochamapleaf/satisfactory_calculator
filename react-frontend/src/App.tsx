@@ -57,8 +57,14 @@ export default function App() {
     const t = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(t)
   }, [solving])
+  /** The plan's gap to a (valid, same-model) lower bound, when that is smaller. */
+  const tighten = (p: Plan | null, bound: number | undefined): Plan | null => {
+    if (!p || p.proven_optimal || p.status !== 'optimal' || bound === undefined || !Number.isFinite(bound)) return p
+    const g = Math.max(0, (p.objective - bound) / Math.max(Math.abs(p.objective), 1e-10))
+    return g < (p.gap ?? Infinity) ? { ...p, gap: g } : p
+  }
   // one handler per solve: plans and progress as they stream in
-  const onUpdate = (k: string, more: number) => (u: SolveUpdate) => {
+  const onUpdate = (k: string, more: number, keepBetter = false) => (u: SolveUpdate) => {
     if (u.gone) { setExtra(more); setRerun(n => n + 1); return }
     if (u.plan) {
       const p = u.plan
@@ -67,12 +73,13 @@ export default function App() {
         setPlan(null)
       } else {
         setBig(null)
-        setPlan(p)
+        // a restarted "Keep solving" (the search was gone) never shows a worse plan than the one kept
+        setPlan(prev => (keepBetter && prev?.status === 'optimal' && p.status === 'optimal' && prev.objective <= p.objective + 1e-9 ? tighten(prev, u.bound) : p))
         setPlanKey(k)
       }
-    } else if (u.gap !== undefined) {
+    } else if (u.bound !== undefined) {
       // the bound moved: same plan, smaller gap
-      setPlan(p => (p && !p.proven_optimal ? { ...p, gap: u.gap ?? null } : p))
+      setPlan(p => tighten(p, u.bound))
     }
     setProgress(u)
     if (u.done) { setSolving(false); setNow(Date.now()) }
@@ -89,7 +96,7 @@ export default function App() {
     const t = setTimeout(() => {
       setStarted(Date.now()); setNow(Date.now())
       if (more) setExtra(0)
-      setRunId(solveStream({ ...settings, time_limit_ms: settings.time_limit_ms + more, max_columns: run ? 0 : AUTO_SOLVE_COLUMNS }, onUpdate(key, settings.time_limit_ms)))
+      setRunId(solveStream({ ...settings, time_limit_ms: settings.time_limit_ms + more, max_columns: run ? 0 : AUTO_SOLVE_COLUMNS }, onUpdate(key, settings.time_limit_ms, more > 0)))
     }, run ? 0 : 150)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,7 +172,7 @@ export default function App() {
           )}
           {unproven && !solving && (
             <div className="note bigmodel" role="status">
-              <p><b>Best plan found{stopped ? ' (stopped)' : ''}</b> in {fmt((progress?.elapsed_ms ?? plan!.solve_ms) / 1000, 1)} s: within {gapPct(plan!.gap)} % of the lower bound, not proven optimal. More time can improve it or prove it.</p>
+              <p><b>Best plan found{stopped ? ' (stopped)' : ''}</b> in {fmt((stopped ? Math.max(progress?.elapsed_ms ?? 0, now - started) : progress?.elapsed_ms ?? plan!.solve_ms) / 1000, 1)} s: within {gapPct(plan!.gap)} % of the lower bound, not proven optimal. More time can improve it or prove it.</p>
               <span className="row">
                 <button onClick={keepGoing}>Keep solving (+{fmt(settings.time_limit_ms / 1000, 1)} s)</button>
                 <label className="row small">Time limit

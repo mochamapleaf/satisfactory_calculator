@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, QualityPip, RemoveMark } from './Icon'
 import ItemPicker from './ItemPicker'
 import TimeInput from './TimeInput'
-import { DATASETS, defaultSettings, withDataset, dn, fmt, GENERATORS, itemName as qItemName, preset, qsplit, scarcity, withQ, type CostWeights, type Generator, type GameData, type ItemRate, type Objective, type Settings } from './solver'
+import { DATASETS, defaultSettings, withDataset, dn, fmt, GENERATORS, itemName as qItemName, preset, qsplit, scarcity, withQ, type CostWeights, type Generator, type GameData, type ItemRate, type Objective, type Settings, type Engine } from './solver'
 
 interface Props {
   data: GameData
@@ -421,6 +421,16 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             <TimeInput ms={s.time_limit_ms} onChange={time_limit_ms => set({ time_limit_ms })} />
             <span className="muted">s</span>
           </div>
+        )}
+        {s.integer && (
+          <label className="row small" title="microlp is built in; HiGHS (open source, MIT) is downloaded on first use, about 1.2 MB">
+            <span className="grow">Solver engine</span>
+            <select value={s.engine ?? 'auto'} onChange={e => set({ engine: e.target.value as Engine })}>
+              <option value="auto">Auto</option>
+              <option value="microlp">microlp</option>
+              <option value="highs">HiGHS</option>
+            </select>
+          </label>
         )}
         <p className="hint">
           {s.integer

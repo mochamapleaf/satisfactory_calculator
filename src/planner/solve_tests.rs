@@ -176,3 +176,30 @@ fn stepped_solve_streams_improving_plans() {
         assert!(run.progress().nodes > nodes, "extend continues the same tree");
     }
 }
+
+/// External-engine hooks (HiGHS in the browser): the LP text names every column, the best plan's
+/// values pass the model's own row check and come back unchanged, a worse or broken vector is refused,
+/// and a proven offer ends the run.
+#[test]
+fn external_engine_round_trip() {
+    let (d, mut s) = sf(&[("Heavy Modular Frame", 7.3)], Objective::Buildings, true);
+    s.time_limit_ms = 300;
+    let Start::Running(mut run) = lp::start(&d, &s) else { panic!() };
+    let lp = run.model_lp();
+    let vals = run.best_values();
+    assert!(!vals.is_empty());
+    assert!(lp.contains(&format!(" v{}", vals.len() - 1)) && lp.starts_with("Minimize") && lp.contains("General"));
+    let (obj, version) = (run.progress().objective.unwrap(), run.progress().version);
+    run.offer_values(&vals, None, false);
+    assert_eq!(run.progress().version, version, "same plan is no improvement");
+    // breaking one balance: take the work of the first used column away
+    let mut bad = vals.clone();
+    if let Some(i) = bad.iter().position(|v| *v > 1.0) {
+        bad[i] = 0.0;
+    }
+    run.offer_values(&bad, None, false);
+    assert!((run.progress().objective.unwrap() - obj).abs() < 1e-9);
+    run.offer_values(&[], Some(obj), true);
+    assert!(run.progress().done && run.progress().proven);
+    assert!(run.plan().proven_optimal);
+}

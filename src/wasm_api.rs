@@ -125,3 +125,53 @@ pub fn solve_extend(ms: f64) -> bool {
         None => false,
     })
 }
+
+// ---- external MILP engine (HiGHS in the worker, report §6 step 5)
+
+/// The current solve's whole-building model (after the exact reductions) as CPLEX LP text,
+/// columns `v0, v1, …`; empty when there is none.
+#[wasm_bindgen]
+pub fn solve_model_lp() -> String {
+    RUN.with(|r| r.borrow().as_ref().map(|run| run.model_lp()).unwrap_or_default())
+}
+
+/// The best plan in hand as one value per model column (empty without one): the engine's start.
+#[wasm_bindgen]
+pub fn solve_best_values() -> Vec<f64> {
+    RUN.with(|r| r.borrow().as_ref().map(|run| run.best_values()).unwrap_or_default())
+}
+
+/// True once the heuristic phases (re-weighted LPs, restricted MILP) are done: the full search
+/// can go to an external engine.
+#[wasm_bindgen]
+pub fn solve_heuristics_done() -> bool {
+    RUN.with(|r| r.borrow().as_ref().is_none_or(|run| run.heuristics_done()))
+}
+
+/// An engine solution (values per model column; may be empty) with its bound (NaN = none);
+/// `proven` ends the solve as optimal. Returns an update like `solve_step`.
+#[wasm_bindgen]
+pub fn solve_offer(values: Vec<f64>, bound: f64, proven: bool) -> String {
+    RUN.with(|r| {
+        let mut r = r.borrow_mut();
+        let Some(run) = r.as_mut() else { return serde_json::json!({"done": true, "gone": true}).to_string() };
+        run.offer_values(&values, bound.is_finite().then_some(bound), proven);
+        let last = SENT.with(|s| s.get());
+        let done = run.progress().done;
+        let out = if done { update(run, None) } else { update(run, last) };
+        SENT.with(|s| s.set(Some(run.progress().version)));
+        out
+    })
+}
+
+/// Ends the current solve with the plan in hand (the engine used up the time). Final update.
+#[wasm_bindgen]
+pub fn solve_finish() -> String {
+    RUN.with(|r| {
+        let mut r = r.borrow_mut();
+        let Some(run) = r.as_mut() else { return serde_json::json!({"done": true, "gone": true}).to_string() };
+        run.finish_now();
+        SENT.with(|s| s.set(Some(run.progress().version)));
+        update(run, None)
+    })
+}
