@@ -180,6 +180,8 @@ pub struct PlanSettings {
     pub module_costs: Vec<f64>,
     /// DSP mixed-belt (混带) layout tab (`mixed_belt.rs`). Not used by the solver; not named
     /// `mixed_belt` because `mixed_belts` above is the solver's sorter-cost switch.
+    /// Read leniently (`mixed_belt::lenient`): a bad number in the tab must not break the solve.
+    #[serde(deserialize_with = "mixed_belt::lenient")]
     pub belt_layout: mixed_belt::BeltLayoutSettings,
 }
 

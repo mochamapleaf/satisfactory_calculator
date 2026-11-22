@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { AUTO_SOLVE_COLUMNS, cancelSolve, keepSolving, MAX_TIME_MS, fmt, GAMES, loadSolver, solveStream, type Game, type GameData, type Plan, type Settings, type SolveUpdate } from './solver'
 import { loadGame, loadSettings, saveSettings } from './urlState'
 import Sidebar from './Sidebar'
@@ -137,6 +137,10 @@ export default function App() {
   }
   const showBig = big !== null && big.key === key
   const current = !!plan && planKey === key
+  // the settings the shown plan was solved for (the mixed-belt tab lays out that plan, not the next one)
+  const planSettings = useMemo(() => {
+    try { return planKey ? (JSON.parse(planKey) as Settings) : null } catch { return null }
+  }, [planKey])
   const limited = current && settings.integer && plan!.warnings.some(w => w.startsWith('Time limit reached'))
   // a whole-building plan in hand that is not proven optimal (timed out, stopped, or still solving)
   const unproven = current && settings.integer && plan!.status === 'optimal' && !plan!.proven_optimal
@@ -220,7 +224,7 @@ export default function App() {
           {plan && tab === 'flow' && <ItemFlow data={data} plan={plan} />}
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}
           {plan && tab === 'values' && <ItemValues plan={plan} settings={settings} />}
-          {plan && !pending && tab === 'mixed' && data.game === 'dsp' && <MixedBelt data={data} plan={plan} settings={settings} setSettings={setSettings} />}
+          {!pending && tab === 'mixed' && data.game === 'dsp' && <MixedBelt plan={plan} planSettings={planSettings} current={current} settings={settings} setSettings={setSettings} />}
         </main>
       </div>
     </div>

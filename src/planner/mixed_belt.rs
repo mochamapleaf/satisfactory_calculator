@@ -35,6 +35,14 @@ pub const SORTER_NAMES: [&str; 3] = ["yellow", "green", "blue"];
 /// Pile sorter items/s over 1 grid by upgrade level: Lv0 800/min, Lv5 1600/min, max 7200/min
 /// (wiki Pile Sorter table).
 pub const PILE: [(&str, f64); 3] = [("Lv0", 800.0 / 60.0), ("Lv5", 1600.0 / 60.0), ("max", 120.0)];
+/// Longest scheme-A line on one control unit that is laid out (machines). Longer: set a unit cap.
+/// His longest is "300 多台" [BV1fXkxYDEbW 90:26]; the limit only keeps the page responsive (MINE).
+pub const LINE_MAX: u32 = 20_000;
+/// Lines longer than this are drawn as an equivalent line with whole periods left out.
+pub const TRACE_MAX: u32 = 600;
+/// Periods below the largest steady-state-feasible one that are tried for a line whose return
+/// flow fails with it.
+const RETURN_TRIES: usize = 16;
 
 // ---------------------------------------------------------------------------------------------
 // settings
@@ -114,7 +122,63 @@ impl Default for BeltLayoutSettings {
     }
 }
 
+/// `PlanSettings::belt_layout` is read leniently: these settings ride in the same JSON as the
+/// solve's, so one fractional or negative number typed into the tab (R = 7.5) must not make the
+/// whole settings object, and with it the solve, unreadable.
+pub fn lenient<'de, D: serde::Deserializer<'de>>(d: D) -> Result<BeltLayoutSettings, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(BeltLayoutSettings::from_value(&v))
+}
+
 impl BeltLayoutSettings {
+    /// Field by field: numbers are rounded and clamped to their range, anything else (wrong type,
+    /// non-finite, missing) keeps the default; optional fields become `None`.
+    pub fn from_value(v: &serde_json::Value) -> Self {
+        fn num(v: &serde_json::Value, k: &str) -> Option<f64> {
+            v.get(k).and_then(|x| x.as_f64()).filter(|x| x.is_finite())
+        }
+        fn int(v: &serde_json::Value, k: &str, lo: u32, hi: u32) -> Option<u32> {
+            num(v, k).map(|x| x.round().clamp(lo as f64, hi as f64) as u32)
+        }
+        // optional counts: 0, negative and non-numbers mean "not set"
+        fn opt(v: &serde_json::Value, k: &str, hi: u32) -> Option<u32> {
+            num(v, k).filter(|x| x.round() >= 1.0).map(|x| x.round().min(hi as f64) as u32)
+        }
+        let d = Self::default();
+        let mut overrides = HashMap::new();
+        if let Some(o) = v.get("overrides").and_then(|o| o.as_object()) {
+            for (key, x) in o {
+                let ov = TwoOverride {
+                    period: opt(x, "period", 100_000),
+                    first: num(x, "first").filter(|f| *f == 0.0 || *f == 1.0).map(|f| f as u8),
+                    k: opt(x, "k", 1_000_000),
+                    sigma5: num(x, "sigma5").filter(|f| (1.0..=4.0).contains(f) && f.fract() == 0.0).map(|f| f as u8),
+                };
+                if ov != TwoOverride::default() {
+                    overrides.insert(key.clone(), ov);
+                }
+            }
+        }
+        Self {
+            belt: int(v, "belt", 0, 2).unwrap_or(d.belt as u32) as u8,
+            stack: int(v, "stack", 1, 4).unwrap_or(d.stack as u32) as u8,
+            rows: int(v, "rows", 1, 2).unwrap_or(d.rows as u32) as u8,
+            row_len: opt(v, "row_len", 100_000),
+            unit_max: opt(v, "unit_max", 10_000_000),
+            sorter_max: int(v, "sorter_max", 0, 2).unwrap_or(d.sorter_max as u32) as u8,
+            pile_level: int(v, "pile_level", 0, 2).unwrap_or(d.pile_level as u32) as u8,
+            margin: num(v, "margin").filter(|m| (0.0..=1000.0).contains(m)).unwrap_or(d.margin),
+            ladder_rho: num(v, "ladder_rho").filter(|m| (0.0..=10.0).contains(m)).unwrap_or(d.ladder_rho),
+            ladder_short: int(v, "ladder_short", 0, 1_000_000).unwrap_or(d.ladder_short),
+            ladder_cap: int(v, "ladder_cap", 1, 1000).unwrap_or(d.ladder_cap),
+            unit_cap: opt(v, "unit_cap", LINE_MAX),
+            hint_items: num(v, "hint_items").filter(|m| *m >= 0.0).unwrap_or(d.hint_items),
+            hint_machines: int(v, "hint_machines", 0, 10_000_000).unwrap_or(d.hint_machines),
+            end_pile_a: int(v, "end_pile_a", 0, 1000).unwrap_or(d.end_pile_a),
+            end_pile_b: int(v, "end_pile_b", 0, 1000).unwrap_or(d.end_pile_b),
+            overrides,
+        }
+    }
     pub fn capacity(&self) -> f64 {
         BELTS[(self.belt as usize).min(2)]
     }
@@ -191,7 +255,7 @@ pub struct TracePoint {
 pub struct Trace {
     pub capacity: f64,
     pub points: Vec<TracePoint>,
-    /// Lowest flow per item (after any machine, and at the start).
+    /// Lowest flow per item after any machine or control unit.
     pub mins: Vec<f64>,
     /// Flows arriving back at the start of the ring (control unit / feed block).
     pub returns: Vec<f64>,
@@ -205,7 +269,9 @@ pub struct Trace {
 /// Runs `events` once from `start` flows. Returns the trace of that pass.
 fn pass(events: &[Event], capacity: f64, start: &[f64], ret: &[f64]) -> Trace {
     let mut f: Vec<f64> = start.to_vec();
-    let mut mins = f.clone();
+    // lowest flow that a machine sees: after a machine or a control unit (not the returns arriving
+    // at the start, nor the empty belt before a ladder's feeds)
+    let mut mins = vec![f64::INFINITY; f.len()];
     let mut points = vec![];
     let mut violations = vec![];
     let mut pos = 0u32;
@@ -260,6 +326,11 @@ fn pass(events: &[Event], capacity: f64, start: &[f64], ret: &[f64]) -> Trace {
             violations.push(format!("belt over capacity after machine {pos}"));
         }
         points.push(TracePoint { pos, kind: kind.into(), item, amount, flows: f.clone() });
+    }
+    for (m, x) in mins.iter_mut().zip(&f) {
+        if !m.is_finite() {
+            *m = *x; // no machine on the line
+        }
     }
     Trace { capacity, returns: f.clone(), mins, points, passes: 1, converged: true, violations }
 }
@@ -351,6 +422,62 @@ fn min_two(capacity: f64, c: [f64; 2], start: [f64; 2], first: usize, k: u32, n:
     mins
 }
 
+/// `n` are the exact steady-state intervals for `c` (n₀ : n₁ = c₀ : c₁, report §2.3).
+fn exact_intervals(c: [f64; 2], n: [u32; 2]) -> bool {
+    n[0] > 0 && n[1] > 0 && (n[0] as f64 * c[1] - n[1] as f64 * c[0]).abs() <= 1e-9 * (n[0] as f64 * c[1]).abs()
+}
+
+/// The two minima of the start and the steady state (what `min_two` gives over k + 2P machines).
+/// With exact intervals the line repeats with period P from the first refill on, so the minima are
+/// closed-form: the first-refilled item f is lowest just before its first refill or just before a
+/// later one, the other item o just before its refills:
+///   min_f = min(s_f − k·c_f, C − (s_o − k·c_o) − P·c_f),  min_o = s_o − (k + n_o)·c_o.
+/// Inexact intervals (an approximated ratio) are simulated.
+pub fn steady_mins(capacity: f64, c: [f64; 2], start: [f64; 2], first: usize, k: u32, n: [u32; 2]) -> [f64; 2] {
+    let period = n[0] + n[1];
+    if !exact_intervals(c, n) {
+        return min_two(capacity, c, start, first, k, n, k.saturating_add(2 * period));
+    }
+    let (f, o) = (first, 1 - first);
+    let kf = k as f64;
+    let mut mins = [0.0; 2];
+    mins[f] = (start[f] - kf * c[f]).min(capacity - (start[o] - kf * c[o]) - period as f64 * c[f]);
+    mins[o] = start[o] - (kf + n[o] as f64) * c[o];
+    mins
+}
+
+/// Length of the line that keeps the first refill at k, `keep` whole periods and the same tail as
+/// a line of `machines` (exact intervals only; otherwise `machines`): same start, same minima,
+/// same return flows.
+pub fn equivalent_line(c: [f64; 2], k: u32, n: [u32; 2], machines: u32, keep: u32) -> u32 {
+    let period = n[0] + n[1];
+    if period == 0 || !exact_intervals(c, n) || machines <= k.saturating_add(keep.saturating_mul(period)) {
+        return machines;
+    }
+    k + keep * period + (machines - k) % period
+}
+
+/// Minima and end flows of a line of `machines` (as `run_two`, without the refill list), evaluated
+/// on the equivalent shorter line when there is one.
+fn line_two(capacity: f64, c: [f64; 2], start: [f64; 2], first: usize, k: u32, n: [u32; 2], machines: u32) -> ([f64; 2], [f64; 2]) {
+    let machines = equivalent_line(c, k, n, machines, 2);
+    let mut f = start;
+    let mut mins = f;
+    let (mut item, mut at) = (first, k);
+    for m in 1..=machines {
+        f[0] -= c[0];
+        f[1] -= c[1];
+        mins[0] = mins[0].min(f[0]);
+        mins[1] = mins[1].min(f[1]);
+        if m == at {
+            f[item] = capacity - f[1 - item];
+            item = 1 - item;
+            at = m + n[item].max(1);
+        }
+    }
+    (mins, f)
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Best {
     /// min(min_A, min_B) over the start, steady state (k + 2P machines).
@@ -386,7 +513,7 @@ pub fn best_for(capacity: f64, c: [f64; 2], n: [u32; 2], step: u32, ov: &TwoOver
         let start = [capacity * s5 as f64 / 5.0, capacity * (5 - s5) as f64 / 5.0];
         for &first in &firsts {
             for &k in &ks {
-                let mins = min_two(capacity, c, start, first as usize, k, n, k + 2 * period);
+                let mins = steady_mins(capacity, c, start, first as usize, k, n);
                 let v = mins[0].min(mins[1]);
                 let better = match &best {
                     None => true,
@@ -457,7 +584,11 @@ pub struct Candidate {
 }
 
 /// Candidate periods P = t(p + q) with P·max(a, b) ≤ C and S(P) ≥ 2m (two rows: both intervals
-/// even), and the chosen one: the largest feasible P (report §2.3 step 4; fitted to his 6/32/30/20).
+/// even), and the chosen one: the largest P whose steady state is feasible (report §2.3 step 4;
+/// fitted to his 6/32/30/20). `design_two` then checks the return flow of the actual line.
+///
+/// With a row length R the layout repeats every lcm(P, step·R) machines (one pass of the belt is R
+/// machines, 2R when it feeds two rows), which must stay within `unit_max` (default 4R, MINE).
 pub fn choose_period(capacity: f64, c: [f64; 2], margin: f64, step: u32, row_len: Option<u32>, unit_max: Option<u32>) -> (u32, u32, Vec<Candidate>, Option<(usize, Best)>) {
     let (p, q, _) = ratio(c[0], c[1]);
     let mut cands = vec![];
@@ -471,12 +602,12 @@ pub fn choose_period(capacity: f64, c: [f64; 2], margin: f64, step: u32, row_len
             break; // S falls with P
         }
         let n = [t * p, t * q];
-        let unit = row_len.map(|r| lcm(period as u64, r as u64) as u32).unwrap_or(0);
+        let unit = row_len.map(|r| lcm(period as u64, step as u64 * r as u64).min(u32::MAX as u64) as u32).unwrap_or(0);
         let mut cand = Candidate { period, n, sum, unit, ..Default::default() };
         if n[0] % step != 0 || n[1] % step != 0 {
             cand.reason = "positions".into();
         } else if let Some(r) = row_len.filter(|&r| r > 0) {
-            if unit > unit_max.unwrap_or(4 * r) {
+            if unit > unit_max.unwrap_or(r.saturating_mul(4)) {
                 cand.reason = "repeat unit too large".into();
             }
         }
@@ -565,49 +696,105 @@ pub struct TwoItemDesign {
     pub machines_per_unit: u32,
 }
 
-/// Among the layouts as good as `best` (same steady-state min), the one that suits this line of
-/// `machines`: return flows within the control unit's shares and a known unit first, then equal
-/// minima (his preference [BV1fXkxYDEbW 34:05]), then the smaller total return (less through the
-/// unit). This order is MINE; it only breaks ties of the report's search.
-fn refine(capacity: f64, c: [f64; 2], n: [u32; 2], step: u32, ov: &TwoOverride, best: Best, machines: u32) -> Best {
+/// One evaluated layout of a line.
+#[derive(Debug, Clone, Copy)]
+pub struct Pick {
+    pub best: Best,
+    /// Start and steady state ≥ m, the actual line ≥ m, and its return flows pass §2.4.
+    pub feasible: bool,
+}
+
+/// The layout (σ, first item, k) for intervals `n` on a line of `machines` (report §2.3 step 3).
+/// Order:
+///  1. feasible layouts: start, steady state and the actual line ≥ m, return flows within the
+///     control unit's shares and a known unit. These are the report's conditions 1 and 4 (§2.3,
+///     §2.4), not a preference;
+///  2. the larger lowest flow (the report's objective);
+///  3. ties, which the report leaves open (MINE): return flows that pass, then the more equal
+///     minima (his preference [BV1fXkxYDEbW 34:05]), then the smaller total return (less through
+///     the control unit; ≤ 12 is the standard unit).
+/// `step` = 2: positions only every 2 machines. Fixed parts of `ov` are not searched.
+pub fn pick_layout(capacity: f64, c: [f64; 2], n: [u32; 2], step: u32, ov: &TwoOverride, machines: u32, margin: f64) -> Option<Pick> {
     let period = n[0] + n[1];
-    let score = |b: &Best| {
-        let shares = [capacity * b.sigma5 as f64 / 5.0, capacity * (5 - b.sigma5) as f64 / 5.0];
-        let (_, _, r) = run_two(capacity, c, shares, b.first as usize, b.k, n, machines);
-        let jump = if b.sigma5 >= 3 { 0 } else { 1 };
-        let ok = r[0] <= shares[0] + EPS && r[1] <= shares[1] + EPS && unit_kind(r, jump).0 != "unknown";
-        (if ok { 0 } else { 1 }, (b.mins[0] - b.mins[1]).abs(), r[0] + r[1])
+    if period == 0 || n[0] % step != 0 || n[1] % step != 0 {
+        return None;
+    }
+    let sigmas: Vec<u8> = match ov.sigma5 {
+        Some(s) if (1..=4).contains(&s) => vec![s],
+        _ => vec![1, 2, 3, 4],
     };
-    let mut pick = (score(&best), best);
-    for s5 in 1..=4u8 {
-        if ov.sigma5.is_some_and(|x| x != s5) {
-            continue;
+    let firsts: Vec<u8> = match ov.first {
+        Some(f) if f < 2 => vec![f],
+        _ => vec![0, 1],
+    };
+    let ks: Vec<u32> = match ov.k {
+        Some(k) if k >= 1 => vec![k],
+        _ => (step..=period).step_by(step as usize).collect(),
+    };
+    // (feasible, lowest flow, returns pass, |min_A − min_B|, total return)
+    type Key = (bool, f64, bool, f64, f64);
+    let better = |a: &Key, b: &Key| {
+        if a.0 != b.0 {
+            return a.0;
         }
+        if (a.1 - b.1).abs() > EPS {
+            return a.1 > b.1;
+        }
+        if a.2 != b.2 {
+            return a.2;
+        }
+        if (a.3 - b.3).abs() > EPS {
+            return a.3 < b.3;
+        }
+        a.4 < b.4 - EPS
+    };
+    let mut pick: Option<(Key, Best)> = None;
+    for &s5 in &sigmas {
         let start = [capacity * s5 as f64 / 5.0, capacity * (5 - s5) as f64 / 5.0];
-        for first in 0..2u8 {
-            if ov.first.is_some_and(|x| x != first) {
-                continue;
-            }
-            for k in (step..=period).step_by(step as usize) {
-                if ov.k.is_some_and(|x| x != k) {
-                    continue;
-                }
-                let mins = min_two(capacity, c, start, first as usize, k, n, k + 2 * period);
+        let jump = if s5 >= 3 { 0 } else { 1 };
+        for &first in &firsts {
+            for &k in &ks {
+                let mins = steady_mins(capacity, c, start, first as usize, k, n);
                 let v = mins[0].min(mins[1]);
-                if v < best.min - EPS {
-                    continue;
+                if let Some((bk, _)) = &pick {
+                    // cannot win: lower than the layout in hand, and that one is feasible or this one is not
+                    if v < bk.1 - EPS && (bk.0 || v < margin - EPS) {
+                        continue;
+                    }
                 }
-                let b = Best { min: v, mins, sigma5: s5, first, k };
-                let sc = score(&b);
-                let better = sc.0 < pick.0 .0
-                    || (sc.0 == pick.0 .0 && (sc.1 < pick.0 .1 - EPS || ((sc.1 - pick.0 .1).abs() <= EPS && sc.2 < pick.0 .2 - EPS)));
-                if better {
-                    pick = (sc, b);
+                let (lm, r) = line_two(capacity, c, start, first as usize, k, n, machines);
+                let ret_ok = r[0] <= start[0] + EPS && r[1] <= start[1] + EPS && unit_kind(r, jump).0 != "unknown";
+                let feasible = ret_ok && v >= margin - EPS && lm[0].min(lm[1]) >= margin - EPS;
+                let key: Key = (feasible, v, ret_ok, (mins[0] - mins[1]).abs(), r[0] + r[1]);
+                if pick.as_ref().is_none_or(|(bk, _)| better(&key, bk)) {
+                    pick = Some((key, Best { min: v, mins, sigma5: s5, first, k }));
                 }
             }
         }
     }
-    pick.1
+    pick.map(|(key, best)| Pick { best, feasible: key.0 })
+}
+
+/// The period for a line of `machines`: from the largest steady-state-feasible candidate `i0`
+/// downwards (at most `RETURN_TRIES` usable candidates), the first whose line is feasible, return
+/// flow included (report §2.3 conditions 1–4, step 4 "可行的 P 里取最大"). Returns it and every
+/// candidate evaluated on the way (the first is `i0`).
+fn search_period(capacity: f64, c: [f64; 2], cands: &[Candidate], i0: usize, step: u32, ov: &TwoOverride, machines: u32, margin: f64) -> (Option<(usize, Pick)>, Vec<(usize, Pick)>) {
+    let mut seen = vec![];
+    for i in (0..=i0.min(cands.len().saturating_sub(1))).rev() {
+        if i != i0 && !cands[i].reason.is_empty() {
+            continue; // odd positions with two rows, repeat unit too large
+        }
+        let Some(pk) = pick_layout(capacity, c, cands[i].n, step, ov, machines, margin) else { continue };
+        seen.push((i, pk));
+        if pk.feasible {
+            return (Some((i, pk)), seen);
+        }
+        if seen.len() >= RETURN_TRIES {
+            break;
+        }
+    }
+    (None, seen)
 }
 
 /// Lays out one two-ingredient line of `machines` machines (§2.3 design algorithm, §2.4 checks).
@@ -616,47 +803,111 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
     let mut notes = vec![];
     let margin = ls.margin();
     let step = ls.step();
-    if c[0] <= 0.0 || c[1] <= 0.0 {
+    if !(c[0] > 0.0 && c[1] > 0.0 && c[0].is_finite() && c[1].is_finite()) {
         return Err("an ingredient has zero use".into());
     }
     if c[0] + c[1] >= capacity - EPS {
         return Err(format!("one machine uses {:.3} stacks/s, a whole belt ({capacity})", c[0] + c[1]));
+    }
+    // split into control units (optional cap)
+    let (units, per_unit) = match ls.unit_cap.filter(|&u| u > 0 && machines > u) {
+        Some(u) => {
+            let k = machines.div_ceil(u);
+            (k, machines.div_ceil(k))
+        }
+        None => (1, machines.max(1)),
+    };
+    if per_unit > LINE_MAX {
+        return Err(format!(
+            "{per_unit} machines on one control unit: lines over {LINE_MAX} machines are not laid out; set a unit cap (单控制单元台数上限) to split the line"
+        ));
     }
     let (p, q, ratio_dev) = ratio(c[0], c[1]);
     if ratio_dev > 0.0 {
         notes.push(Note::warn(format!("use ratio is not a small integer ratio; using {p}:{q} ({:.1} % off), flows drift", 100.0 * ratio_dev), ""));
     }
     let (_, _, mut cands, chosen) = choose_period(capacity, c, margin, step, ls.row_len, ls.unit_max);
-    let recommended = chosen.map(|(i, b)| (cands[i].period, b.sigma5, b.first, b.k, b.min));
-    // the period shown: an override (a multiple of p + q) or the recommendation
-    let mut period_n: Option<(u32, [u32; 2])> = chosen.map(|(i, _)| (cands[i].period, cands[i].n));
-    let mut overridden = false;
+    let i0 = chosen.map(|x| x.0);
+    // the recommendation: no manual choice
+    let auto: Option<(usize, Pick)> = i0.and_then(|i0| {
+        let (found, seen) = search_period(capacity, c, &cands, i0, step, &TwoOverride::default(), per_unit, margin);
+        for (i, pk) in &seen {
+            cands[*i].best = Some(pk.best.min);
+            cands[*i].feasible = pk.feasible;
+            cands[*i].reason = if pk.feasible {
+                String::new()
+            } else if pk.best.min < margin - EPS {
+                "min < m".into()
+            } else {
+                "return flow on this line".into()
+            };
+        }
+        found.or(seen.first().copied())
+    });
+    let recommended = auto.map(|(i, pk)| (cands[i].period, pk.best.sigma5, pk.best.first, pk.best.k, pk.best.min));
+    // manual period (a multiple of p + q)
+    let mut fixed: Option<(u32, [u32; 2])> = None;
     if let Some(pp) = ov.period {
         if pp > 0 && pp % (p + q) == 0 {
             let t = pp / (p + q);
-            period_n = Some((pp, [t * p, t * q]));
-            overridden = true;
+            fixed = Some((pp, [t * p, t * q]));
         } else {
             notes.push(Note::warn(format!("period {pp} is not a multiple of {} (ratio {p}:{q}); using the recommended one", p + q), ""));
         }
     }
-    overridden |= ov.first.is_some() || ov.k.is_some() || ov.sigma5.is_some();
-    // nothing feasible: show one period (the smallest) with its shortfall
-    let (period, n) = period_n.unwrap_or((p + q, [p, q]));
-    if chosen.is_none() && ov.period.is_none() {
+    let overridden = fixed.is_some() || ov.first.is_some() || ov.k.is_some() || ov.sigma5.is_some();
+    // a layout at fixed intervals; when two rows leave no position for them, as for one row
+    let at = |n: [u32; 2], ov: &TwoOverride| pick_layout(capacity, c, n, step, ov, per_unit, margin).or_else(|| pick_layout(capacity, c, n, 1, ov, per_unit, margin));
+    let smallest = (p + q, [p, q]);
+    let (period, n, pick) = if let Some((pp, n)) = fixed {
+        (pp, n, at(n, ov))
+    } else if overridden {
+        // σ / first item / k fixed, the period searched
+        let found = i0.and_then(|i0| {
+            let (found, seen) = search_period(capacity, c, &cands, i0, step, ov, per_unit, margin);
+            found.or(seen.first().copied())
+        });
+        match found {
+            Some((i, pk)) => (cands[i].period, cands[i].n, Some(pk)),
+            None => (smallest.0, smallest.1, at(smallest.1, ov)),
+        }
+    } else {
+        match auto {
+            Some((i, pk)) => (cands[i].period, cands[i].n, Some(pk)),
+            None => (smallest.0, smallest.1, at(smallest.1, ov)),
+        }
+    };
+    let Some(pick) = pick else { return Err("no layout".into()) };
+    let best = pick.best;
+    if i0.is_none() && fixed.is_none() {
+        // nothing feasible: one period (the smallest) is shown with its shortfall
         notes.push(Note::fail(
             format!("no period keeps both ingredients ≥ m = {margin} (best S(P)/2 = {:.3}); shown with P = {period}", closed_sum(capacity, period as f64, c[0], c[1]) / 2.0),
             "BV1iQrKYoEoy 01:44",
         ));
     }
-    let best = if !overridden {
-        chosen.map(|x| x.1).or_else(|| best_for(capacity, c, n, 1, ov))
-    } else {
-        best_for(capacity, c, n, step, ov).or_else(|| best_for(capacity, c, n, 1, ov))
-    };
-    let Some(best) = best else { return Err("no layout".into()) };
+    if let (false, Some(i0)) = (overridden, i0) {
+        if period < cands[i0].period {
+            notes.push(Note::info(
+                format!(
+                    "P = {period} instead of the largest feasible steady state P = {}: with that one this line of {per_unit} machines sends an item back above its control-unit share",
+                    cands[i0].period
+                ),
+                "BV1iQrKYoEoy 27:50",
+            ));
+        }
+    }
     if overridden && best.min < margin - EPS {
         notes.push(Note::warn(format!("manual layout: lowest flow {:.3} < m = {margin}", best.min), "BV1fXkxYDEbW 33:31"));
+    }
+    if step == 2 && (n[0] % 2 != 0 || n[1] % 2 != 0 || best.k % 2 != 0) {
+        notes.push(Note::warn(
+            format!(
+                "two rows per belt: refills exist only after an even number of machines, but this layout needs one after {}",
+                if best.k % 2 != 0 { format!("{} (k)", best.k) } else { format!("an interval of {} / {}", n[0], n[1]) }
+            ),
+            "BV1fXkxYDEbW 77:08",
+        ));
     }
     if (period as f64) * c[0].max(c[1]) > capacity + EPS {
         notes.push(Note::fail(format!("a refill of {:.2} stacks/s exceeds one belt", period as f64 * c[0].max(c[1])), "BV1fXkxYDEbW 39:00"));
@@ -667,18 +918,9 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
         }
     }
     // keep the list short: the evaluated (larger) periods, the shown one and five below it
-    let shown = cands.iter().position(|cd| cd.period == period).or(chosen.map(|x| x.0)).unwrap_or(cands.len());
+    let shown = cands.iter().position(|cd| cd.period == period).or(i0).unwrap_or(cands.len());
     let lo = shown.saturating_sub(5);
     let cands: Vec<Candidate> = cands.into_iter().skip(lo).collect();
-    // split into control units (optional cap)
-    let (units, per_unit) = match ls.unit_cap.filter(|&u| u > 0 && machines > u) {
-        Some(u) => {
-            let k = machines.div_ceil(u);
-            (k, machines.div_ceil(k))
-        }
-        None => (1, machines.max(1)),
-    };
-    let best = refine(capacity, c, n, if best.k % step == 0 { step } else { 1 }, ov, best, per_unit);
     let s5 = best.sigma5 as f64;
     let shares = [capacity * s5 / 5.0, capacity * (5.0 - s5) / 5.0];
     let (line_mins, feeds, returns) = run_two(capacity, c, shares, best.first as usize, best.k, n, per_unit);
@@ -851,7 +1093,10 @@ pub struct LadderDesign {
 /// Prototype `ladder`: the longest group N ≤ cap whose cheapest feeds Fᵢ ≥ N·cᵢ·(1 + ρ if N > short)
 /// fit one belt. Returns (N, feeds).
 pub fn ladder(c: &[f64], capacity: f64, opts: &[(f64, String)], rho: f64, short: u32, cap: u32) -> Option<(u32, Vec<LadderFeed>)> {
-    for n in (1..=cap).rev() {
+    // N·Σc ≤ ΣF ≤ C bounds the group whatever the cap
+    let total: f64 = c.iter().sum();
+    let top = if total > 0.0 { cap.min((capacity / total + EPS).floor().clamp(1.0, 1e6) as u32) } else { cap.min(1) };
+    for n in (1..=top).rev() {
         let surplus = if n > short { 1.0 + rho } else { 1.0 };
         let mut feeds = vec![];
         let mut ok = true;
@@ -997,6 +1242,8 @@ pub struct RecipeLayout {
     pub sorters: SorterPlan,
     pub coaters: Option<Coaters>,
     pub trace: Trace,
+    /// Machines left out of `trace` (whole periods of a long scheme-A line; 0 = the whole line).
+    pub trace_omitted: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -1010,9 +1257,14 @@ pub struct MixedBeltReport {
     pub warnings: Vec<String>,
 }
 
-fn machines_of(r: &PlanRecipe, integer: bool) -> u32 {
-    let n = if integer { r.machines.round() } else { r.machines_ceil.max(r.machines.ceil()) };
-    n.max(0.0) as u32
+/// Whole machines to place: the plan's count rounded up (within 1e-6, as `machines_ceil`).
+fn machines_of(r: &PlanRecipe) -> u32 {
+    let n = (r.machines - 1e-6).ceil();
+    if n.is_finite() {
+        n.max(0.0) as u32
+    } else {
+        0
+    }
 }
 
 /// Mixed-belt layout of every DSP recipe with ≥ 2 ingredients in `plan`.
@@ -1031,7 +1283,7 @@ pub fn layout_for_plan(plan: &Plan, data: &GameData, s: &PlanSettings) -> MixedB
             out.single.push(pr.name.clone());
             continue;
         }
-        let machines = machines_of(pr, s.integer);
+        let machines = machines_of(pr);
         if machines == 0 {
             continue;
         }
@@ -1086,14 +1338,34 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
         match design_two(capacity, [c[0], c[1]], [&names[0], &names[1]], machines, ls, &ov) {
             Ok((d, n)) => {
                 notes.extend(n);
-                lay.trace = simulate(&two_events(&d, capacity, mode.sprayed), capacity, 2);
+                if ls.belt != 2 {
+                    notes.push(Note::warn(
+                        format!(
+                            "the control unit is 笑笑's structure for a blue belt: shares in fifths come from a green (2/5) or yellow (1/5) limiter lane, and the return limit is one green belt. On a {} belt nobody has built it; the shares and unit type shown are an extrapolation (MINE)",
+                            ["yellow", "green", "blue"][(ls.belt as usize).min(2)]
+                        ),
+                        "BV1fXkxYDEbW 20:56",
+                    ));
+                }
+                // long lines: draw the equivalent line with whole periods left out
+                let keep = (TRACE_MAX.saturating_sub(d.k) / d.period.max(1)).max(2);
+                let shown = if d.machines_per_unit > TRACE_MAX { equivalent_line(d.c, d.k, d.n, d.machines_per_unit, keep) } else { d.machines_per_unit };
+                if shown < d.machines_per_unit {
+                    let mut short = d.clone();
+                    short.machines_per_unit = shown;
+                    short.feeds = run_two(capacity, d.c, d.shares, d.first as usize, d.k, d.n, shown).1;
+                    lay.trace = simulate(&two_events(&short, capacity, mode.sprayed), capacity, 2);
+                    lay.trace_omitted = d.machines_per_unit - shown;
+                } else {
+                    lay.trace = simulate(&two_events(&d, capacity, mode.sprayed), capacity, 2);
+                }
                 units = d.units;
                 per_line = d.machines_per_unit;
                 feed_points = d.feeds.len() as u32;
                 // pile sorter over the limiter (two in the double unit), limiter sorter for the
                 // 1/5 blue-belt variant counted as 1; refills sharing a tower belt take a pile sorter each
                 let shared: u32 = feed_points - d.tower_belts.iter().sum::<u32>().min(feed_points);
-                unit_sorters = units * ((if d.unit == "double" { 2 } else { 1 }) + shared);
+                unit_sorters = units.saturating_mul((if d.unit == "double" { 2 } else { 1 }) + shared);
                 end_pile = ls.end_pile_a.min(per_line);
                 // restart hint (§2.3 step 7)
                 if d_items < ls.hint_items && d.machines_per_unit > ls.hint_machines {
@@ -1106,7 +1378,16 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
                     ));
                 }
                 if d.units > 1 {
-                    notes.push(Note::info(format!("split into {} control units of {} machines (unit cap)", d.units, d.machines_per_unit), ""));
+                    let laid = d.units as u64 * d.machines_per_unit as u64;
+                    notes.push(Note::info(
+                        format!(
+                            "split into {} control units of {} machines (unit cap){}",
+                            d.units,
+                            d.machines_per_unit,
+                            if laid > machines as u64 { format!("; that is {laid} places for {machines} machines, the last unit is {} short", laid - machines as u64) } else { String::new() }
+                        ),
+                        "",
+                    ));
                 }
                 if ls.rows >= 2 && per_line % 2 == 1 {
                     notes.push(Note::info("two rows per belt and an odd machine count: one position has a single machine".into(), ""));
@@ -1129,8 +1410,8 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
                 let best_sorter = SORTERS[(ls.sorter_max as usize).min(2)][0];
                 let recover: Vec<u32> = feeds.iter().map(|f| (f.rate / best_sorter - EPS).ceil().max(1.0) as u32).collect();
                 let feed_sorters: u32 = feeds.iter().map(|f| f.combo.matches("sorter").count() as u32).sum();
-                unit_sorters = groups * (feed_sorters + recover.iter().sum::<u32>());
-                feed_points = groups * feeds.len() as u32;
+                unit_sorters = groups.saturating_mul(feed_sorters + recover.iter().sum::<u32>());
+                feed_points = groups.saturating_mul(feeds.len() as u32);
                 end_pile = ls.end_pile_b.min(n);
                 units = groups;
                 per_line = n;
@@ -1164,6 +1445,10 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
             _ => *o,
         };
         let tier = sorter_tier(sized_for, 1.0, false, ls);
+        let pile = PILE[(ls.pile_level as usize).min(2)];
+        if tier == "pile" && pile.1 < sized_for - EPS {
+            notes.push(Note::fail(format!("{}: output {sized_for:.2} items/s exceeds a pile sorter at {}", data.item_name(i), pile.0), ""));
+        }
         let full_at = ((capacity + EPS) / o).floor().min(u32::MAX as f64) as u32;
         if full_at < per_line {
             notes.push(Note::info(
@@ -1180,8 +1465,8 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
         input_items: d_items,
         end_pile,
         outputs,
-        mixed: machines + machines * n_out + unit_sorters,
-        separate: machines * (ins.len() as u32 + n_out),
+        mixed: machines.saturating_add(machines.saturating_mul(n_out)).saturating_add(unit_sorters),
+        separate: machines.saturating_mul(ins.len() as u32 + n_out),
         lp_estimate: lp_per * machines as f64,
     };
     if !s.mixed_belts {
@@ -1190,7 +1475,8 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
     // coaters (§2.10): on each refill / feed branch, before it joins the belt
     if let (true, Some(e)) = (mode.sprayed, effect) {
         let coaters = match lay.scheme.as_str() {
-            "A" => feed_points + 2 * units,
+            // per control unit: one on every refill branch and on the unit's two feeds
+            "A" => units.saturating_mul(feed_points + 2),
             _ => feed_points,
         };
         let sprays = machines as f64 * d_items;

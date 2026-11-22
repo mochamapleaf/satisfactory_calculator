@@ -3,13 +3,16 @@
 import { useMemo, useState } from 'react'
 import { Icon } from './Icon'
 import {
-  defaultBeltLayout, fmt, mixedBelt, type BeltLayoutSettings, type GameData, type Plan, type RecipeLayout, type Settings,
+  cleanBeltLayout, defaultBeltLayout, fmt, mixedBelt, type BeltLayoutSettings, type Plan, type RecipeLayout, type Settings,
   type TwoOverride,
 } from './solver'
 
 interface Props {
-  data: GameData
-  plan: Plan
+  plan: Plan | null
+  /** The settings `plan` was solved for (null: unknown, use the current ones). */
+  planSettings: Settings | null
+  /** `plan` is the plan of the current settings (false: a new solve is running, was stopped or failed). */
+  current: boolean
   settings: Settings
   setSettings: (f: (s: Settings) => Settings) => void
 }
@@ -24,7 +27,7 @@ const SERIES = ['var(--accent)', 'var(--raw)', 'var(--sup)', 'var(--liquid)']
 const f2 = (x: number) => fmt(x, 3)
 
 /** Scheme-A order along the belt as copyable text (report §3 item 4). */
-function sequenceText(l: RecipeLayout, cap: number): string {
+function sequenceText(l: RecipeLayout): string {
   const t = l.two
   if (!t) return ''
   const nm = (i: number) => l.inputs[i].name
@@ -49,8 +52,8 @@ function sequenceText(l: RecipeLayout, cap: number): string {
   const ok = (i: number) => (r[i] <= t.shares[i] + 1e-9 ? '✓' : '✗')
   const tot = r[0] + r[1]
   parts.push(`${tail} 台(零头)`)
-  parts.push(`回控制单元(回流:${nm(0)} ${fmt(r[0], 3)} ≤ ${fmt(t.shares[0], 3)} ${ok(0)},${nm(1)} ${fmt(r[1], 3)} ≤ ${fmt(t.shares[1], 3)} ${ok(1)},合计 ${fmt(tot, 3)} ${tot > 12 + 1e-9 ? '> 12 → 双绿带单元' : '≤ 12 → 标准单元'})`)
-  void cap
+  const unit = t.unit === 'standard' ? '≤ 12 → 标准单元' : t.unit === 'double' ? '> 12 → 双绿带单元' : '> 12,且超出双绿带单元(跳格物品 ≤ 24、限流物品 ≤ 12)→ 无已知结构'
+  parts.push(`回控制单元(回流:${nm(0)} ${fmt(r[0], 3)} ≤ ${fmt(t.shares[0], 3)} ${ok(0)},${nm(1)} ${fmt(r[1], 3)} ≤ ${fmt(t.shares[1], 3)} ${ok(1)},合计 ${fmt(tot, 3)} ${unit})`)
   return `${parts.join(' → ')}${t.units > 1 ? `;共 ${t.units} 个控制单元` : ''}`
 }
 
@@ -139,17 +142,39 @@ function BeltDiagram({ l, cap, margin, endPile }: { l: RecipeLayout; cap: number
   )
 }
 
-function Detail({ l, ls, cap, setOverride, data }: {
-  l: RecipeLayout; ls: BeltLayoutSettings; cap: number; data: GameData
+/** Copies text; where the clipboard API is missing (plain http) it falls back to a selection copy. */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard) { await navigator.clipboard.writeText(text); return true }
+  } catch { /* fall through */ }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'; ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    ta.remove()
+    return ok
+  } catch { return false }
+}
+
+function Detail({ l, ls, cap, margin, setOverride }: {
+  l: RecipeLayout; ls: BeltLayoutSettings; cap: number; margin: number
   setOverride: (key: string, o: TwoOverride | null) => void
 }) {
   const t = l.two
   const g = l.ladder
   const ov = ls.overrides[l.key] ?? {}
-  const seq = l.scheme === 'A' ? sequenceText(l, cap) : ladderText(l)
+  const seq = l.scheme === 'A' ? sequenceText(l) : ladderText(l)
   const set = (patch: TwoOverride) => setOverride(l.key, { ...ov, ...patch })
   const endPile = l.sorters.end_pile
-  void data
+  const [copied, setCopied] = useState('')
+  // periods offered by hand: multiples of p + q that one refill can carry, plus the recommended and the chosen one
+  const periods = t ? [...new Set([
+    ...Array.from({ length: 60 }, (_, i) => (i + 1) * (t.p + t.q)).filter(p => p * Math.max(...t.c) <= cap + 1e-9),
+    ...(t.recommended ? [t.recommended[0]] : []), ...(ov.period ? [ov.period] : []),
+  ])].sort((a, b) => a - b) : []
   return (
     <div className="mbdetail">
       <ul className="chips small">
@@ -157,13 +182,16 @@ function Detail({ l, ls, cap, setOverride, data }: {
           <li key={r.item}><span className="swatch" style={{ background: SERIES[i % 4] }} /><Icon id={r.item} size={18} />{r.name} <b>{fmt(r.items, 3)}</b>/s = <b>{fmt(r.stacks, 3)}</b> 叠/秒 per machine</li>
         ))}
       </ul>
-      <BeltDiagram l={l} cap={cap} margin={ls.margin} endPile={endPile} />
+      <BeltDiagram l={l} cap={cap} margin={margin} endPile={endPile} />
+      {l.trace_omitted > 0 && t && (
+        <p className="hint">长线:图中省略了中间 {l.trace_omitted} 台({l.trace_omitted / t.period} 个整周期,排法与前面的周期相同);省略处之后的机器序号要加上 {l.trace_omitted}。起始段、零头和回流与整条线相同。</p>
+      )}
       <p className="hint">
         横轴:机器序号{ls.rows >= 2 ? '(一条带供两排,补料位置只取偶数台)' : ''};上方:每台机器的进料爪(颜色 = 黄/绿/蓝/白爪)、
-        {l.scheme === 'A' ? '补料点(↓ 补进量,叠/秒)' : '投料'};下方:带上各物品流量(叠/秒),{l.scheme === 'A' ? `虚线为余量 m = ${fmt(ls.margin)},低于 m 的段标红,` : ''}实线为带容量 C。
+        {l.scheme === 'A' ? '补料点(↓ 补进量,叠/秒)' : '投料'};下方:带上各物品流量(叠/秒),{l.scheme === 'A' ? `虚线为余量 m = ${fmt(margin)},低于 m 的段标红,` : ''}实线为带容量 C。
       </p>
       <div className="seqbox">
-        <div className="row small"><b>序列 Sequence</b><button className="tabbtn" onClick={() => { void navigator.clipboard?.writeText(seq) }}>Copy</button></div>
+        <div className="row small"><b>序列 Sequence</b><button className="tabbtn" onClick={() => { void copyText(seq).then(ok => { setCopied(ok ? 'Copied' : 'Copy failed: select the text'); setTimeout(() => setCopied(''), 2000) }) }}>{copied || 'Copy'}</button></div>
         <p className="seq">{seq}</p>
       </div>
       {t && (
@@ -191,7 +219,7 @@ function Detail({ l, ls, cap, setOverride, data }: {
               <label>周期 P
                 <select value={ov.period ?? ''} onChange={e => set({ period: e.target.value ? +e.target.value : null })}>
                   <option value="">推荐 auto ({t.recommended?.[0] ?? '–'})</option>
-                  {Array.from({ length: 24 }, (_, i) => (i + 1) * (t.p + t.q)).filter(p => p * Math.max(...t.c) <= cap + 1e-9).map(p => <option key={p} value={p}>{p}</option>)}
+                  {periods.map(p => <option key={p} value={p}>{p}{p % (t.p + t.q) ? ' (not a multiple)' : ''}</option>)}
                 </select></label>
               <label>先补 first
                 <select value={ov.first ?? ''} onChange={e => set({ first: e.target.value === '' ? null : +e.target.value })}>
@@ -199,18 +227,22 @@ function Detail({ l, ls, cap, setOverride, data }: {
                   {l.inputs.map((r, i) => <option key={i} value={i}>{r.name}</option>)}
                 </select></label>
               <label>第一次补料位置 k
-                <input type="number" min={1} value={ov.k ?? ''} placeholder={String(t.k)} onChange={e => set({ k: e.target.value ? Math.max(1, Math.round(+e.target.value)) : null })} /></label>
+                <input type="number" min={1} value={ov.k ?? ''} placeholder={String(t.k)} onChange={e => set({ k: e.target.value && Number.isFinite(+e.target.value) ? Math.min(1000000, Math.max(1, Math.round(+e.target.value))) : null })} /></label>
               <label>摇匀 σ ({l.inputs[0].name})
                 <select value={ov.sigma5 ?? ''} onChange={e => set({ sigma5: e.target.value ? +e.target.value : null })}>
                   <option value="">auto</option>
                   {[1, 2, 3, 4].map(s => <option key={s} value={s}>{s}/5</option>)}
                 </select></label>
             </div>
-            {t.overridden && t.recommended && (
-              <p className="hint">推荐 recommended: P = {t.recommended[0]}, σ = {t.recommended[1]}/5, 先补 {l.inputs[t.recommended[2]].name},k = {t.recommended[3]},最低 {f2(t.recommended[4])};
-                当前 current: 最低 {f2(t.best)}{t.recommended[4] > t.best + 1e-9 ? ` (${f2(t.best - t.recommended[4])})` : ''}.{' '}
+            {(t.overridden || Object.keys(ov).length > 0) && (
+              <p className="hint">
+                {t.recommended
+                  ? <>推荐 recommended: P = {t.recommended[0]}, σ = {t.recommended[1]}/5, 先补 {l.inputs[t.recommended[2]].name},k = {t.recommended[3]},最低 {f2(t.recommended[4])};
+                    当前 current: 最低 {f2(t.best)}{t.recommended[4] > t.best + 1e-9 ? ` (${f2(t.best - t.recommended[4])})` : ''}.{' '}</>
+                  : <>没有可行的推荐 no feasible recommendation; 当前 current: 最低 {f2(t.best)}.{' '}</>}
                 <a href="#" onClick={e => { e.preventDefault(); setOverride(l.key, null) }}>Reset</a></p>
             )}
+            {!t.overridden && <p className="hint">auto: 可行(全线 ≥ m,回流过检查)的最大周期;同样好的排法里取两个最低值更接近、回流更小的(这个次序是本工具定的,不是笑笑的规则)。</p>}
             <h4>候选周期 Candidates</h4>
             <table className="small">
               <thead><tr><th className="num">P</th><th className="num">S</th><th className="num">best min</th><th>status</th></tr></thead>
@@ -260,32 +292,36 @@ function Detail({ l, ls, cap, setOverride, data }: {
 
 const numOr = (v: string, d: number | null) => (v.trim() === '' ? d : Number.isFinite(+v) ? +v : d)
 
-export default function MixedBelt({ data, plan, settings, setSettings }: Props) {
+export default function MixedBelt({ plan, planSettings, current, settings, setSettings }: Props) {
   const ls = settings.belt_layout ?? defaultBeltLayout()
-  const rep = useMemo(() => {
-    try { return mixedBelt(settings, plan) } catch (e) { return { error: String(e), recipes: [], single: [], warnings: [], capacity: 30, stack: 4, margin: 1.5 } }
-  }, [settings, plan])
+  const solved = !!plan && plan.status === 'optimal'
+  // the plan is laid out with the settings it was solved for (its machines and modes), and the tab's own settings
+  const rep = useMemo(
+    () => (solved ? mixedBelt({ ...(planSettings ?? settings), belt_layout: ls }, plan) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [solved, plan, planSettings, planSettings ? null : settings, ls],
+  )
   const [open, setOpen] = useState<Record<string, boolean>>({})
-  if (plan.status !== 'optimal') return <p className="muted">Solve a plan first.</p>
-  const setL = (patch: Partial<BeltLayoutSettings>) => setSettings(s => ({ ...s, belt_layout: { ...(s.belt_layout ?? defaultBeltLayout()), ...patch } }))
+  // every write goes through cleanBeltLayout: whole numbers in range, so a typed 7.5 or −1 never reaches the solver
+  const setL = (patch: Partial<BeltLayoutSettings>) => setSettings(s => ({ ...s, belt_layout: cleanBeltLayout({ ...(s.belt_layout ?? defaultBeltLayout()), ...patch }) }))
   const setOverride = (key: string, o: TwoOverride | null) => setSettings(s => {
     const bl = s.belt_layout ?? defaultBeltLayout()
     const overrides = { ...bl.overrides }
     const clean = o ? Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined)) : {}
     if (Object.keys(clean).length) overrides[key] = clean
     else delete overrides[key]
-    return { ...s, belt_layout: { ...bl, overrides } }
+    return { ...s, belt_layout: cleanBeltLayout({ ...bl, overrides }) }
   })
   const isOpen = (k: string) => open[k] ?? settings.mixed_belts
-  const cap = rep.capacity
+  const cap = rep?.capacity ?? 30
   return (
     <div className="results mixedbelt">
       <p className="hint">
         <b>混带 Mixed belts</b>: one mixed input belt per line, laid out per recipe after 笑笑meow (ep19/20).
         Two ingredients: control unit + direct refills (scheme A, closed form S = C − P(a²+ab+b²)/(a+b), period, σ and first refill searched);
         three or more: fixed-rate ladder groups (scheme B). Flows in 叠/秒 (stacks/s). Statistical average-flow model:
-        the margin m, the ladder surplus ρ and short-group length, the repeat-unit cap 4R and the restart hint are
-        <b> fitted to his lines, not measured</b> — test outage of each input and a full output in a sandbox and confirm a full-speed restart
+        the margin m, the ladder surplus ρ and short-group length, the repeat-unit cap 4R, the restart hint and the order among equally good layouts are
+        <b> fitted to his lines or chosen here, not measured</b> — test outage of each input and a full output in a sandbox and confirm a full-speed restart
         before building [BV1fXkxYDEbW 80:40].
       </p>
       {!settings.mixed_belts && <p className="note small">The solver did not cost sorters as mixed belts (Sidebar → mixed input belts); this tab works either way.</p>}
@@ -300,7 +336,7 @@ export default function MixedBelt({ data, plan, settings, setSettings }: Props) 
           <summary>More</summary>
           <div className="mbsettings">
             <label>白爪 Pile<select value={ls.pile_level} onChange={e => setL({ pile_level: +e.target.value })}>{PILE_NAMES.map((n, i) => <option key={i} value={i}>{n}</option>)}</select></label>
-            <label>单元上限 lcm(P,R) ≤<input type="number" min={1} placeholder={ls.row_len ? String(4 * ls.row_len) : '4R'} value={ls.unit_max ?? ''} onChange={e => setL({ unit_max: numOr(e.target.value, null) })} /></label>
+            <label>单元上限 lcm(P, 排数·R) ≤<input type="number" min={1} placeholder={ls.row_len ? String(4 * ls.row_len) : '4R'} value={ls.unit_max ?? ''} onChange={e => setL({ unit_max: numOr(e.target.value, null) })} /></label>
             <label>单控制单元台数上限<input type="number" min={1} placeholder="不设" value={ls.unit_cap ?? ''} onChange={e => setL({ unit_cap: numOr(e.target.value, null) })} /></label>
             <label>梯口余量 ρ %<input type="number" min={0} step={0.1} value={+(100 * ls.ladder_rho).toFixed(3)} onChange={e => setL({ ladder_rho: (numOr(e.target.value, 8.333) ?? 8.333) / 100 })} /></label>
             <label>短组 ≤<input type="number" min={1} value={ls.ladder_short} onChange={e => setL({ ladder_short: numOr(e.target.value, 12) ?? 12 })} /></label>
@@ -311,9 +347,12 @@ export default function MixedBelt({ data, plan, settings, setSettings }: Props) 
           </div>
         </details>
       </div>
-      {'error' in rep && rep.error && <p className="warn">{rep.error}</p>}
-      {rep.recipes.length === 0 && <p className="muted">No recipe in this plan has two or more ingredients.</p>}
-      {rep.recipes.length > 0 && (
+      {!rep && <p className="muted">Solve a plan first.</p>}
+      {rep && !current && <p className="note small" role="status"><b>Earlier plan.</b> The settings changed and no plan for them is in hand yet (still solving, stopped, or no solution): the layouts below are for the plan solved before.</p>}
+      {rep?.error && <p className="warn">{rep.error}</p>}
+      {rep?.warnings.map((w, i) => <p key={i} className="warn">{w}</p>)}
+      {rep && !rep.error && rep.recipes.length === 0 && <p className="muted">No recipe in this plan has two or more ingredients.</p>}
+      {rep && rep.recipes.length > 0 && (
         <div className="tablewrap"><table className="mbtable">
           <thead><tr>
             <th>Recipe</th><th className="num">台数</th><th>方案 Scheme</th><th className="num">周期 / 组</th><th className="num">最低 min</th>
@@ -335,13 +374,13 @@ export default function MixedBelt({ data, plan, settings, setSettings }: Props) 
           </tbody>
         </table></div>
       )}
-      {rep.recipes.filter(l => isOpen(l.key)).map(l => (
+      {rep?.recipes.filter(l => isOpen(l.key)).map(l => (
         <section key={l.key} className="mbrecipe">
           <h3><Icon id={l.outputs[0]?.item} />{l.name}{l.mode_label && <span className="muted small"> · {l.mode_label}</span>} <span className="tag">{SCHEME[l.scheme]}</span></h3>
-          <Detail l={l} ls={ls} cap={cap} setOverride={setOverride} data={data} />
+          <Detail l={l} ls={ls} cap={cap} margin={rep.margin} setOverride={setOverride} />
         </section>
       ))}
-      {rep.single.length > 0 && <p className="hint">单原料配方不混带,一物一塔 [BV1fXkxYDEbW 03:44]: {rep.single.join('、')}</p>}
+      {rep && rep.single.length > 0 && <p className="hint">单原料配方不混带,一物一塔 [BV1fXkxYDEbW 03:44]: {rep.single.join('、')}</p>}
       <p className="hint">
         统计流量模型(平均流量,看不到逻辑帧碰撞和慢配方的不均匀)。上线前在沙盒测三种情况:任一进料断货、产物堆满,并确认都能重启到满速
         (笑笑 [BV1fXkxYDEbW 80:40])。拟合参数(余量 m、梯口 ρ / 短组 12 / 组长 24、单元上限 4R、重启提示 12 个/秒 · 60 台、末端白爪 2 / 3 台)需在游戏中校准。

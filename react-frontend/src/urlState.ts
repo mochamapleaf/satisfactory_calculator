@@ -1,4 +1,4 @@
-import { DATASETS, defaultBeltLayout, defaultSettings, withDataset, type BeltLayoutSettings, type Game, type Settings } from './solver'
+import { cleanBeltLayout, DATASETS, defaultSettings, withDataset, type Game, type Settings } from './solver'
 
 // Settings live in the URL hash (shareable links) and localStorage (last session).
 const KEY = 'sf-planner-settings'
@@ -43,18 +43,8 @@ function upgrade(input: Record<string, unknown>): Settings {
     delete s.clock_percent
   }
   s.cost = { ...defaultSettings(game).cost, ...(s.cost ?? {}) }
-  {
-    // mixed-belt settings: defaults for missing or mistyped fields
-    const def = defaultBeltLayout() as unknown as Record<string, unknown>
-    const bl: Record<string, unknown> = { ...def }
-    for (const [k, v] of Object.entries((s.belt_layout ?? {}) as unknown as Record<string, unknown>)) {
-      if (k === 'overrides') { if (isRecord(v)) bl[k] = v; continue }
-      if (!(k in def)) continue
-      if (typeof v === 'number' && Number.isFinite(v)) bl[k] = v
-      else if (v === null && def[k] === null) bl[k] = null
-    }
-    s.belt_layout = bl as unknown as BeltLayoutSettings
-  }
+  // mixed-belt settings: whole numbers in range, defaults for missing or mistyped fields
+  s.belt_layout = cleanBeltLayout(s.belt_layout)
   if (s.objective === 'compute' && game !== 'dsp') s.objective = 'buildings' // DSP-only preset
   delete s.max_columns // a per-request guard, never taken from a link
   if (game === 'factorio') {

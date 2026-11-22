@@ -194,4 +194,9 @@ Spec: `docs/research/dsp-mixed-belt/00-最终报告.md` §2–4; step log `docs/
 - Tests: 13 (all prototype asserts, his worked cases, plan level). Live: 26 checks on vite preview, shots in
   `docs/research/dsp-mixed-belt/_过程文件/shots/`. Note: processors with two rows reach 1/2 at interval 9 positions
   (report §2.3(b) says 1.5/1.5, which holds for one row); the planner picks interval 8.
+- Review 5 (`docs/review/fable-review-5.md`, 1 high, 5 medium, 12 low; all fixed, non-blue belts only flagged):
+  belt settings read leniently (a typed 7.5 blanked the page and broke the solve); the return flow of the actual line
+  is part of the layout and period choice; long lines bounded (20 000 per unit, shortened diagram); the tab lays out
+  the plan with its own settings; report corrected (processors at interval 9 reach 1 / 2, not 1.5 / 1.5).
+  Tests: 20 mixed-belt (88 in all). Live: 26 + 31 checks, shots in `shots/review5/`.
 - P5 (in-game calibration) 「需要 Xinyu」.

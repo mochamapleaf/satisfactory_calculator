@@ -193,6 +193,39 @@ export const defaultBeltLayout = (): BeltLayoutSettings => ({
   ladder_rho: 1 / 12, ladder_short: 12, ladder_cap: 24, unit_cap: null, hint_items: 12, hint_machines: 60,
   end_pile_a: 2, end_pile_b: 3, overrides: {},
 })
+/** Mixed-belt settings from anything (a link, saved settings, a typed number): every count a whole
+ * number in its range, optional counts null, unknown fields dropped. Mirrors
+ * `BeltLayoutSettings::from_value` in src/planner/mixed_belt.rs, which reads the same object. */
+export function cleanBeltLayout(raw: unknown): BeltLayoutSettings {
+  const d = defaultBeltLayout()
+  const v = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>
+  const num = (o: Record<string, unknown>, k: string) => (typeof o[k] === 'number' && Number.isFinite(o[k] as number) ? (o[k] as number) : null)
+  const int = (k: keyof BeltLayoutSettings, lo: number, hi: number) => { const x = num(v, k); return x === null ? (d[k] as number) : Math.min(hi, Math.max(lo, Math.round(x))) }
+  const opt = (o: Record<string, unknown>, k: string, hi: number) => { const x = num(o, k); return x === null || Math.round(x) < 1 ? null : Math.min(hi, Math.round(x)) }
+  const real = (k: keyof BeltLayoutSettings, lo: number, hi: number) => { const x = num(v, k); return x === null || x < lo || x > hi ? (d[k] as number) : x }
+  const overrides: Record<string, TwoOverride> = {}
+  if (v.overrides && typeof v.overrides === 'object' && !Array.isArray(v.overrides)) {
+    for (const [key, o] of Object.entries(v.overrides as Record<string, unknown>)) {
+      if (!o || typeof o !== 'object') continue
+      const r = o as Record<string, unknown>
+      const ov: TwoOverride = {}
+      const period = opt(r, 'period', 100000), k = opt(r, 'k', 1000000), first = num(r, 'first'), sigma5 = num(r, 'sigma5')
+      if (period !== null) ov.period = period
+      if (first === 0 || first === 1) ov.first = first
+      if (k !== null) ov.k = k
+      if (sigma5 !== null && [1, 2, 3, 4].includes(sigma5)) ov.sigma5 = sigma5
+      if (Object.keys(ov).length) overrides[key] = ov
+    }
+  }
+  return {
+    belt: int('belt', 0, 2), stack: int('stack', 1, 4), rows: int('rows', 1, 2), row_len: opt(v, 'row_len', 100000),
+    unit_max: opt(v, 'unit_max', 10000000), sorter_max: int('sorter_max', 0, 2), pile_level: int('pile_level', 0, 2),
+    margin: real('margin', 0, 1000), ladder_rho: real('ladder_rho', 0, 10), ladder_short: int('ladder_short', 0, 1000000),
+    ladder_cap: int('ladder_cap', 1, 1000), unit_cap: opt(v, 'unit_cap', 20000), hint_items: real('hint_items', 0, 1e9),
+    hint_machines: int('hint_machines', 0, 10000000), end_pile_a: int('end_pile_a', 0, 1000), end_pile_b: int('end_pile_b', 0, 1000),
+    overrides,
+  }
+}
 export interface BeltNote { level: 'fail' | 'warn' | 'info'; text: string; cite: string }
 export interface BeltRate { item: string; name: string; items: number; stacks: number }
 export interface TracePoint { pos: number; kind: 'unit' | 'machine' | 'fill' | 'feed' | 'recover' | 'coater'; item: number | null; amount: number; flows: number[] }
@@ -220,11 +253,19 @@ export interface RecipeLayout {
   two: TwoItemDesign | null; ladder: LadderDesign | null; sorters: SorterPlan
   coaters: { coaters: number; sprays_per_s: number; proliferator_per_s: number; proliferator: string } | null
   trace: Trace
+  /** machines left out of the trace (whole periods of a long line); 0 = the whole line */
+  trace_omitted: number
 }
 export interface MixedBeltReport { capacity: number; stack: number; margin: number; recipes: RecipeLayout[]; single: string[]; warnings: string[]; error?: string }
 /** Mixed-belt layout of a solved plan (fast, runs on the page thread; no re-solve). */
 export function mixedBelt(s: Settings, plan: Plan): MixedBeltReport {
-  return JSON.parse(mixed_belt_json(JSON.stringify(s), JSON.stringify(plan))) as MixedBeltReport
+  const empty: MixedBeltReport = { capacity: 30, stack: 4, margin: 1.5, recipes: [], single: [], warnings: [] }
+  try {
+    // an error comes back as { error } alone: the page still gets every list
+    return { ...empty, ...(JSON.parse(mixed_belt_json(JSON.stringify(s), JSON.stringify(plan))) as Partial<MixedBeltReport>) }
+  } catch (e) {
+    return { ...empty, error: String(e) }
+  }
 }
 
 export interface RateLine { item: string; name: string; rate: number }
