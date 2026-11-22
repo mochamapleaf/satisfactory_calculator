@@ -979,3 +979,126 @@ fn quality_integer_bench() {
         assert_balanced(&p);
     }
 }
+
+// ---- review 7 ----
+
+/// Review 7 H1: a planted seed's quality is lost (vanilla: the harvest is always normal), so
+/// `yumako-tree@i` takes tier-i seeds and yields normal fruit; no legendary fruit from legendary seeds.
+#[test]
+fn plant_harvest_is_normal() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = lp_settings("2x1", "yumako-mash@4", 1.0);
+    s.planets = vec!["gleba".into()];
+    let allowed = lp::allowed_recipes(&d, &s);
+    let ex = quality::expand(&d, &s, &allowed, &["yumako-mash@4".into()]);
+    let mut seen = 0;
+    for (r, modes) in ex.iter().filter(|(r, _)| split(&r.id).0 == "yumako-tree") {
+        let i = split(&r.id).1;
+        seen += 1;
+        assert_eq!(r.inputs, vec![(quality::qid("yumako-seed", i), 0.2)], "{}", r.id);
+        assert_eq!(r.outputs, vec![("yumako".to_string(), 10.0)], "{}", r.id);
+        for m in modes {
+            assert_eq!(m.outputs.as_ref().unwrap(), &vec![("yumako".to_string(), 10.0)], "{} {}", r.id, m.key);
+        }
+    }
+    assert_eq!(seen, 5);
+    // processing still passes quality on (legendary fruit → legendary mash)
+    let (mash, _) = ex.iter().find(|(r, _)| r.id == "yumako-processing@4").unwrap();
+    assert!(mash.outputs.iter().any(|o| o.0 == "yumako-mash@4"));
+}
+
+/// Integer columns and shared-group rows (shares…, whole machines) of a model's LP text.
+fn shared_rows(lp_text: &str) -> Vec<(Vec<usize>, usize)> {
+    let general = lp_text.split("General\n").nth(1).unwrap();
+    let ints: std::collections::HashSet<usize> = general.lines().filter_map(|l| l.trim().strip_prefix('v')?.parse().ok()).collect();
+    let body = lp_text.split("Subject To\n").nth(1).unwrap().split("Bounds\n").next().unwrap();
+    let mut out = Vec::new();
+    for row in body.replace('\n', " ").split(" c").filter(|r| r.contains("<=")) {
+        let lhs = row.split("<=").next().unwrap();
+        let toks: Vec<&str> = lhs.split_whitespace().skip(1).collect();
+        let terms: Vec<(f64, usize)> = toks.chunks(2).map(|c| (c[0].parse().unwrap(), c[1][1..].parse().unwrap())).collect();
+        let Some(&(a, n)) = terms.last() else { continue };
+        if a == -1.0 && ints.contains(&n) && terms[..terms.len() - 1].iter().all(|t| t.0 == 1.0 && !ints.contains(&t.1)) {
+            out.push((terms[..terms.len() - 1].iter().map(|t| t.1).collect(), n));
+        }
+    }
+    out
+}
+
+/// Review 7 H2: the share variables cost nothing, so an engine may return a tier's share anywhere
+/// up to its group's spare capacity (and a group above its need when machines are free). The plan
+/// shows the work (x / speed) and ⌈Σ shares⌉ whatever the engine returned.
+#[test]
+fn integer_shared_engine_slack_is_not_shown() {
+    let mut d = loop_data("assembling-machine-3", true);
+    add_resource(&mut d, "part", 1.0);
+    // buildings at 20 parts: the rounded LP (316.31) is not the optimum (287.83), so a fresh run
+    // takes the engine's values
+    let s = int_settings("widget@4", 1.0, 20.0);
+    let Start::Running(mut run) = lp::start(&d, &s) else { panic!() };
+    while !run.step(None) {}
+    let p = run.plan();
+    assert!(p.proven_optimal && close(p.objective, 287.83215862, 1e-6), "{}", p.objective);
+    let mut vals = run.best_values();
+    // put a group's spare capacity onto its busiest tier's share
+    let rows = shared_rows(&run.model_lp());
+    assert!(!rows.is_empty());
+    let mut moved = 0;
+    for (shares, n) in &rows {
+        let slack = vals[*n] - shares.iter().map(|k| vals[*k]).sum::<f64>();
+        if slack > 0.01 {
+            // (onto a tier that runs: an idle tier has no row to show)
+            let k = *shares.iter().max_by(|a, b| vals[**a].total_cmp(&vals[**b])).unwrap();
+            vals[k] += slack;
+            moved += 1;
+        }
+    }
+    assert!(moved > 0, "no group with spare capacity");
+    let Start::Running(mut fresh) = lp::start(&d, &s) else { panic!() };
+    let first = fresh.progress().objective.unwrap();
+    assert!(first > p.objective + 1e-6, "the engine's plan must be the better one: {first} vs {}", p.objective);
+    fresh.offer_values(&vals, None, false);
+    let q = fresh.plan();
+    assert!(close(q.objective, p.objective, 1e-9), "{} vs {}", q.objective, p.objective);
+    assert_eq!(q.buildings, p.buildings);
+    for r in &q.recipes {
+        assert!(close(r.groups[0].clock_percent, 100.0, 1e-9), "{}: share {} is not its work", r.id, r.machines);
+        let old = p.recipes.iter().find(|o| o.id == r.id && o.mode == r.mode).unwrap();
+        assert!(close(r.machines, old.machines, 1e-6), "{} {} vs {}", r.id, r.machines, old.machines);
+    }
+    let g = group_sums(&q);
+    assert_eq!(q.buildings, g.values().map(|n| (n - 1e-6).ceil()).sum::<f64>());
+}
+
+/// Review 7 M1: beacons stand at every whole machine of a shared group (idle share included),
+/// as the objective charges them: beacons = whole machines × beacons per machine, and their MW too.
+#[test]
+fn integer_shared_beacons_at_whole_machines() {
+    let d = GameData::for_set("factorio", "2x1");
+    let mut s = lp_settings("2x1", "iron-gear-wheel@4", 10.0);
+    s.planets = vec!["nauvis".into()];
+    s.beacon_module = "speed-module-3".into();
+    s.beacon_counts = vec![8];
+    s.cost = CostWeights { resources: 1.0, buildings: 50.0, power: 0.0, shards: 0.0, ..Objective::Resources.preset() };
+    s.integer = true;
+    s.time_limit_ms = 3000;
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    let mut by: HashMap<(String, String), (f64, f64, f64)> = HashMap::new();
+    for r in p.recipes.iter().filter(|r| r.beacons > 0.0) {
+        let e = by.entry((split(&r.id).0.to_string(), r.mode.clone())).or_default();
+        e.0 += r.beacons;
+        e.1 += r.machines;
+        e.2 = r.group_machines;
+    }
+    assert!(!by.is_empty(), "the plan uses no beacons: {:?}", p.recipes.iter().map(|r| (&r.id, &r.mode)).collect::<Vec<_>>());
+    let mut fractional = false;
+    for (g, (beacons, share, whole)) in &by {
+        assert!(close(*beacons, 8.0 * whole, 1e-9), "{g:?}: {beacons} beacons for {whole} machines ({share} of work)");
+        fractional |= whole - share > 1e-3;
+    }
+    assert!(fractional, "every beaconed group is full: the test shows nothing");
+    let total: f64 = by.values().map(|v| v.0).sum();
+    let shown = p.building_counts.iter().find(|b| b.building.to_lowercase().contains("beacon")).map(|b| b.count).unwrap();
+    assert_eq!(shown, (total - 1e-6).ceil());
+}

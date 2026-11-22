@@ -46,6 +46,11 @@ function upgrade(input: Record<string, unknown>): Settings {
   // mixed-belt settings: whole numbers in range, defaults for missing or mistyped fields
   s.belt_layout = cleanBeltLayout(s.belt_layout)
   if (s.objective === 'compute' && game !== 'dsp') s.objective = 'buildings' // DSP-only preset
+  // quality tiers are whole numbers 0 … 4: anything else in a link (2.5, −1, 9) would fail the
+  // solver's settings parse and blank the plan (review 7 L1)
+  for (const k of ['module_quality', 'beacon_quality', 'machine_quality'] as const) {
+    s[k] = Math.min(4, Math.max(0, Math.round(s[k] ?? 0)))
+  }
   delete s.max_columns // a per-request guard, never taken from a link
   if (game === 'factorio') {
     // an unknown data set id (typo, or a set removed later) falls back to base 2.0

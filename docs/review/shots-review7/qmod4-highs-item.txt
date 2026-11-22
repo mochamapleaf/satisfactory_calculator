@@ -1,0 +1,466 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+
+Band width is items per minute; a bar is as tall as the flow passing through it. Hover a bar to follow it. 17 loop edges (an item feeding back into its own chain) are drawn as thin dashed lines below the chart. ↻ on a recipe marks what it makes and reuses itself; only the net amount is drawn.
+
+↺ 39.86/min Electronic circuit
+↺ 39.86/min Plastic bar
+↺ 79.71/min Copper cable
+↺ 8.04/min Electronic circuit ★rare
+↺ 8.04/min Plastic bar ★rare
+↺ 16.08/min Copper cable ★rare
+↺ 18.76/min Electronic circuit ★uncommon
+↺ 18.76/min Plastic bar ★uncommon
+↺ 37.53/min Copper cable ★uncommon
+↺ 30.82/min Iron plate
+↺ 92.47/min Copper cable
+↺ 4.02/min Iron plate ★rare
+↺ 12.06/min Copper cable ★rare
+↺ 9.38/min Iron plate ★uncommon
+↺ 28.15/min Copper cable ★uncommon
+↺ 1.38/min Electronic circuit ★epic
+↺ 1.38/min Advanced circuit ★epic
+6.48× Electromagnetic plant
+Advanced circuit
+Electronic circuit 255.08/min
+Plastic bar 90.7/min
+Copper cable 456.88/min
+Advanced circuit 106.28/min
+Advanced circuit ★uncommon 50.04/min
+Advanced circuit ★rare 21.45/min
+Advanced circuit ★epic 7.14/min
+Advanced circuit ★legendary 1.1/min
+1.66× Recycler
+Advanced circuit recycling
+Electronic circuit ★uncommon 87.3/min
+Electronic circuit ★rare 36.97/min
+Electronic circuit ★epic 10.3/min
+Electronic circuit ★legendary 1.45/min
+Plastic bar ★uncommon 37.26/min
+Plastic bar ★rare 15.52/min
+Plastic bar ★epic 3.16/min
+Plastic bar ★legendary 0.35/min
+Copper cable ★uncommon 130.4/min
+Copper cable ★rare 54.32/min
+Copper cable ★epic 11.06/min
+Copper cable ★legendary 1.23/min
+0.34× Recycler
+Advanced circuit recycling ★rare
+0.78× Recycler
+Advanced circuit recycling ★uncommon
+0.32× Electromagnetic plant
+Advanced circuit ★epic
+0.04× Electromagnetic plant
+Advanced circuit ★legendary
+1.11× Electromagnetic plant
+Advanced circuit ★rare
+2.66× Electromagnetic plant
+Advanced circuit ★uncommon
+0.15× Oil refinery
+Coal liquefaction
+↻ 24.99 Heavy oil
+Coal 21.62/min
+Steam (500°C) 49.98/min
+Heavy oil 113.7/min
+Light oil 184.21/min
+Petroleum gas 232.41/min
+0.76× Electromagnetic plant
+Copper cable
+Copper plate 58.63/min
+1.49× Electric furnace
+Copper plate
+Copper ore 39.09/min
+1.09× Electromagnetic plant
+Electronic circuit
+Iron plate 91.83/min
+0.21× Recycler
+Electronic circuit recycling
+Iron plate ★uncommon 18.63/min
+Iron plate ★rare 7.76/min
+Iron plate ★epic 1.58/min
+Iron plate ★legendary 0.18/min
+0.03× Recycler
+Electronic circuit recycling ★rare
+0.07× Recycler
+Electronic circuit recycling ★uncommon
+0.03× Electromagnetic plant
+Electronic circuit ★epic
+0× Electromagnetic plant
+Electronic circuit ★legendary
+0.09× Electromagnetic plant
+Electronic circuit ★rare
+0.22× Electromagnetic plant
+Electronic circuit ★uncommon
+0.01× Heat exchanger
+Heat exchanger : Steam
+Water 274.48/min
+Heat (MJ) 4.85/min
+0.17× Chemical plant
+Heavy oil cracking to light oil
+1.55× Electric furnace
+Iron plate
+Iron ore 40.67/min
+0× Centrifuge
+Kovarex enrichment process
+↻ 0 Uranium-235, ↻ 0 Uranium-238
+Uranium-238 0/min
+Uranium-235 0/min
+0.37× Chemical plant
+Light oil cracking to petroleum gas
+0× Nuclear reactor
+Nuclear reactor
+Uranium fuel cell 0/min
+Depleted uranium fuel cell 0/min
+0.48× Cryogenic plant
+Plastic bar
+0.06× Recycler
+Quality module recycling ★epic
+Quality module ★epic 1.47/min
+0.24× Electromagnetic plant
+Quality module ★epic
+Quality module ★legendary 1/min
+0.03× Electromagnetic plant
+Quality module ★legendary
+0× Assembling machine 3
+Uranium fuel cell
+0× Centrifuge
+Uranium processing
+Uranium ore 0/min
+mined 21.62
+mined 39.09
+mined 40.67
+mined 0
+mined 274.48
+output 1
+byproduct 0
+Where each item goes
+ITEM	TOTAL /MIN	MADE BY	USED BY
+Copper cableLOOP	456.88	
+284.7 · Copper cable (Electromagnetic plant)
+92.47 · Electronic circuit recycling (Recycler)
+79.71 · Advanced circuit recycling (Recycler)
+	
+275.49 · Electronic circuit (Electromagnetic plant) (60%)
+181.39 · Advanced circuit (Electromagnetic plant) (40%)
+
+Water	274.48	
+274.48 · mined
+	
+184.21 · Light oil cracking to petroleum gas (Chemical plant) (67%)
+85.27 · Heavy oil cracking to light oil (Chemical plant) (31%)
+5 · Heat exchanger : Steam (Heat exchanger) (2%)
+
+Electronic circuitLOOP	255.08	
+215.22 · Electronic circuit (Electromagnetic plant)
+39.86 · Advanced circuit recycling (Recycler)
+	
+164.39 · Electronic circuit recycling (Recycler) (64%)
+90.7 · Advanced circuit (Electromagnetic plant) (36%)
+
+Petroleum gas	232.41	
+214.92 · Light oil cracking to petroleum gas (Chemical plant)
+17.49 · Coal liquefaction (Oil refinery)
+	
+232.41 · Plastic bar (Cryogenic plant) (100%)
+
+Light oil	184.21	
+149.23 · Heavy oil cracking to light oil (Chemical plant)
+34.98 · Coal liquefaction (Oil refinery)
+	
+184.21 · Light oil cracking to petroleum gas (Chemical plant) (100%)
+
+
+Copper cable ★uncommonLOOP	130.4	
+37.53 · Advanced circuit recycling ★uncommon (Recycler)
+28.15 · Electronic circuit recycling ★uncommon (Recycler)
+27.74 · Electronic circuit recycling (Recycler)
+23.91 · Advanced circuit recycling (Recycler)
+13.07 · Copper cable (Electromagnetic plant)
+	
+74.52 · Advanced circuit ★uncommon (Electromagnetic plant) (57%)
+55.89 · Electronic circuit ★uncommon (Electromagnetic plant) (43%)
+
+Heavy oilLOOP	113.7	
+113.7 · Coal liquefaction (Oil refinery)
+	
+113.7 · Heavy oil cracking to light oil (Chemical plant) (100%)
+
+Advanced circuit	106.28	
+106.28 · Advanced circuit (Electromagnetic plant)
+	
+106.28 · Advanced circuit recycling (Recycler) (100%)
+
+Iron plateLOOP	91.83	
+61.01 · Iron plate (Electric furnace)
+30.82 · Electronic circuit recycling (Recycler)
+	
+91.83 · Electronic circuit (Electromagnetic plant) (100%)
+0 · Uranium fuel cell (Assembling machine 3) (0%)
+
+Plastic barLOOP	90.7	
+50.84 · Plastic bar (Cryogenic plant)
+39.86 · Advanced circuit recycling (Recycler)
+	
+90.7 · Advanced circuit (Electromagnetic plant) (100%)
+
+
+Electronic circuit ★uncommonLOOP	87.3	
+43.66 · Electronic circuit ★uncommon (Electromagnetic plant)
+18.76 · Advanced circuit recycling ★uncommon (Recycler)
+12.91 · Electronic circuit (Electromagnetic plant)
+11.96 · Advanced circuit recycling (Recycler)
+	
+50.04 · Electronic circuit recycling ★uncommon (Recycler) (57%)
+37.26 · Advanced circuit ★uncommon (Electromagnetic plant) (43%)
+
+Copper plate	58.63	
+58.63 · Copper plate (Electric furnace)
+	
+58.63 · Copper cable (Electromagnetic plant) (100%)
+
+
+Copper cable ★rareLOOP	54.32	
+16.08 · Advanced circuit recycling ★rare (Recycler)
+12.06 · Electronic circuit recycling ★rare (Recycler)
+11.26 · Advanced circuit recycling ★uncommon (Recycler)
+8.44 · Electronic circuit recycling ★uncommon (Recycler)
+2.77 · Electronic circuit recycling (Recycler)
+2.39 · Advanced circuit recycling (Recycler)
+1.31 · Copper cable (Electromagnetic plant)
+	
+31.04 · Advanced circuit ★rare (Electromagnetic plant) (57%)
+23.28 · Electronic circuit ★rare (Electromagnetic plant) (43%)
+
+
+Advanced circuit ★uncommon	50.04	
+43.66 · Advanced circuit ★uncommon (Electromagnetic plant)
+6.38 · Advanced circuit (Electromagnetic plant)
+	
+50.04 · Advanced circuit recycling ★uncommon (Recycler) (100%)
+
+Steam (500°C)	49.98	
+49.98 · Heat exchanger : Steam (Heat exchanger)
+	
+49.98 · Coal liquefaction (Oil refinery) (100%)
+
+Iron ore	40.67	
+40.67 · mined
+	
+40.67 · Iron plate (Electric furnace) (100%)
+
+Copper ore	39.09	
+39.09 · mined
+	
+39.09 · Copper plate (Electric furnace) (100%)
+
+
+Plastic bar ★uncommonLOOP	37.26	
+18.76 · Advanced circuit recycling ★uncommon (Recycler)
+11.96 · Advanced circuit recycling (Recycler)
+6.54 · Plastic bar (Cryogenic plant)
+	
+37.26 · Advanced circuit ★uncommon (Electromagnetic plant) (100%)
+
+
+Electronic circuit ★rareLOOP	36.97	
+18.19 · Electronic circuit ★rare (Electromagnetic plant)
+8.04 · Advanced circuit recycling ★rare (Recycler)
+5.63 · Advanced circuit recycling ★uncommon (Recycler)
+2.62 · Electronic circuit ★uncommon (Electromagnetic plant)
+1.29 · Electronic circuit (Electromagnetic plant)
+1.2 · Advanced circuit recycling (Recycler)
+	
+21.45 · Electronic circuit recycling ★rare (Recycler) (58%)
+15.52 · Advanced circuit ★rare (Electromagnetic plant) (42%)
+
+Coal	21.62	
+21.62 · mined
+	
+11.62 · Plastic bar (Cryogenic plant) (54%)
+10 · Coal liquefaction (Oil refinery) (46%)
+
+
+Advanced circuit ★rare	21.45	
+18.19 · Advanced circuit ★rare (Electromagnetic plant)
+2.62 · Advanced circuit ★uncommon (Electromagnetic plant)
+0.64 · Advanced circuit (Electromagnetic plant)
+	
+21.45 · Advanced circuit recycling ★rare (Recycler) (100%)
+
+
+Iron plate ★uncommonLOOP	18.63	
+9.38 · Electronic circuit recycling ★uncommon (Recycler)
+9.25 · Electronic circuit recycling (Recycler)
+	
+18.63 · Electronic circuit ★uncommon (Electromagnetic plant) (100%)
+
+
+Plastic bar ★rareLOOP	15.52	
+8.04 · Advanced circuit recycling ★rare (Recycler)
+5.63 · Advanced circuit recycling ★uncommon (Recycler)
+1.2 · Advanced circuit recycling (Recycler)
+0.65 · Plastic bar (Cryogenic plant)
+	
+15.52 · Advanced circuit ★rare (Electromagnetic plant) (100%)
+
+
+Copper cable ★epic	11.06	
+4.83 · Advanced circuit recycling ★rare (Recycler)
+3.62 · Electronic circuit recycling ★rare (Recycler)
+1.13 · Advanced circuit recycling ★uncommon (Recycler)
+0.84 · Electronic circuit recycling ★uncommon (Recycler)
+0.28 · Electronic circuit recycling (Recycler)
+0.24 · Advanced circuit recycling (Recycler)
+0.13 · Copper cable (Electromagnetic plant)
+	
+6.32 · Advanced circuit ★epic (Electromagnetic plant) (57%)
+4.74 · Electronic circuit ★epic (Electromagnetic plant) (43%)
+
+
+Electronic circuit ★epicLOOP	10.3	
+4.35 · Electronic circuit ★epic (Electromagnetic plant)
+2.41 · Advanced circuit recycling ★rare (Recycler)
+1.38 · Quality module recycling ★epic (Recycler)
+1.09 · Electronic circuit ★rare (Electromagnetic plant)
+0.56 · Advanced circuit recycling ★uncommon (Recycler)
+0.26 · Electronic circuit ★uncommon (Electromagnetic plant)
+0.13 · Electronic circuit (Electromagnetic plant)
+0.12 · Advanced circuit recycling (Recycler)
+	
+7.14 · Quality module ★epic (Electromagnetic plant) (69%)
+3.16 · Advanced circuit ★epic (Electromagnetic plant) (31%)
+
+
+Iron plate ★rareLOOP	7.76	
+4.02 · Electronic circuit recycling ★rare (Recycler)
+2.81 · Electronic circuit recycling ★uncommon (Recycler)
+0.92 · Electronic circuit recycling (Recycler)
+	
+7.76 · Electronic circuit ★rare (Electromagnetic plant) (100%)
+
+
+Advanced circuit ★epicLOOP	7.14	
+4.35 · Advanced circuit ★epic (Electromagnetic plant)
+1.38 · Quality module recycling ★epic (Recycler)
+1.09 · Advanced circuit ★rare (Electromagnetic plant)
+0.26 · Advanced circuit ★uncommon (Electromagnetic plant)
+0.06 · Advanced circuit (Electromagnetic plant)
+	
+7.14 · Quality module ★epic (Electromagnetic plant) (100%)
+
+Heat (MJ)	4.85	
+4.85 · Nuclear reactor (Nuclear reactor)
+	
+4.85 · Heat exchanger : Steam (Heat exchanger) (100%)
+
+
+Plastic bar ★epic	3.16	
+2.41 · Advanced circuit recycling ★rare (Recycler)
+0.56 · Advanced circuit recycling ★uncommon (Recycler)
+0.12 · Advanced circuit recycling (Recycler)
+0.07 · Plastic bar (Cryogenic plant)
+	
+3.16 · Advanced circuit ★epic (Electromagnetic plant) (100%)
+
+
+Iron plate ★epic	1.58	
+1.21 · Electronic circuit recycling ★rare (Recycler)
+0.28 · Electronic circuit recycling ★uncommon (Recycler)
+0.09 · Electronic circuit recycling (Recycler)
+	
+1.58 · Electronic circuit ★epic (Electromagnetic plant) (100%)
+
+Quality module ★epic	1.47	
+1.47 · Quality module ★epic (Electromagnetic plant)
+	
+1.47 · Quality module recycling ★epic (Recycler) (100%)
+
+
+Electronic circuit ★legendary	1.45	
+0.48 · Electronic circuit ★legendary (Electromagnetic plant)
+0.46 · Quality module recycling ★epic (Recycler)
+0.27 · Advanced circuit recycling ★rare (Recycler)
+0.12 · Electronic circuit ★rare (Electromagnetic plant)
+0.06 · Advanced circuit recycling ★uncommon (Recycler)
+0.03 · Electronic circuit ★uncommon (Electromagnetic plant)
+0.01 · Electronic circuit (Electromagnetic plant)
+0.01 · Advanced circuit recycling (Recycler)
+	
+1.1 · Quality module ★legendary (Electromagnetic plant) (76%)
+0.35 · Advanced circuit ★legendary (Electromagnetic plant) (24%)
+
+
+Copper cable ★legendary	1.23	
+0.54 · Advanced circuit recycling ★rare (Recycler)
+0.4 · Electronic circuit recycling ★rare (Recycler)
+0.13 · Advanced circuit recycling ★uncommon (Recycler)
+0.09 · Electronic circuit recycling ★uncommon (Recycler)
+0.03 · Electronic circuit recycling (Recycler)
+0.03 · Advanced circuit recycling (Recycler)
+0.01 · Copper cable (Electromagnetic plant)
+	
+0.7 · Advanced circuit ★legendary (Electromagnetic plant) (57%)
+0.53 · Electronic circuit ★legendary (Electromagnetic plant) (43%)
+
+
+Advanced circuit ★legendary	1.1	
+0.48 · Advanced circuit ★legendary (Electromagnetic plant)
+0.46 · Quality module recycling ★epic (Recycler)
+0.12 · Advanced circuit ★rare (Electromagnetic plant)
+0.03 · Advanced circuit ★uncommon (Electromagnetic plant)
+0.01 · Advanced circuit (Electromagnetic plant)
+	
+1.1 · Quality module ★legendary (Electromagnetic plant) (100%)
+
+Quality module ★legendary	1	
+0.67 · Quality module ★epic (Electromagnetic plant)
+0.33 · Quality module ★legendary (Electromagnetic plant)
+	
+1 · output (100%)
+
+
+Plastic bar ★legendary	0.35	
+0.27 · Advanced circuit recycling ★rare (Recycler)
+0.06 · Advanced circuit recycling ★uncommon (Recycler)
+0.01 · Advanced circuit recycling (Recycler)
+0.01 · Plastic bar (Cryogenic plant)
+	
+0.35 · Advanced circuit ★legendary (Electromagnetic plant) (100%)
+
+
+Iron plate ★legendary	0.18	
+0.13 · Electronic circuit recycling ★rare (Recycler)
+0.03 · Electronic circuit recycling ★uncommon (Recycler)
+0.01 · Electronic circuit recycling (Recycler)
+	
+0.18 · Electronic circuit ★legendary (Electromagnetic plant) (100%)
+
+Uranium ore	0	
+0 · mined
+	
+0 · Uranium processing (Centrifuge) (100%)
+
+Uranium-238LOOP	0	
+0 · Uranium processing (Centrifuge)
+	
+0 · Uranium fuel cell (Assembling machine 3) (92%)
+0 · Kovarex enrichment process (Centrifuge) (8%)
+
+Depleted uranium fuel cell	0	
+0 · Nuclear reactor (Nuclear reactor)
+	
+0 · byproduct (100%)
+
+Uranium fuel cell	0	
+0 · Uranium fuel cell (Assembling machine 3)
+	
+0 · Nuclear reactor (Nuclear reactor) (100%)
+
+Uranium-235LOOP	0	
+0 · Kovarex enrichment process (Centrifuge)
+0 · Uranium processing (Centrifuge)
+	
+0 · Uranium fuel cell (Assembling machine 3) (100%)

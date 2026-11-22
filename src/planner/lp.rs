@@ -247,6 +247,24 @@ fn group_key(u: &Unit) -> String {
     format!("{}#{}", quality::split(&u.recipe.id).0, u.mode.key)
 }
 
+/// Tolerance on a group's whole machines: work of up to this many machines above a whole number
+/// still fits (solver feasibility tolerance; the same in `finish`).
+const WHOLE_TOL: f64 = 1e-6;
+
+/// Whole machines per shared group at `pt`: ⌈Σ tier shares⌉.
+fn group_machines(inp: &Inputs, pt: &Point) -> HashMap<String, f64> {
+    let mut out: HashMap<String, f64> = HashMap::new();
+    for u in &inp.units {
+        if let Some(v) = pt.rec.get(&u.key) {
+            *out.entry(group_key(u)).or_insert(0.0) += v.1;
+        }
+    }
+    for n in out.values_mut() {
+        *n = (*n - WHOLE_TOL).ceil().max(0.0);
+    }
+    out
+}
+
 fn shards_per_machine(c_max: f64) -> u32 {
     if c_max <= 1.0 + 1e-9 {
         0
@@ -462,7 +480,11 @@ fn point_from(m: &Model, inp: &Inputs, sol: impl Fn(Variable) -> f64) -> Point {
     let mut pt = Point::default();
     for (u, v) in inp.units.iter().zip(&m.rv) {
         let sh = v.s.map(&sol).unwrap_or(0.0);
-        pt.rec.insert(u.key.clone(), (sol(v.x).max(0.0), sol(v.n).max(0.0), sh.max(0.0)));
+        let x = sol(v.x).max(0.0);
+        // shared machines: a tier's share is its work at full speed. The share variable costs
+        // nothing, so a solver may return any value up to the group's spare capacity (review 7 H2)
+        let n = if inp.shared { x / u.mode.speed } else { sol(v.n).max(0.0) };
+        pt.rec.insert(u.key.clone(), (x, n, sh.max(0.0)));
     }
     for (k, list) in [(0u8, &m.raw), (1, &m.sup), (2, &m.surplus)] {
         for (it, v) in list {
@@ -761,6 +783,23 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
     let mut summary: Option<ComputeSummary> = None;
     // DSP: compute cost of every plan (whatever the objective), so presets compare
     let cw = (data.game == "dsp").then(|| compute::model().weights(&s.generator));
+    // shared machines: beacons stand at (and draw power for) every whole machine of a group, idle
+    // or not, as the objective charges them; each tier row carries its share of them (review 7 M1)
+    let mut placed: HashMap<String, f64> = HashMap::new();
+    if inp.shared {
+        let whole = group_machines(inp, pt);
+        let mut work: HashMap<String, f64> = HashMap::new();
+        for u in &inp.units {
+            if let Some(v) = pt.rec.get(&u.key).filter(|v| v.0.abs() >= 1e-7) {
+                *work.entry(group_key(u)).or_insert(0.0) += v.1;
+            }
+        }
+        for (g, n) in work {
+            if n > 0.0 {
+                placed.insert(g.clone(), whole.get(&g).copied().unwrap_or(n).max(n) / n);
+            }
+        }
+    }
     for u in &inp.units {
         let (r, f) = (&*u.recipe, &u.mode);
         let c_max = if f.overclock { c_max } else { 1.0 };
@@ -778,11 +817,13 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
             sh = sh.round();
         }
         let groups = machine_groups(n, x / f.speed, sh, c_max, whole);
+        // machines this row's beacons serve: its share of the group's whole machines when shared
+        let nb = if inp.shared { n * placed.get(&group_key(u)).copied().unwrap_or(1.0) } else { n };
         let power: f64 = groups
             .iter()
             .map(|g| g.count * f.power_base * (g.clock_percent / 100.0).powf(f.power_exp))
             .sum::<f64>()
-            + f.beacon_power * n;
+            + f.beacon_power * nb;
         let shards = if whole { sh } else { groups.iter().map(|g| g.count * g.shards as f64).sum() };
         let b = data.building(&f.building);
         plan.recipes.push(PlanRecipe {
@@ -807,7 +848,7 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
                 .collect(),
             somersloops: f.somersloops,
             compute: 0.0,
-            beacons: n * f.beacons,
+            beacons: nb * f.beacons,
             group_machines: 0.0,
         });
         if let Some(w) = &cw {
@@ -869,7 +910,7 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
         let g = groups.entry((base.to_string(), r.mode.clone())).or_insert((r.building.clone(), 0.0));
         g.1 += r.machines;
     }
-    let whole_of = |n: f64| if integer && !inp.shared { n } else { (n - 1e-6).ceil() };
+    let whole_of = |n: f64| if integer && !inp.shared { n } else { (n - WHOLE_TOL).ceil() };
     if plan.quality {
         for r in plan.recipes.iter_mut() {
             let n = groups.get(&(quality::split(&r.id).0.to_string(), r.mode.clone())).map(|g| g.1).unwrap_or(0.0);
@@ -1012,7 +1053,13 @@ impl<'a> Run<'a> {
     }
 
     /// Takes `pt` (whole buildings) as the best plan when it fits the budgets and is cheaper.
-    fn offer(&mut self, pt: Point) {
+    fn offer(&mut self, mut pt: Point) {
+        if self.inp.shared {
+            // canonical form: every group holds exactly the whole machines its tiers' work needs
+            // (a solver may leave a group above that when its machines cost nothing or within its
+            // tolerance), so the objective, the building counts and the rows shown agree
+            pt.groups = group_machines(&self.inp, &pt);
+        }
         if !within_budgets(&self.s, &self.inp, &pt) {
             return;
         }

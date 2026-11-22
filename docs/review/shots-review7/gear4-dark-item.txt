@@ -1,0 +1,133 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+
+Band width is items per minute; a bar is as tall as the flow passing through it. Hover a bar to follow it. 4 loop edges (an item feeding back into its own chain) are drawn as thin dashed lines below the chart.
+
+↺ 394.69/min Iron plate
+↺ 11.82/min Iron plate ★epic
+↺ 39.11/min Iron plate ★rare
+↺ 129.64/min Iron plate ★uncommon
+8.91× Assembling machine 3
+Iron gear wheel
+Iron plate 1603.8/min
+Iron gear wheel 1052.49/min
+Iron gear wheel ★uncommon 345.71/min
+Iron gear wheel ★rare 104.31/min
+Iron gear wheel ★epic 31.51/min
+Iron gear wheel ★legendary 10/min
+1.37× Recycler
+Iron gear wheel recycling
+Iron plate ★uncommon 320.59/min
+Iron plate ★rare 97.1/min
+Iron plate ★epic 29.35/min
+Iron plate ★legendary 5.89/min
+0.04× Recycler
+Iron gear wheel recycling ★epic
+0.14× Recycler
+Iron gear wheel recycling ★rare
+0.45× Recycler
+Iron gear wheel recycling ★uncommon
+0.16× Assembling machine 3
+Iron gear wheel ★epic
+0.05× Assembling machine 3
+Iron gear wheel ★legendary
+0.54× Assembling machine 3
+Iron gear wheel ★rare
+1.78× Assembling machine 3
+Iron gear wheel ★uncommon
+34.39× Electric furnace
+Iron plate
+Iron ore 1031.78/min
+mined 1031.78
+output 10
+Where each item goes
+ITEM	TOTAL /MIN	MADE BY	USED BY
+Iron plateLOOP	1603.8	
+1209.12 · Iron plate (Electric furnace)
+394.69 · Iron gear wheel recycling (Recycler)
+	
+1603.8 · Iron gear wheel (Assembling machine 3) (100%)
+
+Iron gear wheel	1052.49	
+1052.49 · Iron gear wheel (Assembling machine 3)
+	
+1052.49 · Iron gear wheel recycling (Recycler) (100%)
+
+Iron ore	1031.78	
+1031.78 · mined
+	
+1031.78 · Iron plate (Electric furnace) (100%)
+
+
+Iron gear wheel ★uncommon	345.71	
+210.39 · Iron gear wheel ★uncommon (Assembling machine 3)
+135.32 · Iron gear wheel (Assembling machine 3)
+	
+345.71 · Iron gear wheel recycling ★uncommon (Recycler) (100%)
+
+
+Iron plate ★uncommonLOOP	320.59	
+129.64 · Iron gear wheel recycling ★uncommon (Recycler)
+118.41 · Iron gear wheel recycling (Recycler)
+72.55 · Iron plate (Electric furnace)
+	
+320.59 · Iron gear wheel ★uncommon (Assembling machine 3) (100%)
+
+
+Iron gear wheel ★rare	104.31	
+63.72 · Iron gear wheel ★rare (Assembling machine 3)
+27.05 · Iron gear wheel ★uncommon (Assembling machine 3)
+13.53 · Iron gear wheel (Assembling machine 3)
+	
+104.31 · Iron gear wheel recycling ★rare (Recycler) (100%)
+
+
+Iron plate ★rareLOOP	97.1	
+39.11 · Iron gear wheel recycling ★rare (Recycler)
+38.89 · Iron gear wheel recycling ★uncommon (Recycler)
+11.84 · Iron gear wheel recycling (Recycler)
+7.25 · Iron plate (Electric furnace)
+	
+97.1 · Iron gear wheel ★rare (Assembling machine 3) (100%)
+
+
+Iron gear wheel ★epic	31.51	
+19.26 · Iron gear wheel ★epic (Assembling machine 3)
+8.19 · Iron gear wheel ★rare (Assembling machine 3)
+2.71 · Iron gear wheel ★uncommon (Assembling machine 3)
+1.35 · Iron gear wheel (Assembling machine 3)
+	
+31.51 · Iron gear wheel recycling ★epic (Recycler) (100%)
+
+
+Iron plate ★epicLOOP	29.35	
+11.82 · Iron gear wheel recycling ★epic (Recycler)
+11.73 · Iron gear wheel recycling ★rare (Recycler)
+3.89 · Iron gear wheel recycling ★uncommon (Recycler)
+1.18 · Iron gear wheel recycling (Recycler)
+0.73 · Iron plate (Electric furnace)
+	
+29.35 · Iron gear wheel ★epic (Assembling machine 3) (100%)
+
+
+Iron gear wheel ★legendary	10	
+5.89 · Iron gear wheel ★legendary (Assembling machine 3)
+2.75 · Iron gear wheel ★epic (Assembling machine 3)
+0.91 · Iron gear wheel ★rare (Assembling machine 3)
+0.3 · Iron gear wheel ★uncommon (Assembling machine 3)
+0.15 · Iron gear wheel (Assembling machine 3)
+	
+10 · output (100%)
+
+
+Iron plate ★legendary	5.89	
+3.94 · Iron gear wheel recycling ★epic (Recycler)
+1.3 · Iron gear wheel recycling ★rare (Recycler)
+0.43 · Iron gear wheel recycling ★uncommon (Recycler)
+0.13 · Iron gear wheel recycling (Recycler)
+0.08 · Iron plate (Electric furnace)
+	
+5.89 · Iron gear wheel ★legendary (Assembling machine 3) (100%)

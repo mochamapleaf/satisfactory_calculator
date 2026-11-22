@@ -230,3 +230,13 @@ Design: `docs/research/factorio-quality/00-最终报告.md` §2.1 / §5 step 6, 
   circuit, quality module, processing unit, LDS chain all proven within 1e-4 (≤ 2.8 s); all-planets legendary
   plastic unproven (79 % relative gap on a near-zero objective). Live browser test on :4173 with both engines.
 - Open: quality mining (report: second phase).
+
+## 2026-11-22 — Review 7: whole-building quality plans
+`docs/review/fable-review-7.md` (1 High, 3 Medium, 4 Low), step log `docs/review/progress-review7.md`.
+- Plants (agricultural tower) now yield normal products whatever the seed's quality: the legendary seed loop that
+  gave free legendary fruit is gone. The bench row "plastic@4 all planets" is now LP 4.53 / plan 4.73 (234
+  buildings, 4.2 % gap at 4 s), not 0.08 / 7 buildings / 79 %.
+- Shared plans: a tier's share is its work (x / speed) and a group holds ⌈Σ shares⌉ whatever the engine returned;
+  beacons and beacon MW at whole machines. Links: quality tiers clamped to 0 … 4. Machine graph sums loadouts.
+- Cover cuts for the shared model measured and not kept (no consistent gain).
+- `cargo test -q --release` 95 pass / 5 ignored; `cargo test -q` 94 / 6. Live: `docs/review/scripts/live_test_review7.py`.

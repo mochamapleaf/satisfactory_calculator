@@ -1,0 +1,129 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+40
+PRODUCTION BUILDINGS
+22.3MW
+PRODUCTION POWER
+2.2MW
+EXTRACTION, EST.
+24.5MW
+TOTAL POWER
+optimal
+WHOLE BUILDINGS · 887 MS
+Buildings
+12×
+Assembling machine 3
+16×
+Beacon
+10×
+Electric furnace
+2×
+Recycler
+Recipes
+RECIPE	BUILDING	BUILDINGS	CLOCK		MW	IN (/MIN)	OUT (/MIN)	
+Iron gear wheel2 TIERS
+Assembling machine 3 · 4P
+	Assembling machine 3	1
+normal 0.7
+legendary 0.05
+	74.5% busy	—	1.2	
+83.48 Iron plate
+5.88 Iron plate ★legendary
+	
+83.48 Iron gear wheel
+5.88 Iron gear wheel ★legendary
+	
+
+Iron gear wheel4 TIERS
+Assembling machine 3 · 2Q 2P
+	Assembling machine 3	3
+normal 0.74
+uncommon 1.56
+rare 0.53
+epic 0.16
+	100% busy	—	2.9	
+133.73 Iron plate
+281.35 Iron plate ★uncommon
+95.62 Iron plate ★rare
+29.29 Iron plate ★epic
+	
+87.76 Iron gear wheel
+195.92 Iron gear wheel ★uncommon
+87.62 Iron gear wheel ★rare
+29.78 Iron gear wheel ★epic
+3.92 Iron gear wheel ★legendary
+	
+
+Iron gear wheel
+Assembling machine 3 · 3Q 1P
+	Assembling machine 3	8	100% busy	—	5.4	
+1680 Iron plate
+	
+853.12 Iron gear wheel
+177.19 Iron gear wheel ★uncommon
+17.72 Iron gear wheel ★rare
+1.77 Iron gear wheel ★epic
+0.2 Iron gear wheel ★legendary
+	
+
+Iron gear wheel recycling4 TIERS
+4Q
+	Recycler	2
+normal 1.33
+uncommon 0.49
+rare 0.14
+epic 0.04
+	99.9% busy	—	0.4	
+1024.36 Iron gear wheel
+373.11 Iron gear wheel ★uncommon
+105.34 Iron gear wheel ★rare
+31.55 Iron gear wheel ★epic
+	
+384.14 Iron plate
+255.16 Iron plate ★uncommon
+93 Iron plate ★rare
+29.03 Iron plate ★epic
+5.85 Iron plate ★legendary
+	
+
+Iron plate
+Electric furnace · 2P · 8 beacons
+	Electric furnace	2	100% busy	—	10.8	
+847.88 Iron ore
+	
+1271.81 Iron plate
+	
+
+Iron plate
+Electric furnace · 1Q 1P
+	Electric furnace	2	100% busy	—	0.6	
+60 Iron ore
+	
+70.31 Iron plate
+4.22 Iron plate ★uncommon
+0.42 Iron plate ★rare
+0.04 Iron plate ★epic
+0 Iron plate ★legendary
+	
+
+Iron plate
+Electric furnace · 2Q
+	Electric furnace	6	96.5% busy	—	1	
+195.37 Iron ore
+	
+170.95 Iron plate
+21.98 Iron plate ★uncommon
+2.2 Iron plate ★rare
+0.22 Iron plate ★epic
+0.02 Iron plate ★legendary
+	
+Raw resources
+RESOURCE	/MIN	OF WORLD MAX	CARRIER
+Iron ore	1103.24	—	Belt Mk.2
+Outputs
+ITEM	/MIN	CARRIER
+
+Iron gear wheel ★legendary	10	Belt Mk.1

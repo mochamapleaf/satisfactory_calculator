@@ -1,0 +1,87 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+
+Each producer's output is split across its consumers in proportion to demand. Grey edges are belts, blue edges are pipes. Drag nodes to tidy up; scroll to zoom.
+
+1052.49 Iron gear wheel
+135.32 Iron gear wheel ★uncommon
+210.39 Iron gear wheel ★uncommon
+13.53 Iron gear wheel ★rare
+63.72 Iron gear wheel ★rare
+27.05 Iron gear wheel ★rare
+1.35 Iron gear wheel ★epic
+19.26 Iron gear wheel ★epic
+8.19 Iron gear wheel ★epic
+2.71 Iron gear wheel ★epic
+0.15 Iron gear wheel ★legendary
+2.75 Iron gear wheel ★legendary
+5.89 Iron gear wheel ★legendary
+0.91 Iron gear wheel ★legendary
+0.3 Iron gear wheel ★legendary
+1031.78 Iron ore
+394.69 Iron plate
+1209.12 Iron plate
+118.41 Iron plate ★uncommon
+129.64 Iron plate ★uncommon
+72.55 Iron plate ★uncommon
+11.84 Iron plate ★rare
+39.11 Iron plate ★rare
+38.89 Iron plate ★rare
+7.25 Iron plate ★rare
+1.18 Iron plate ★epic
+11.82 Iron plate ★epic
+11.73 Iron plate ★epic
+3.89 Iron plate ★epic
+0.73 Iron plate ★epic
+0.13 Iron plate ★legendary
+3.94 Iron plate ★legendary
+1.3 Iron plate ★legendary
+0.43 Iron plate ★legendary
+0.08 Iron plate ★legendary
+8.91× Assembling machine 3
+share of 12 machines
+Iron gear wheel
+8.7 MW
+1.37× Recycler
+share of 2 machines
+Iron gear wheel recycling
+0.2 MW
+0.45× Recycler
+share of 2 machines
+Iron gear wheel recycling ★uncommon
+0.1 MW
+1.78× Assembling machine 3
+share of 12 machines
+Iron gear wheel ★uncommon
+1.7 MW
+0.14× Recycler
+share of 2 machines
+Iron gear wheel recycling ★rare
+0 MW
+0.54× Assembling machine 3
+share of 12 machines
+Iron gear wheel ★rare
+0.5 MW
+0.04× Recycler
+share of 2 machines
+Iron gear wheel recycling ★epic
+0 MW
+0.16× Assembling machine 3
+share of 12 machines
+Iron gear wheel ★epic
+0.2 MW
+Iron gear wheel ★legendary
+Output · 10/min
+0.05× Assembling machine 3
+share of 1 machines
+Iron gear wheel ★legendary
+0.1 MW
+Iron ore
+Raw · 1031.78/min
+34.39× Electric furnace
+share of 35 machines
+Iron plate
+11.1 MW

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Background, Controls, MarkerType, MiniMap, ReactFlow, type Edge, type Node, Position } from '@xyflow/react'
 import dagre from '@dagrejs/dagre'
 import { Icon } from './Icon'
-import { carrier, dn, fmt, isLiquid, itemName as qItemName, type GameData, type Plan } from './solver'
+import { carrier, dn, fmt, isLiquid, itemName as qItemName, type GameData, type Plan, type PlanRecipe } from './solver'
 
 const W = 190
 const H = 64
@@ -14,7 +14,14 @@ function nodeKind(id: string) {
 export default function FlowGraph({ data, plan }: { data: GameData; plan: Plan }) {
   const { nodes, edges } = useMemo(() => {
     const bid = (name: string) => data.buildings.find(b => dn(b, data.game) === name || b.name === name)?.id
-    const recipes = new Map(plan.recipes.map(r => [r.id, r]))
+    // one node per recipe id: the machines and MW of all its modes (loadouts) together
+    const recipes = new Map<string, PlanRecipe>()
+    const modes = new Map<string, number>()
+    for (const r of plan.recipes) {
+      const o = recipes.get(r.id)
+      recipes.set(r.id, o ? { ...o, machines: o.machines + r.machines, power: o.power + r.power } : r)
+      modes.set(r.id, (modes.get(r.id) ?? 0) + 1)
+    }
     const ids = new Set<string>()
     for (const f of plan.flows) { ids.add(f.from); ids.add(f.to) }
 
@@ -25,6 +32,7 @@ export default function FlowGraph({ data, plan }: { data: GameData; plan: Plan }
         return (
           <div>
             <div className="nodehead"><Icon id={r.outputs[0]?.item} size={24} /><Icon id={bid(r.building)} size={24} /><b>{fmt(r.machines)}× {r.building}</b></div>
+            {plan.quality && !!r.group_machines && modes.get(key) === 1 && r.group_machines - r.machines > 1e-6 && <div className="muted" title="The quality tiers of this recipe share these machines, which switch recipes">share of {fmt(r.group_machines, 0)} machines</div>}
             <div>{r.name}{r.alt ? ' (alt)' : ''}</div>
             <div className="muted">{fmt(r.power, 1)} MW{r.somersloops ? ` · ${r.somersloops} sloop` : ''}</div>
           </div>

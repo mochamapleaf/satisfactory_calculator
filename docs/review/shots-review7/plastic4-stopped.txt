@@ -1,0 +1,479 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+
+Best plan found (stopped) in 2.9 s: within 4.2 % of the lower bound, not proven optimal. More time can improve it or prove it.
+
+Keep solving (+8 s)
+Time limit
+s
+Use fractional buildings
+234
+PRODUCTION BUILDINGS
+23.1MW
+PRODUCTION POWER
+0MW
+EXTRACTION, EST.
+23.1MW
+TOTAL POWER
+≤ 4.2% gap
+WHOLE BUILDINGS · 2375 MS
+Buildings
+157×
+Agricultural tower
+1×
+Assembling machine 3
+54×
+Biochamber
+2×
+Centrifuge
+1×
+Chemical plant
+1×
+Cryogenic plant
+0×
+Foundry
+1×
+Heat exchanger
+1×
+Nuclear reactor
+1×
+Oil refinery
+15×
+Recycler
+Recipes
+RECIPE	BUILDING	BUILDINGS	CLOCK		MW	IN (/MIN)	OUT (/MIN)	
+Bioflux3 TIERS
+4Q
+	Biochamber	2
+normal 1.04
+uncommon 0.37
+rare 0.04
+	71.9% busy	—	0	
+248.8 Yumako mash
+199.04 Jelly
+21.58 Nutrients
+87.75 Yumako mash ★uncommon
+70.2 Jelly ★uncommon
+8.78 Yumako mash ★rare
+7.02 Jelly ★rare
+	
+74.64 Bioflux
+48.72 Bioflux ★uncommon
+12.77 Bioflux ★rare
+1.8 Bioflux ★epic
+0.2 Bioflux ★legendary
+	
+
+
+Bioplastic ★epic
+4Q
+	Biochamber	1	0.5% busy	—	0	
+0.22 Bioflux ★epic
+0.88 Yumako mash ★epic
+0.07 Nutrients
+	
+0.74 Plastic bar ★epic
+0.25 Plastic bar ★legendary
+	
+
+
+Bioplastic ★legendary
+4P
+	Biochamber	1	0.1% busy	—	0	
+0.02 Bioflux ★legendary
+0.1 Yumako mash ★legendary
+0.06 Nutrients
+	
+0.18 Plastic bar ★legendary
+	
+
+Biosulfur4 TIERS
+4Q
+	Biochamber	2
+normal 0.28
+uncommon 1.01
+rare 0.27
+epic 0.03
+	79.6% busy	—	0	
+66.78 Spoilage
+13.36 Bioflux
+23.88 Nutrients
+243.59 Spoilage ★uncommon
+48.72 Bioflux ★uncommon
+63.85 Spoilage ★rare
+12.77 Bioflux ★rare
+7.92 Spoilage ★epic
+1.58 Bioflux ★epic
+	
+30.05 Sulfur
+118.63 Sulfur ★uncommon
+62.52 Sulfur ★rare
+15.56 Sulfur ★epic
+2.52 Sulfur ★legendary
+	
+
+
+Biosulfur ★legendary
+4P
+	Biochamber	1	0.7% busy	—	0	
+0.88 Spoilage ★legendary
+0.18 Bioflux ★legendary
+0.46 Nutrients
+	
+0.88 Sulfur ★legendary
+	
+
+Burnt spoilage	Biochamber	1	87.7% busy	—	0	
+52.62 Spoilage
+13.15 Nutrients
+	
+13.15 Carbon
+	
+
+Burnt spoilage2 TIERS
+4Q
+	Biochamber	18
+rare 15.29
+epic 2.68
+	99.8% busy	—	0	
+733.94 Spoilage ★rare
+269.59 Nutrients
+128.77 Spoilage ★epic
+	
+137.61 Carbon ★rare
+65.43 Carbon ★epic
+12.64 Carbon ★legendary
+	
+
+Burnt spoilage ★legendary
+4P
+	Biochamber	1	89.1% busy	—	0	
+21.38 Spoilage ★legendary
+56.12 Nutrients
+	
+8.91 Carbon ★legendary
+	
+
+Carbon recycling2 TIERS
+4Q
+	Recycler	1
+rare 0.44
+epic 0.24
+	68.1% busy	—	0.1	
+169.37 Carbon ★rare
+92.25 Carbon ★epic
+	
+31.76 Carbon ★rare
+26.82 Carbon ★epic
+6.82 Carbon ★legendary
+	
+
+Casting iron
+4P
+	Foundry	0	
+0 × 100%
+	—	0	
+0 Molten iron
+	
+0 Iron plate
+	
+
+Coal liquefaction
+3P
+	Oil refinery	1	7% busy	—	0.1	
+4.6 Coal
+11.51 Heavy oil
+23.02 Steam (500°C)
+	
+63.88 Heavy oil
+16.11 Light oil
+8.06 Petroleum gas
+	
+
+Coal synthesis2 TIERS
+3P
+	Chemical plant	1
+normal 0.16
+legendary 0.34
+	50.3% busy	—	0.4	
+13.15 Carbon
+2.63 Sulfur
+83.04 Water
+28.37 Carbon ★legendary
+5.67 Sulfur ★legendary
+	
+4.6 Coal
+9.93 Coal ★legendary
+	
+
+Heat exchanger : Steam	Heat exchanger	1	0.4% busy	—	0	
+2.3 Water
+2.23 Heat (MJ)
+	
+23.02 Steam (500°C)
+	
+
+Heavy oil cracking to light oil
+Biochamber · 4P
+	Biochamber	1	5.5% busy	—	0	
+39.28 Water
+52.37 Heavy oil
+3.44 Nutrients
+	
+98.19 Light oil
+	
+
+Iron bacteria3 TIERS
+Biochamber · 4Q
+	Biochamber	5
+normal 0.28
+uncommon 3.99
+rare 0.4
+	93.3% busy	—	0	
+159.19 Jelly
+69.96 Nutrients
+2297.61 Jelly ★uncommon
+229.76 Jelly ★rare
+	
+2.98 Iron bacteria
+43.98 Iron bacteria ★uncommon
+17.32 Iron bacteria ★rare
+2.59 Iron bacteria ★epic
+0.29 Iron bacteria ★legendary
+119.39 Spoilage
+1759.03 Spoilage ★uncommon
+692.87 Spoilage ★rare
+103.75 Spoilage ★epic
+11.53 Spoilage ★legendary
+	
+
+Iron bacteria ★epic
+Biochamber · 3Q 1P
+	Biochamber	1	4.7% busy	—	0	
+23.68 Jelly ★epic
+1.27 Nutrients
+	
+0.56 Iron bacteria ★epic
+0.13 Iron bacteria ★legendary
+22.44 Spoilage ★epic
+5.18 Spoilage ★legendary
+	
+
+Iron bacteria ★legendary
+Biochamber · 4P
+	Biochamber	1	0.9% busy	—	0	
+2.63 Jelly ★legendary
+0.58 Nutrients
+	
+0.11 Iron bacteria ★legendary
+4.38 Spoilage ★legendary
+	
+
+Iron ore melting
+4P
+	Foundry	0	
+0 × 100%
+	—	0	
+0 Iron ore
+0 Calcite
+	
+0 Molten iron
+	
+
+Jelly recycling
+4Q
+	Recycler	10	98.1% busy	—	1.8	
+7534.48 Jelly
+	
+1412.72 Jelly
+423.81 Jelly ★uncommon
+42.38 Jelly ★rare
+4.24 Jelly ★epic
+0.47 Jelly ★legendary
+	
+
+Jellynut processing
+Biochamber · 4Q
+	Biochamber	15	100% busy	—	0	
+1440 Jellynut
+225 Nutrients
+	
+32.4 Jellynut seed
+9.72 Jellynut seed ★uncommon
+0.97 Jellynut seed ★rare
+0.1 Jellynut seed ★epic
+0.01 Jellynut seed ★legendary
+6480 Jelly
+1944 Jelly ★uncommon
+194.4 Jelly ★rare
+19.44 Jelly ★epic
+2.16 Jelly ★legendary
+	
+
+Jellystem5 TIERS	Agricultural tower	144
+normal 90
+uncommon 48.6
+rare 4.86
+epic 0.49
+legendary 0.05
+	100% busy	—	14.4	
+18 Jellynut seed
+9.72 Jellynut seed ★uncommon
+0.97 Jellynut seed ★rare
+0.1 Jellynut seed ★epic
+0.01 Jellynut seed ★legendary
+	
+1440 Jellynut
+	
+
+Kovarex enrichment process
+2P
+	Centrifuge	1	0% busy	—	0	
+0 Uranium-235
+0 Uranium-238
+	
+0 Uranium-235
+0 Uranium-238
+	
+
+Light oil cracking to petroleum gas
+Biochamber · 4P
+	Biochamber	1	15.9% busy	—	0	
+114.31 Water
+114.31 Light oil
+10 Nutrients
+	
+190.51 Petroleum gas
+	
+
+Nuclear reactor	Nuclear reactor	1	0.1% busy	—	0	
+0 Uranium fuel cell
+	
+2.23 Heat (MJ)
+0 Depleted uranium fuel cell
+	
+
+Nutrients from bioflux
+4P
+	Biochamber	1	30.6% busy	—	0	
+36.74 Bioflux
+19.29 Nutrients
+	
+734.77 Nutrients
+	
+
+
+Plastic bar ★legendary
+Cryogenic plant · 8P
+	Cryogenic plant	1	41.4% busy	—	4.6	
+198.57 Petroleum gas
+9.93 Coal ★legendary
+	
+59.57 Plastic bar ★legendary
+	
+
+Spoilage recycling ★uncommon
+4Q
+	Recycler	3	81% busy	—	0.4	
+1865.16 Spoilage ★uncommon
+	
+349.72 Spoilage ★uncommon
+104.92 Spoilage ★rare
+10.49 Spoilage ★epic
+1.17 Spoilage ★legendary
+	
+
+Sulfur recycling3 TIERS
+4Q
+	Recycler	1
+uncommon 0.19
+rare 0.11
+epic 0.03
+	33.8% busy	—	0.1	
+146 Sulfur ★uncommon
+87.05 Sulfur ★rare
+26.19 Sulfur ★epic
+	
+27.38 Sulfur ★uncommon
+24.53 Sulfur ★rare
+10.63 Sulfur ★epic
+2.27 Sulfur ★legendary
+	
+
+Uranium fuel cell
+Assembling machine 3 · 4P
+	Assembling machine 3	1	0% busy	—	0	
+0 Iron plate
+0 Uranium-235
+0 Uranium-238
+	
+0 Uranium fuel cell
+	
+
+Uranium processing
+2P
+	Centrifuge	1	0% busy	—	0	
+0 Uranium ore
+	
+0 Uranium-235
+0 Uranium-238
+	
+
+Yumako processing
+Biochamber · 4Q
+	Biochamber	2	67.7% busy	—	0	
+130 Yumako
+20.31 Nutrients
+	
+2.92 Yumako seed
+0.88 Yumako seed ★uncommon
+0.09 Yumako seed ★rare
+0.01 Yumako seed ★epic
+0 Yumako seed ★legendary
+292.5 Yumako mash
+87.75 Yumako mash ★uncommon
+8.78 Yumako mash ★rare
+0.88 Yumako mash ★epic
+0.1 Yumako mash ★legendary
+	
+
+Yumako tree4 TIERS	Agricultural tower	13
+normal 12.51
+rare 0.44
+epic 0.04
+legendary 0
+	100% busy	—	1.3	
+2.5 Yumako seed
+0.09 Yumako seed ★rare
+0.01 Yumako seed ★epic
+0 Yumako seed ★legendary
+	
+130 Yumako
+	
+Raw resources
+RESOURCE	/MIN	OF WORLD MAX	CARRIER
+Calcite	0	—	Belt Mk.1
+Iron ore	0	—	Belt Mk.1
+Uranium ore	0	—	Belt Mk.1
+Water	238.93	—	—
+Outputs
+ITEM	/MIN	CARRIER
+
+Plastic bar ★legendary	60	Belt Mk.1
+Bioflux BYPRODUCT	24.55	Belt Mk.1
+Depleted uranium fuel cell BYPRODUCT	0	Belt Mk.1
+Iron bacteria BYPRODUCT	2.98	Belt Mk.1
+Iron bacteria ★uncommon BYPRODUCT	43.98	Belt Mk.1
+Iron bacteria ★rare BYPRODUCT	17.32	Belt Mk.1
+Iron bacteria ★epic BYPRODUCT	3.15	Belt Mk.1
+Iron bacteria ★legendary BYPRODUCT	0.53	Belt Mk.1
+Jellynut seed BYPRODUCT	14.4	Belt Mk.1
+
+Plastic bar ★epic BYPRODUCT	0.74	Belt Mk.1
+Sulfur BYPRODUCT	27.42	Belt Mk.1
+Yumako mash BYPRODUCT	43.7	Belt Mk.1
+Yumako seed BYPRODUCT	0.42	Belt Mk.1
+Yumako seed ★uncommon BYPRODUCT	0.88	Belt Mk.1

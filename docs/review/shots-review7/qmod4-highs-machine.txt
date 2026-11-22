@@ -1,0 +1,336 @@
+Plan
+Item flow
+Machine graph
+Item values
+Solve again
+
+Each producer's output is split across its consumers in proportion to demand. Grey edges are belts, blue edges are pipes. Drag nodes to tidy up; scroll to zoom.
+
+106.28 Advanced circuit
+6.38 Advanced circuit ★uncommon
+43.66 Advanced circuit ★uncommon
+0.64 Advanced circuit ★rare
+18.19 Advanced circuit ★rare
+2.62 Advanced circuit ★rare
+0.06 Advanced circuit ★epic
+4.35 Advanced circuit ★epic
+1.09 Advanced circuit ★epic
+0.26 Advanced circuit ★epic
+1.38 Advanced circuit ★epic
+0.01 Advanced circuit ★legendary
+0.48 Advanced circuit ★legendary
+0.12 Advanced circuit ★legendary
+0.03 Advanced circuit ★legendary
+0.46 Advanced circuit ★legendary
+10 Coal
+11.62 Coal
+31.65 Copper cable
+48.07 Copper cable
+26.53 Copper cable
+40.29 Copper cable
+86.5 Copper cable
+131.38 Copper cable
+36.71 Copper cable
+55.76 Copper cable
+13.67 Copper cable ★uncommon
+10.25 Copper cable ★uncommon
+21.45 Copper cable ★uncommon
+16.08 Copper cable ★uncommon
+7.47 Copper cable ★uncommon
+5.6 Copper cable ★uncommon
+15.85 Copper cable ★uncommon
+11.89 Copper cable ★uncommon
+16.08 Copper cable ★uncommon
+12.06 Copper cable ★uncommon
+1.37 Copper cable ★rare
+1.02 Copper cable ★rare
+9.19 Copper cable ★rare
+6.89 Copper cable ★rare
+6.43 Copper cable ★rare
+4.83 Copper cable ★rare
+0.75 Copper cable ★rare
+0.56 Copper cable ★rare
+1.59 Copper cable ★rare
+1.19 Copper cable ★rare
+6.89 Copper cable ★rare
+5.17 Copper cable ★rare
+4.83 Copper cable ★rare
+3.62 Copper cable ★rare
+0.14 Copper cable ★epic
+0.1 Copper cable ★epic
+2.76 Copper cable ★epic
+2.07 Copper cable ★epic
+0.64 Copper cable ★epic
+0.48 Copper cable ★epic
+0.07 Copper cable ★epic
+0.06 Copper cable ★epic
+0.16 Copper cable ★epic
+0.12 Copper cable ★epic
+2.07 Copper cable ★epic
+1.55 Copper cable ★epic
+0.48 Copper cable ★epic
+0.36 Copper cable ★epic
+0.02 Copper cable ★legendary
+0.01 Copper cable ★legendary
+0.31 Copper cable ★legendary
+0.23 Copper cable ★legendary
+0.07 Copper cable ★legendary
+0.05 Copper cable ★legendary
+0.01 Copper cable ★legendary
+0.01 Copper cable ★legendary
+0.02 Copper cable ★legendary
+0.01 Copper cable ★legendary
+0.23 Copper cable ★legendary
+0.17 Copper cable ★legendary
+0.05 Copper cable ★legendary
+0.04 Copper cable ★legendary
+39.09 Copper ore
+12.15 Copper plate
+46.48 Copper plate
+0 Depleted uranium fuel cell
+14.17 Electronic circuit
+25.69 Electronic circuit
+76.52 Electronic circuit
+138.7 Electronic circuit
+5.1 Electronic circuit ★uncommon
+6.85 Electronic circuit ★uncommon
+8.01 Electronic circuit ★uncommon
+10.76 Electronic circuit ★uncommon
+5.51 Electronic circuit ★uncommon
+7.4 Electronic circuit ★uncommon
+18.63 Electronic circuit ★uncommon
+25.03 Electronic circuit ★uncommon
+0.5 Electronic circuit ★rare
+0.69 Electronic circuit ★rare
+3.38 Electronic circuit ★rare
+4.67 Electronic circuit ★rare
+2.36 Electronic circuit ★rare
+3.27 Electronic circuit ★rare
+0.54 Electronic circuit ★rare
+0.75 Electronic circuit ★rare
+7.64 Electronic circuit ★rare
+10.55 Electronic circuit ★rare
+1.1 Electronic circuit ★rare
+1.52 Electronic circuit ★rare
+0.04 Electronic circuit ★epic
+0.08 Electronic circuit ★epic
+0.74 Electronic circuit ★epic
+1.67 Electronic circuit ★epic
+0.17 Electronic circuit ★epic
+0.39 Electronic circuit ★epic
+0.04 Electronic circuit ★epic
+0.09 Electronic circuit ★epic
+1.33 Electronic circuit ★epic
+3.01 Electronic circuit ★epic
+0.33 Electronic circuit ★epic
+0.76 Electronic circuit ★epic
+0.08 Electronic circuit ★epic
+0.18 Electronic circuit ★epic
+0.42 Electronic circuit ★epic
+0.96 Electronic circuit ★epic
+0 Electronic circuit ★legendary
+0.01 Electronic circuit ★legendary
+0.06 Electronic circuit ★legendary
+0.2 Electronic circuit ★legendary
+0.02 Electronic circuit ★legendary
+0.05 Electronic circuit ★legendary
+0 Electronic circuit ★legendary
+0.01 Electronic circuit ★legendary
+0.12 Electronic circuit ★legendary
+0.37 Electronic circuit ★legendary
+0.03 Electronic circuit ★legendary
+0.09 Electronic circuit ★legendary
+0.01 Electronic circuit ★legendary
+0.02 Electronic circuit ★legendary
+0.11 Electronic circuit ★legendary
+0.35 Electronic circuit ★legendary
+4.85 Heat (MJ)
+113.7 Heavy oil
+40.67 Iron ore
+30.82 Iron plate
+0 Iron plate
+61.01 Iron plate
+0 Iron plate
+9.25 Iron plate ★uncommon
+9.38 Iron plate ★uncommon
+0.92 Iron plate ★rare
+4.02 Iron plate ★rare
+2.81 Iron plate ★rare
+0.09 Iron plate ★epic
+1.21 Iron plate ★epic
+0.28 Iron plate ★epic
+0.01 Iron plate ★legendary
+0.13 Iron plate ★legendary
+0.03 Iron plate ★legendary
+34.98 Light oil
+149.23 Light oil
+17.49 Petroleum gas
+214.92 Petroleum gas
+39.86 Plastic bar
+50.84 Plastic bar
+11.96 Plastic bar ★uncommon
+18.76 Plastic bar ★uncommon
+6.54 Plastic bar ★uncommon
+1.2 Plastic bar ★rare
+8.04 Plastic bar ★rare
+5.63 Plastic bar ★rare
+0.65 Plastic bar ★rare
+0.12 Plastic bar ★epic
+2.41 Plastic bar ★epic
+0.56 Plastic bar ★epic
+0.07 Plastic bar ★epic
+0.01 Plastic bar ★legendary
+0.27 Plastic bar ★legendary
+0.06 Plastic bar ★legendary
+0.01 Plastic bar ★legendary
+1.47 Quality module ★epic
+0.67 Quality module ★legendary
+0.33 Quality module ★legendary
+49.98 Steam (500°C)
+0 Uranium-235
+0 Uranium-235
+0 Uranium-238
+0 Uranium-238
+0 Uranium-238
+0 Uranium fuel cell
+0 Uranium ore
+5 Water
+85.27 Water
+184.21 Water
+6.48× Electromagnetic plant
+share of 11 machines
+Advanced circuit
+54.4 MW
+1.66× Recycler
+share of 3 machines
+Advanced circuit recycling
+0.3 MW
+0.78× Recycler
+share of 3 machines
+Advanced circuit recycling ★uncommon
+0.1 MW
+2.66× Electromagnetic plant
+share of 11 machines
+Advanced circuit ★uncommon
+22.4 MW
+0.34× Recycler
+share of 3 machines
+Advanced circuit recycling ★rare
+0.1 MW
+1.11× Electromagnetic plant
+share of 11 machines
+Advanced circuit ★rare
+9.3 MW
+0.24× Electromagnetic plant
+share of 1 machines
+Quality module ★epic
+0.5 MW
+0.32× Electromagnetic plant
+share of 1 machines
+Advanced circuit ★epic
+3.2 MW
+0.06× Recycler
+share of 1 machines
+Quality module recycling ★epic
+0 MW
+0.03× Electromagnetic plant
+share of 1 machines
+Quality module ★legendary
+0.1 MW
+0.04× Electromagnetic plant
+share of 1 machines
+Advanced circuit ★legendary
+0.4 MW
+Coal
+Raw · 21.62/min
+0.15× Oil refinery
+share of 1 machines
+Coal liquefaction
+0.2 MW
+0.48× Cryogenic plant
+share of 1 machines
+Plastic bar
+4.2 MW
+1.09× Electromagnetic plant
+share of 2 machines
+Electronic circuit
+9.2 MW
+0.76× Electromagnetic plant
+Copper cable
+6.7 MW
+0.21× Recycler
+share of 1 machines
+Electronic circuit recycling
+0 MW
+0.22× Electromagnetic plant
+share of 2 machines
+Electronic circuit ★uncommon
+1.9 MW
+0.07× Recycler
+share of 1 machines
+Electronic circuit recycling ★uncommon
+0 MW
+0.09× Electromagnetic plant
+share of 2 machines
+Electronic circuit ★rare
+0.8 MW
+0.03× Recycler
+share of 1 machines
+Electronic circuit recycling ★rare
+0 MW
+0.03× Electromagnetic plant
+share of 1 machines
+Electronic circuit ★epic
+0.3 MW
+0× Electromagnetic plant
+share of 1 machines
+Electronic circuit ★legendary
+0 MW
+Copper ore
+Raw · 39.09/min
+1.49× Electric furnace
+share of 2 machines
+Copper plate
+0.7 MW
+0× Nuclear reactor
+share of 1 machines
+Nuclear reactor
+0 MW
+Depleted uranium fuel cell
+Byproduct · 0/min
+0.01× Heat exchanger
+share of 1 machines
+Heat exchanger : Steam
+0 MW
+0.17× Chemical plant
+share of 1 machines
+Heavy oil cracking to light oil
+0.1 MW
+Iron ore
+Raw · 40.67/min
+1.55× Electric furnace
+share of 2 machines
+Iron plate
+0.7 MW
+0× Assembling machine 3
+share of 1 machines
+Uranium fuel cell
+0 MW
+0.37× Chemical plant
+share of 1 machines
+Light oil cracking to petroleum gas
+0.3 MW
+Quality module ★legendary
+Output · 1/min
+0× Centrifuge
+share of 1 machines
+Kovarex enrichment process
+0 MW
+0× Centrifuge
+share of 1 machines
+Uranium processing
+0 MW
+Uranium ore
+Raw · 0/min
+Water
+Raw · 274.48/min

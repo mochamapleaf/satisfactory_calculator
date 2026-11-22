@@ -1,0 +1,36 @@
+gear4-microlp: done 0.7 s | 50 | PRODUCTION BUILDINGS | 22.7MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 24.8MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 43 MS
+gear4-microlp: 2 shared rows checked (whole, split, busy %): OK
+gear4-highs: done 0.6 s | 50 | PRODUCTION BUILDINGS | 22.7MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 24.8MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 14 MS
+gear4-highs: 2 shared rows checked (whole, split, busy %): OK
+gear4-auto: done 0.6 s | 50 | PRODUCTION BUILDINGS | 22.7MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 24.8MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 12 MS
+gear4-auto: 2 shared rows checked (whole, split, busy %): OK
+gear4-auto / Item flow: 3880 chars, 'share of' lines 0, NaN False
+gear4-auto / Machine graph: 1942 chars, 'share of' lines 10, NaN False
+gear4-beacons: done 1.2 s | 40 | PRODUCTION BUILDINGS | 22.3MW | PRODUCTION POWER | 2.2MW | EXTRACTION, EST. | 24.5MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 887 MS
+gear4-beacons: 3 shared rows checked (whole, split, busy %): OK
+qmod4-microlp: done 2.2 s | 37 | PRODUCTION BUILDINGS | 115.7MW | PRODUCTION POWER | 0.2MW | EXTRACTION, EST. | 115.9MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 1794 MS
+qmod4-microlp: 6 shared rows checked (whole, split, busy %): OK
+qmod4-highs: done 4.3 s | 37 | PRODUCTION BUILDINGS | 115.7MW | PRODUCTION POWER | 0.2MW | EXTRACTION, EST. | 115.9MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 3981 MS
+qmod4-highs: 6 shared rows checked (whole, split, busy %): OK
+qmod4-highs / Item flow: 14136 chars, 'share of' lines 0, NaN False
+qmod4-highs / Machine graph: 7639 chars, 'share of' lines 30, NaN False
+plastic4 all planets: Stop button True | after stop: 234 | PRODUCTION BUILDINGS | 23.1MW | PRODUCTION POWER | 0MW | EXTRACTION, EST. | 23.1MW | TOTAL POWER | ≤ 4.2% gap | WHOLE BUILDINGS · 2375 MS
+plastic4-stopped: 9 shared rows checked (whole, split, busy %): OK
+plastic4 keep solving: done 9.2 s | 234 | PRODUCTION BUILDINGS | 23.1MW | PRODUCTION POWER | 0MW | EXTRACTION, EST. | 23.1MW | TOTAL POWER | ≤ 4.2% gap | WHOLE BUILDINGS · 12828 MS | legendary fruit lines: 0
+plastic4-kept: 9 shared rows checked (whole, split, busy %): OK
+machine legendary: 21 | PRODUCTION BUILDINGS | 9.1MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 11.1MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 13 MS | select = 4
+old link (no machine_quality): 50 | PRODUCTION BUILDINGS | 22.7MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 24.8MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 13 MS | select = 0
+link machine_quality=2.5: plan shown True | select = 3 | 28 | PRODUCTION BUILDINGS | 11.9MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 14MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 11 MS
+link machine_quality=-1: plan shown True | select = 0 | 50 | PRODUCTION BUILDINGS | 22.7MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 24.8MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 12 MS
+link machine_quality=9: plan shown True | select = 4 | 21 | PRODUCTION BUILDINGS | 9.1MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 11.1MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 11 MS
+machine quality select -> index 2 (rare): 33 | PRODUCTION BUILDINGS | 14.2MW | PRODUCTION POWER | 2.1MW | EXTRACTION, EST. | 16.2MW | TOTAL POWER | optimal | WHOLE BUILDINGS · 8 MS
+gear4-phone390: done 0.6 s | page overflow x 0 px | shared rows 2
+gear4-phone390 / Item flow: 3880 chars, 'share of' lines 0, NaN False
+gear4-phone390 / Machine graph: 1942 chars, 'share of' lines 10, NaN False
+gear4-dark: done 0.6 s | page overflow x 0 px | shared rows 2
+gear4-dark / Item flow: 3880 chars, 'share of' lines 0, NaN False
+gear4-dark / Machine graph: 1942 chars, 'share of' lines 10, NaN False
+gear4-phone390-dark: done 0.7 s | page overflow x 0 px | shared rows 2
+gear4-phone390-dark / Item flow: 3880 chars, 'share of' lines 0, NaN False
+gear4-phone390-dark / Machine graph: 1942 chars, 'share of' lines 10, NaN False
+console / page errors: none

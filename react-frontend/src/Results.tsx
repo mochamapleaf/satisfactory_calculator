@@ -85,7 +85,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
               const base = r.name.replace(/ ★\S+$/, '')
               return (
                 <tr key={qsplit(r.id)[0] + '#' + r.mode} className="shared">
-                  <td><Icon id={qsplit(r.outputs[0]?.item ?? '')[0]} />{base}<span className="tag" title="These quality tiers run on the same machines, which switch recipes">{g.length} tiers</span>{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
+                  <td><Icon id={qsplit(r.outputs[0]?.item ?? '')[0]} />{base}{r.alt && <span className="tag">alt</span>}<span className="tag" title="These quality tiers run on the same machines, which switch recipes">{g.length} tiers</span>{r.mode_label && <div className="muted small">{r.mode_label}</div>}</td>
                   <td><Icon id={bid(r.building)} />{r.building}</td>
                   <td className="num" title={`shared by ${g.length} tiers: ${fmt(share, 4)} machines of work`}>
                     <b>{fmt(n, whole ? 0 : 2)}</b>{!whole && <span className="muted"> ({fmt(share)})</span>}

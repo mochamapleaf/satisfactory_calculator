@@ -16,6 +16,16 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 pub const TIERS: u8 = 5;
 pub const LEGENDARY: u8 = 4;
+/// Building of the plant recipes (yumako tree, jellystem, tree: `tools/convert_factoriolab.py`).
+/// A planted seed's quality is lost: the harvest is always normal (vanilla 2.0 / 2.1; the forum
+/// suggestion https://forums.factorio.com/viewtopic.php?p=644983 and the "Quality Seeds" mod exist
+/// because of it), so `r@i` takes tier-i seeds and yields normal products (review 7 H1).
+pub const PLANT_BUILDING: &str = "agricultural-tower";
+
+/// The products of `r` keep no quality from its inputs (plants).
+fn normal_products(r: &Recipe) -> bool {
+    r.building == PLANT_BUILDING || (!r.producers.is_empty() && r.producers.iter().all(|p| p == PLANT_BUILDING))
+}
 const DEFAULT_NAMES: [&str; 5] = ["normal", "uncommon", "rare", "epic", "legendary"];
 
 /// "iron-gear-wheel@4" → ("iron-gear-wheel", 4); ids without a tier suffix → (id, 0).
@@ -171,17 +181,20 @@ pub fn expand(data: &GameData, s: &PlanSettings, allowed: &[&Recipe], target_ids
                 continue;
             }
             let tier = |it: &str| if solid(it) { qid(it, i) } else { it.to_string() };
+            // plants: the harvest is normal whatever the seed
+            let out_i = if normal_products(r) { 0 } else { i };
+            let out_tier = |it: &str| if solid(it) { qid(it, out_i) } else { it.to_string() };
             let suffix = if i == 0 { String::new() } else { format!(" ★{}", tier_name(data, i)) };
             let er = Recipe {
                 id,
                 name: format!("{}{suffix}", r.name),
                 name_zh: r.name_zh.as_ref().map(|z| format!("{z}{suffix}")),
                 inputs: r.inputs.iter().map(|(it, q)| (tier(it), *q)).collect(),
-                outputs: r.outputs.iter().map(|(it, q)| (tier(it), *q)).collect(),
-                catalyst: r.catalyst.iter().map(|(it, q)| (tier(it), *q)).collect(),
+                outputs: r.outputs.iter().map(|(it, q)| (out_tier(it), *q)).collect(),
+                catalyst: r.catalyst.iter().map(|(it, q)| (out_tier(it), *q)).collect(),
                 ..r.clone()
             };
-            let modes = loadout_modes(data, s, r, i, &qm, &pm, &solid);
+            let modes = loadout_modes(data, s, r, out_i, &qm, &pm, &solid);
             if !modes.is_empty() {
                 out.push((er, modes));
             }
@@ -190,7 +203,8 @@ pub fn expand(data: &GameData, s: &PlanSettings, allowed: &[&Recipe], target_ids
     out
 }
 
-/// Machine × loadout modes of base recipe `r` run at input tier `i`: k quality modules and
+/// Machine × loadout modes of base recipe `r` whose products start at tier `i` (the input tier;
+/// 0 for plants): k quality modules and
 /// the other slots productivity modules (k = 0 … slots; plus a plain k = 0 mode), products
 /// split by Q(k·q_m). Quality modules only where they can matter (tier < legendary, solid
 /// products, allowed by recipe and machine).
