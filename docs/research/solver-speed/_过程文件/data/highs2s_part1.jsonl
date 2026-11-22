@@ -1,0 +1,11 @@
+{"name": "dsp_multi_pall_bld", "highs_s": 2.01, "status": "Time limit reached", "obj": 151.39196123910335, "bound": 135.64667474318983, "gap": 0.10400345148475845, "nodes": 0, "rows": 939, "cols": 1827}
+{"name": "dsp_um60_pall_bld", "highs_s": 2.032, "status": "Time limit reached", "obj": 114.08445011419992, "bound": 101.79706991184722, "gap": 0.10770425057974939, "nodes": 0, "rows": 698, "cols": 1357}
+{"name": "fa_sci6_mod_b4_bld", "highs_s": 2.01, "status": "Time limit reached", "obj": 243.19648072326038, "bound": 218.88196892066492, "gap": 0.09997888016423881, "nodes": 0, "rows": 1387, "cols": 2721}
+{"name": "fa_sci6_modall_bld", "highs_s": 2.02, "status": "Time limit reached", "obj": 254.36392859315723, "bound": 248.38109339112316, "gap": 0.023520768982945386, "nodes": 0, "rows": 613, "cols": 1173}
+{"name": "fa_sci7_mod_b4_pow", "highs_s": 2.058, "status": "Time limit reached", "obj": 538.4409101759345, "bound": 503.3049567526815, "gap": 0.065254984826046, "nodes": 0, "rows": 9109, "cols": 4612}
+{"name": "fa_sci7_modall_bld", "highs_s": 2.034, "status": "Time limit reached", "obj": 337.1648479775621, "bound": 323.55734476939597, "gap": 0.04035860585641978, "nodes": 0, "rows": 699, "cols": 1337}
+{"name": "fx_sci6_mod_b4_pow", "highs_s": 2.029, "status": "Time limit reached", "obj": 387.5596428663396, "bound": 341.7667470949587, "gap": 0.11815702850973518, "nodes": 0, "rows": 14446, "cols": 7360}
+{"name": "fx_sci6_modall_pow", "highs_s": 2.035, "status": "Time limit reached", "obj": 360.8512904533376, "bound": 354.6154648327156, "gap": 0.017280873826966022, "nodes": 0, "rows": 5609, "cols": 3006}
+{"name": "sf_phase4_oc250_pow", "highs_s": 2.145, "status": "Time limit reached", "obj": 7095.051968535226, "bound": 7086.531174418875, "gap": 0.0012009487956026756, "nodes": 0, "rows": 2592, "cols": 1037}
+{"name": "sf_phase5_std_pow", "highs_s": 0.061, "status": "Optimal", "obj": 8767.059820454457, "bound": 8766.437598232234, "gap": 7.097273601014492e-05, "nodes": 1, "rows": 852, "cols": 503}
+{"name": "sf_turbo_rip_alt_bld", "highs_s": 2.013, "status": "Time limit reached", "obj": 85.01042467002077, "bound": 76.34537813017329, "gap": 0.10192922307448772, "nodes": 1, "rows": 336, "cols": 566}

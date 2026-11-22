@@ -1,0 +1,10 @@
+{"name": "dsp_multi_plain_cmp", "highs_s": 0.27, "status": "Optimal", "obj": 437.511716, "bound": 437.51099286956514, "gap": 1.6528253036204045e-06, "nodes": 1, "rows": 775, "cols": 431}
+{"name": "dsp_um60_plain_cmp", "highs_s": 0.281, "status": "Optimal", "obj": 329.4035359999999, "bound": 329.4035359999999, "gap": 0.0, "nodes": 1, "rows": 559, "cols": 317}
+{"name": "fa_sci6_mod_b8_bld", "highs_s": 60.015, "status": "Time limit reached", "obj": 247.84525988346704, "bound": 247.38102868287157, "gap": 0.0018730687075223383, "nodes": 14194, "rows": 613, "cols": 1173}
+{"name": "fa_sci6_plain_pow", "highs_s": 1.722, "status": "Optimal", "obj": 741.5488248484847, "bound": 741.4777921913718, "gap": 9.578958894237442e-05, "nodes": 17, "rows": 839, "cols": 473}
+{"name": "fa_sci7_mod_b8_bld", "highs_s": 60.016, "status": "Time limit reached", "obj": 325.086911977765, "bound": 324.31052195603314, "gap": 0.0023882537042431264, "nodes": 12292, "rows": 699, "cols": 1337}
+{"name": "fa_sci7_plain_pow", "highs_s": 1.388, "status": "Optimal", "obj": 1125.1761313019379, "bound": 1125.079380560778, "gap": 8.598719655379151e-05, "nodes": 209, "rows": 961, "cols": 538}
+{"name": "fx_sci6_mod_b8_pow", "highs_s": 8.79, "status": "Optimal", "obj": 363.33569534678026, "bound": 363.2999552035554, "gap": 9.836672719634413e-05, "nodes": 325, "rows": 5824, "cols": 3049}
+{"name": "fx_sci6_mod_bld", "highs_s": 60.027, "status": "Time limit reached", "obj": 203.33759218603214, "bound": 202.89817843132775, "gap": 0.002161005989991133, "nodes": 16013, "rows": 615, "cols": 1145}
+{"name": "sf_pasta_alt_pow", "highs_s": 3.341, "status": "Optimal", "obj": 1747.1367811126051, "bound": 1746.9679091943528, "gap": 9.665638093015643e-05, "nodes": 1, "rows": 1397, "cols": 772}
+{"name": "sf_phase4_sloop20_res", "highs_s": 26.038, "status": "Optimal", "obj": 5187.182283152522, "bound": 5187.012460165066, "gap": 3.273896658846879e-05, "nodes": 35, "rows": 820, "cols": 1526}

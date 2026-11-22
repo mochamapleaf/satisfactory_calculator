@@ -1,0 +1,10 @@
+{"name": "dsp_multi_p3_bld", "highs_s": 2.015, "status": "Time limit reached", "obj": 151.32725787388063, "bound": 141.0034100457024, "gap": 0.0682219976310041, "nodes": 0, "rows": 441, "cols": 831}
+{"name": "dsp_um60_p3_bld", "highs_s": 2.015, "status": "Time limit reached", "obj": 111.91353235199993, "bound": 105.21594863895585, "gap": 0.05984605768655638, "nodes": 0, "rows": 330, "cols": 621}
+{"name": "fa_sci6_mod_b8_pow", "highs_s": 2.027, "status": "Time limit reached", "obj": 423.54401523980994, "bound": 419.80476649706685, "gap": 0.008828477344027467, "nodes": 0, "rows": 3323, "cols": 1715}
+{"name": "fa_sci6_mod_bld", "highs_s": 2.006, "status": "Time limit reached", "obj": 252.24300283860555, "bound": 249.9472842111558, "gap": 0.009101218276086908, "nodes": 10, "rows": 355, "cols": 657}
+{"name": "fa_sci7_mod_b8_pow", "highs_s": 2.048, "status": "Time limit reached", "obj": 582.0155171502804, "bound": 543.3969025208371, "gap": 0.0663532388595607, "nodes": 0, "rows": 3799, "cols": 1957}
+{"name": "fa_sci7_mod_bld", "highs_s": 2.017, "status": "Time limit reached", "obj": 336.0860000407755, "bound": 330.1695049796127, "gap": 0.017604110437343303, "nodes": 0, "rows": 404, "cols": 747}
+{"name": "fx_sci6_mod_b4_res", "highs_s": 2.078, "status": "Optimal", "obj": 4677.732329700016, "bound": 4677.274543338633, "gap": 9.786501858529219e-05, "nodes": 1, "rows": 2531, "cols": 4977}
+{"name": "fx_sci6_mod_pow", "highs_s": 2.004, "status": "Time limit reached", "obj": 382.60326105121976, "bound": 382.31259152575694, "gap": 0.0007597152325994031, "nodes": 0, "rows": 2950, "cols": 1612}
+{"name": "sf_phase4_alt_bld", "highs_s": 2.007, "status": "Time limit reached", "obj": 303.98945211033697, "bound": 294.7062372771998, "gap": 0.030537950473912123, "nodes": 1, "rows": 350, "cols": 588}
+{"name": "sf_phase4_oc250_bld", "highs_s": 2.415, "status": "Time limit reached", "obj": Infinity, "bound": 142.3280750517814, "gap": Infinity, "nodes": 0, "rows": 800, "cols": 813}

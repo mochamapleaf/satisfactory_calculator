@@ -1,0 +1,6 @@
+{"name":"sf_rip10_alt_bld","wasm_ms":1120.2,"median_ms":1156.8,"status":"optimal","objective":7.070204016581104,"proven":true,"gap":0.000028898719975000473,"columns":214}
+{"name":"sf_rip10_alt_pow","wasm_ms":825.2,"median_ms":826.4,"status":"optimal","objective":49.462674560753584,"proven":true,"gap":0.00008488632034108555,"columns":214}
+{"name":"sf_hmf7_alt_pow","wasm_ms":557.4,"median_ms":563.3,"status":"optimal","objective":642.9554708875256,"proven":true,"gap":0.0000998261978638756,"columns":214}
+{"name":"lp_fx_sci6_mod_b4_pow","wasm_ms":346.4,"median_ms":360.5,"status":"optimal","objective":322.4419071337312,"proven":true,"gap":null,"columns":2439}
+{"name":"lp_dsp_multi_pall_cmp","wasm_ms":127.3,"median_ms":128.1,"status":"optimal","objective":194.3779698063451,"proven":true,"gap":null,"columns":875}
+{"name":"dsp_um60_plain_bld_4s","wasm_ms":4007.4,"median_ms":4007.9,"status":"optimal","objective":220.11520000000007,"proven":false,"gap":0.009843330522684221,"columns":85}

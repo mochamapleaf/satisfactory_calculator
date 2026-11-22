@@ -1,0 +1,11 @@
+{"name": "dsp_multi_p3_cmp", "highs_s": 60.015, "status": "Time limit reached", "obj": 225.63541756852217, "bound": 217.51827154776956, "gap": 0.03597460943066509, "nodes": 2239, "rows": 2326, "cols": 1208}
+{"name": "dsp_um60_p3_cmp", "highs_s": 60.007, "status": "Time limit reached", "obj": 169.75413602969948, "bound": 163.81260152510944, "gap": 0.03500082321146232, "nodes": 3755, "rows": 1720, "cols": 899}
+{"name": "fa_sci6_mod_b4_res", "highs_s": 0.976, "status": "Optimal", "obj": 5839.237177331306, "bound": 5838.661546558157, "gap": 9.857978973412177e-05, "nodes": 1, "rows": 1387, "cols": 2721}
+{"name": "fa_sci6_mod_pow", "highs_s": 14.383, "status": "Optimal", "obj": 450.8926348480077, "bound": 450.8483512626558, "gap": 9.821314860644132e-05, "nodes": 3261, "rows": 1775, "cols": 941}
+{"name": "fa_sci7_mod_b4_bld", "highs_s": 60.013, "status": "Time limit reached", "obj": 297.40020800278455, "bound": 292.63391063756137, "gap": 0.01602654348237226, "nodes": 2974, "rows": 1584, "cols": 3107}
+{"name": "fa_sci7_mod_pow", "highs_s": 49.542, "status": "Optimal", "obj": 596.2327126832132, "bound": 596.1731194368061, "gap": 9.994964237854283e-05, "nodes": 8064, "rows": 2029, "cols": 1072}
+{"name": "fx_sci6_mod_b4_bld", "highs_s": 60.021, "status": "Time limit reached", "obj": 187.42348804710804, "bound": 186.23821110307784, "gap": 0.006324057653501138, "nodes": 5677, "rows": 2531, "cols": 4977}
+{"name": "fx_sci6_modall_bld", "highs_s": 60.033, "status": "Time limit reached", "obj": 202.34120858464695, "bound": 200.2046456595032, "gap": 0.010559208082667674, "nodes": 2168, "rows": 1094, "cols": 2103}
+{"name": "sf_hmf7_alt_bld", "highs_s": 22.585, "status": "Optimal", "obj": 41.509614243251896, "bound": 41.50608198099819, "gap": 8.509503926023234e-05, "nodes": 9785, "rows": 332, "cols": 559}
+{"name": "sf_phase4_alt_pow", "highs_s": 1.03, "status": "Optimal", "obj": 7087.297893654524, "bound": 7087.092591012702, "gap": 2.8967689082948175e-05, "nodes": 1, "rows": 1470, "cols": 812}
+{"name": "sf_phase4_sloop20_bld", "highs_s": 60.045, "status": "Time limit reached", "obj": 145.0384221560309, "bound": 134.37946293159632, "gap": 0.07349059005183996, "nodes": 3154, "rows": 820, "cols": 1526}

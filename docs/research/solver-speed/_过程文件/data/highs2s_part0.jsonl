@@ -1,0 +1,11 @@
+{"name": "dsp_multi_p3_cmp", "highs_s": 2.02, "status": "Time limit reached", "obj": 230.02054278316442, "bound": 215.348488126391, "gap": 0.0637858448608412, "nodes": 0, "rows": 2326, "cols": 1208}
+{"name": "dsp_um60_p3_cmp", "highs_s": 2.015, "status": "Time limit reached", "obj": 170.61886058341923, "bound": 162.09760329672537, "gap": 0.049943231701091106, "nodes": 0, "rows": 1720, "cols": 899}
+{"name": "fa_sci6_mod_b4_res", "highs_s": 0.909, "status": "Optimal", "obj": 5839.237177331306, "bound": 5838.661546558157, "gap": 9.857978973412177e-05, "nodes": 1, "rows": 1387, "cols": 2721}
+{"name": "fa_sci6_mod_pow", "highs_s": 2.02, "status": "Time limit reached", "obj": 451.2055002586754, "bound": 449.55046139137374, "gap": 0.0036680378815258465, "nodes": 14, "rows": 1775, "cols": 941}
+{"name": "fa_sci7_mod_b4_bld", "highs_s": 2.02, "status": "Time limit reached", "obj": 313.328451264583, "bound": 283.18890658845953, "gap": 0.09619153496747997, "nodes": 0, "rows": 1584, "cols": 3107}
+{"name": "fa_sci7_mod_pow", "highs_s": 2.018, "status": "Time limit reached", "obj": 597.2191827591593, "bound": 591.9434095467211, "gap": 0.008833897779478564, "nodes": 0, "rows": 2029, "cols": 1072}
+{"name": "fx_sci6_mod_b4_bld", "highs_s": 2.026, "status": "Time limit reached", "obj": 202.6488812713294, "bound": 180.6455952884819, "gap": 0.10857837380995455, "nodes": 0, "rows": 2531, "cols": 4977}
+{"name": "fx_sci6_modall_bld", "highs_s": 2.022, "status": "Time limit reached", "obj": 204.46137410174933, "bound": 199.20191033229315, "gap": 0.025723507887797065, "nodes": 0, "rows": 1094, "cols": 2103}
+{"name": "sf_hmf7_alt_bld", "highs_s": 2.003, "status": "Time limit reached", "obj": 41.727538637316115, "bound": 38.856014466545496, "gap": 0.0688160448601843, "nodes": 107, "rows": 332, "cols": 559}
+{"name": "sf_phase4_alt_pow", "highs_s": 0.956, "status": "Optimal", "obj": 7087.297893654524, "bound": 7087.092591012702, "gap": 2.8967689082948175e-05, "nodes": 1, "rows": 1470, "cols": 812}
+{"name": "sf_phase4_sloop20_bld", "highs_s": 2.061, "status": "Time limit reached", "obj": Infinity, "bound": 130.0061766477159, "gap": Infinity, "nodes": 0, "rows": 820, "cols": 1526}

@@ -1,0 +1,10 @@
+{"name": "dsp_multi_plain_bld", "highs_s": 0.285, "status": "Optimal", "obj": 294.84559999999993, "bound": 294.8456, "gap": 0.0, "nodes": 1, "rows": 180, "cols": 312}
+{"name": "dsp_um60_plain_bld", "highs_s": 0.112, "status": "Optimal", "obj": 220.1151999999999, "bound": 220.1151999999999, "gap": 0.0, "nodes": 1, "rows": 134, "cols": 232}
+{"name": "fa_sci6_mod_b8_res", "highs_s": 1.172, "status": "Optimal", "obj": 5840.497177331307, "bound": 5839.9531823310535, "gap": 9.314189935150547e-05, "nodes": 1, "rows": 613, "cols": 1173}
+{"name": "fa_sci6_plain_bld", "highs_s": 1.295, "status": "Optimal", "obj": 631.5537727272725, "bound": 631.4909555555554, "gap": 9.946448652483836e-05, "nodes": 204, "rows": 199, "cols": 345}
+{"name": "fa_sci7_mod_b8_res", "highs_s": 2.115, "status": "Time limit reached", "obj": 7862.3240167965305, "bound": 7861.417150542093, "gap": 0.00011534328177017457, "nodes": 0, "rows": 699, "cols": 1337}
+{"name": "fa_sci7_plain_bld", "highs_s": 2.011, "status": "Time limit reached", "obj": 955.0916264705884, "bound": 954.6371595658213, "gap": 0.0004758359220952238, "nodes": 285, "rows": 226, "cols": 391}
+{"name": "fx_sci6_mod_b8_bld", "highs_s": 2.021, "status": "Time limit reached", "obj": 235.77039166777823, "bound": 198.71087384989278, "gap": 0.15718478285477702, "nodes": 0, "rows": 1094, "cols": 2103}
+{"name": "fx_sci6_plain_pow", "highs_s": 2.003, "status": "Time limit reached", "obj": 577.7462101414142, "bound": 577.371732134455, "gap": 0.0006481704256744831, "nodes": 0, "rows": 1314, "cols": 752}
+{"name": "sf_pasta_alt_bld", "highs_s": 2.005, "status": "Time limit reached", "obj": 52.34725637684345, "bound": 45.62053522861415, "gap": 0.12850188555832232, "nodes": 1, "rows": 332, "cols": 559}
+{"name": "sf_phase5_alt_pow", "highs_s": 2.025, "status": "Time limit reached", "obj": 6104.408456245693, "bound": 6103.279790197732, "gap": 0.00018489359879039977, "nodes": 0, "rows": 1484, "cols": 820}

@@ -1,0 +1,10 @@
+{"name": "dsp_multi_pall_cmp", "highs_s": 10.025, "status": "Time limit reached", "obj": 231.51134809349375, "bound": 209.7212006915261, "gap": 0.09412129289302874, "nodes": 1, "rows": 5314, "cols": 2702}
+{"name": "dsp_um60_pall_cmp", "highs_s": 10.025, "status": "Time limit reached", "obj": 170.98114048033227, "bound": 158.0813351870738, "gap": 0.07544577873921907, "nodes": 24, "rows": 3928, "cols": 2003}
+{"name": "fa_sci6_mod_b4_pow", "highs_s": 10.006, "status": "Time limit reached", "obj": 394.1895101069711, "bound": 389.2315718107705, "gap": 0.012577550059247327, "nodes": 0, "rows": 7967, "cols": 4037}
+{"name": "fa_sci6_modall_pow", "highs_s": 10.059, "status": "Time limit reached", "obj": 448.80835023262455, "bound": 447.3798638036182, "gap": 0.0031828428064360516, "nodes": 252, "rows": 3323, "cols": 1715}
+{"name": "fa_sci7_modall_pow", "highs_s": 10.021, "status": "Time limit reached", "obj": 592.1952895763453, "bound": 588.0530068392457, "gap": 0.0069947917688825915, "nodes": 46, "rows": 3799, "cols": 1957}
+{"name": "fx_sci6_mod_b8_res", "highs_s": 1.357, "status": "Optimal", "obj": 4678.782329700012, "bound": 4678.400173338269, "gap": 8.16785938762624e-05, "nodes": 1, "rows": 1094, "cols": 2103}
+{"name": "fx_sci6_plain_bld", "highs_s": 1.217, "status": "Optimal", "obj": 471.48728787878775, "bound": 471.44463551066315, "gap": 9.0463453037088e-05, "nodes": 89, "rows": 319, "cols": 553}
+{"name": "sf_phase4_sloop20_pow", "highs_s": 10.34, "status": "Time limit reached", "obj": 35300215.15340083, "bound": 4113.242497691219, "gap": 0.9998834782598401, "nodes": 0, "rows": 4265, "cols": 2215}
+{"name": "sf_phase5_alt_bld", "highs_s": 10.006, "status": "Time limit reached", "obj": 151.43099106145823, "bound": 144.60601470685097, "gap": 0.045069878409746016, "nodes": 336, "rows": 354, "cols": 594}
+{"name": "sf_turbo_rip_alt_pow", "highs_s": 2.685, "status": "Optimal", "obj": 1474.5999547853155, "bound": 1474.4550788647657, "gap": 9.824760951582006e-05, "nodes": 17, "rows": 1416, "cols": 782}
