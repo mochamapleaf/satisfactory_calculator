@@ -22,7 +22,7 @@ export default function App() {
   const [data, setData] = useState<GameData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [settings, setSettings] = useState<Settings>(loadSettings)
-  const [tab, setTab] = useState<Tab>('table')
+  const [tabSel, setTab] = useState<Tab>('table')
   const [iconStyle, setIconStyle] = useState<IconStyle>(loadIconStyle)
   useEffect(() => saveIconStyle(iconStyle), [iconStyle])
 
@@ -156,6 +156,9 @@ export default function App() {
 
   if (error) return <div className="loading">The solver did not load: {error}. Reload the page to try again.</div>
   if (!data) return <div className="loading">Loading solver…</div>
+  // tabs that exist for this game; a tab chosen in another game (Galaxy, Map, Mixed belts) falls back to the plan
+  const visibleTabs = TABS.filter(([id]) => (id !== 'mixed' && id !== 'galaxy' || data.game === 'dsp') && (id !== 'map' || data.game === 'satisfactory'))
+  const tab: Tab = visibleTabs.some(([id]) => id === tabSel) ? tabSel : 'table'
 
   return (
     <IconProvider game={data.game} style={iconStyle}>
@@ -179,7 +182,7 @@ export default function App() {
         <Sidebar data={data} settings={settings} setSettings={setSettings} />
         <main>
           <div className="tabs" role="tablist">
-            {TABS.filter(([id]) => (id !== 'mixed' || data.game === 'dsp') && (id !== 'galaxy' || data.game === 'dsp') && (id !== 'map' || data.game === 'satisfactory')).map(([id, name]) => (
+            {visibleTabs.map(([id, name]) => (
               <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{name}</button>
             ))}
             {solving && <span className="solving" role="status">Solving{elapsed >= 1 ? ` ${elapsed} s` : ''}{settings.integer && !bigRun ? ` of ≤ ${fmt((progress?.deadline_ms ?? settings.time_limit_ms) / 1000, 1)} s` : ''}{unproven && plan ? ` · best plan so far, within ${gapPct(plan.gap)} % of the bound` : ''}</span>}
