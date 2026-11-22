@@ -209,6 +209,8 @@ fn external_engine_round_trip() {
 /// settings the reductions act on: Factorio modules, beacons and module cost, DSP tiers and
 /// proliferator modes, Power / Compute / custom weights.
 #[test]
+// proving every case within 30 s needs an optimised build: `cargo test --release` runs it
+#[cfg_attr(debug_assertions, ignore)]
 fn reductions_keep_the_optimum_with_modules_beacons_and_power() {
     let mut cases: Vec<(&str, (GameData, PlanSettings))> = Vec::new();
     let fa = |o: Objective, effects: &[&str], beacons: &[u32], costs: &[f64]| {

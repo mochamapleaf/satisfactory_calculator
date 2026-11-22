@@ -200,3 +200,15 @@ Spec: `docs/research/dsp-mixed-belt/00-最终报告.md` §2–4; step log `docs/
   the plan with its own settings; report corrected (processors at interval 9 reach 1 / 2, not 1.5 / 1.5).
   Tests: 20 mixed-belt (88 in all). Live: 26 + 31 checks, shots in `shots/review5/`.
 - P5 (in-game calibration) 「需要 Xinyu」.
+
+## 2026-11-22 — Satisfactory map view (geo G6)
+Plan: `docs/research/satisfactory-geo/00-最终报告.md` §7–§9; step log `docs/research/satisfactory-geo/_过程文件/progress-g6.md`.
+- `react-frontend/src/geo/model.ts`: TypeScript port of `tools/geo_solve.py` (siting MILP, OE costs, checker, summary),
+  `geo_breakeven` haul costs and the `geo_sites` hub rule; solved by the same highs-js package (`geo/highsLp.ts`, CSC
+  arrays) in its own worker (`geo/geoWorker.ts`); p sweep `geo/sweep.ts` (p = 0, 2..pmax, envelope, warm start;
+  p = 1 copied; F 0.5×/2× for p*). Map tab (`MapView.tsx`, `geo/map.css`, lazy chunk): vector map from node coordinates,
+  sites, machines, belts/pipes/rail, hubs, summary, cost(p) chart, links with break-even.
+- Tests: `npm run test:geo` (node --test): geo_solve_test cases ported; every case of `geo/python-ref.json`
+  (`tools/geo_reference_dump.py`, highspy) gives the same model size, objective, hubs and cars; sweep equals
+  `p_sweep_plate12k.json`. Browser: 12 000 plate/min at Sm3_0 → 95 123.6 vs 99 386.2 belts only (−4.3 %), p* 2/2/0.
+- Not done: tech-tier planning (G9), shared track segments, per-site integer refinement (G7).

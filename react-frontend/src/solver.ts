@@ -604,5 +604,4 @@ export function carrier(rate: number, liquid: boolean, data: GameData): string {
   return `${Math.ceil(rate / max)}× ${kind} Mk.${tiers.length}`
 }
 
-export const fmt = (x: number, d = 2) =>
-  Math.abs(x - Math.round(x)) < 1e-6 ? String(Math.round(x)) : x.toFixed(d).replace(/0+$/, '').replace(/\.$/, '')
+export { fmt } from './fmt'
