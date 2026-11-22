@@ -1,0 +1,674 @@
+[
+ {
+  "case": "sf_hard",
+  "t": 0.01,
+  "solving": null,
+  "card": "",
+  "rows": 0,
+  "note": null,
+  "warn": null,
+  "buttons": []
+ },
+ {
+  "case": "sf_hard",
+  "t": 0.14,
+  "solving": "Solving of ≤ 4 s",
+  "card": "",
+  "rows": 0,
+  "note": null,
+  "warn": null,
+  "buttons": []
+ },
+ {
+  "case": "sf_hard",
+  "event": "first plan visible",
+  "t": 0.37,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 2.6 % of the bound",
+  "card": "717 | 27655.2MW | 5408.8MW | 33064MW | ≤ 2.6% gap",
+  "rows": 77,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 0.37,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 2.6 % of the bound",
+  "card": "717 | 27655.2MW | 5408.8MW | 33064MW | ≤ 2.6% gap",
+  "rows": 77,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 0.58,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 2.4 % of the bound",
+  "card": "716 | 27603MW | 5394.5MW | 32997.5MW | ≤ 2.4% gap",
+  "rows": 79,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 0.79,
+  "solving": "Solving 1 s of ≤ 4 s · best plan so far, within 2.4 % of the bound",
+  "card": "716 | 27603MW | 5394.5MW | 32997.5MW | ≤ 2.4% gap",
+  "rows": 79,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 1.68,
+  "solving": "Solving 1 s of ≤ 4 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 1.89,
+  "solving": "Solving 2 s of ≤ 4 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 2.81,
+  "solving": "Solving 3 s of ≤ 4 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 3.63,
+  "solving": "Solving 3 s of ≤ 4 s · best plan so far, within 0.95 % of the bound",
+  "card": "713 | 27752.6MW | 5403MW | 33155.6MW | ≤ 1% gap",
+  "rows": 87,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 3.83,
+  "solving": "Solving 4 s of ≤ 4 s · best plan so far, within 0.95 % of the bound",
+  "card": "713 | 27752.6MW | 5403MW | 33155.6MW | ≤ 1% gap",
+  "rows": 87,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "t": 4.35,
+  "solving": null,
+  "card": "713 | 27752.6MW | 5403MW | 33155.6MW | ≤ 1% gap",
+  "rows": 87,
+  "note": "Best plan found in 4 s: within 0.95 % of the lower bound, not proven optimal. More time can improve it or prove it.Keep solving (+4 s)Time limit sUse fractional buildings",
+  "warn": null,
+  "buttons": [
+   "Solve again",
+   "Keep solving (+4 s)"
+  ]
+ },
+ {
+  "case": "sf_hard",
+  "event": "final",
+  "solving": null,
+  "card": "713 | 27752.6MW | 5403MW | 33155.6MW | ≤ 1% gap",
+  "rows": 87,
+  "note": "Best plan found in 4 s: within 0.95 % of the lower bound, not proven optimal. More time can improve it or prove it.Keep solving (+4 s)Time limit sUse fractional buildings",
+  "warn": null,
+  "buttons": [
+   "Solve again",
+   "Keep solving (+4 s)"
+  ]
+ },
+ {
+  "case": "stop",
+  "event": "before stop",
+  "solving": "Solving 1 s of ≤ 10 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "stop",
+  "event": "after stop",
+  "solving": null,
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": "Best plan found (stopped) in 1.6 s: within 1 % of the lower bound, not proven optimal. More time can improve it or prove it.Keep solving (+10 s)Time limit sUse fractional buildings",
+  "warn": null,
+  "buttons": [
+   "Solve again",
+   "Keep solving (+10 s)"
+  ]
+ },
+ {
+  "case": "stop",
+  "event": "keep solving 1 s",
+  "solving": "Solving 1 s of ≤ 20 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "event": "first plan visible",
+  "t": 0.0,
+  "solving": "Solving 1 s of ≤ 20 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 0.0,
+  "solving": "Solving 1 s of ≤ 20 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 0.73,
+  "solving": "Solving 2 s of ≤ 20 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 1.7,
+  "solving": "Solving 3 s of ≤ 20 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 2.74,
+  "solving": "Solving 4 s of ≤ 20 s · best plan so far, within 1 % of the bound",
+  "card": "713 | 27783.8MW | 5406.1MW | 33189.9MW | ≤ 1% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 2.84,
+  "solving": "Solving 4 s of ≤ 20 s · best plan so far, within 0.95 % of the bound",
+  "card": "713 | 27752.6MW | 5403MW | 33155.6MW | ≤ 1% gap",
+  "rows": 87,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 3.78,
+  "solving": "Solving 5 s of ≤ 20 s · best plan so far, within 0.95 % of the bound",
+  "card": "713 | 27752.6MW | 5403MW | 33155.6MW | ≤ 1% gap",
+  "rows": 87,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 4.72,
+  "solving": "Solving 6 s of ≤ 20 s · best plan so far, within 0.95 % of the bound",
+  "card": "713 | 27752.6MW | 5403MW | 33155.6MW | ≤ 1% gap",
+  "rows": 87,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 4.93,
+  "solving": "Solving 6 s of ≤ 20 s · best plan so far, within 0.84 % of the bound",
+  "card": "712 | 27811.9MW | 5417.9MW | 33229.8MW | ≤ 0.8% gap",
+  "rows": 89,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 5.26,
+  "solving": "Solving 6 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 5.68,
+  "solving": "Solving 7 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 6.71,
+  "solving": "Solving 8 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 7.74,
+  "solving": "Solving 9 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 8.77,
+  "solving": "Solving 10 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 9.69,
+  "solving": "Solving 11 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 10.72,
+  "solving": "Solving 12 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 11.75,
+  "solving": "Solving 13 s of ≤ 20 s · best plan so far, within 0.73 % of the bound",
+  "card": "711 | 27815.4MW | 5420.7MW | 33236.1MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 12.06,
+  "solving": "Solving 13 s of ≤ 20 s · best plan so far, within 0.7 % of the bound",
+  "card": "711 | 27833.9MW | 5422.5MW | 33256.4MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 12.68,
+  "solving": "Solving 14 s of ≤ 20 s · best plan so far, within 0.7 % of the bound",
+  "card": "711 | 27833.9MW | 5422.5MW | 33256.4MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "keep",
+  "t": 13.71,
+  "solving": "Solving 15 s of ≤ 20 s · best plan so far, within 0.7 % of the bound",
+  "card": "711 | 27833.9MW | 5422.5MW | 33256.4MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "stop",
+  "event": "keep solving final",
+  "solving": "Solving 15 s of ≤ 20 s · best plan so far, within 0.7 % of the bound",
+  "card": "711 | 27833.9MW | 5422.5MW | 33256.4MW | ≤ 0.7% gap",
+  "rows": 90,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 0.0,
+  "solving": null,
+  "card": "",
+  "rows": 0,
+  "note": null,
+  "warn": null,
+  "buttons": []
+ },
+ {
+  "case": "sloop",
+  "t": 0.11,
+  "solving": "Solving of ≤ 4 s",
+  "card": "",
+  "rows": 0,
+  "note": null,
+  "warn": null,
+  "buttons": []
+ },
+ {
+  "case": "sloop",
+  "event": "first plan visible",
+  "t": 0.31,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 30.4 % of the bound",
+  "card": "147 | 7306.2MW | 767.4MW | 8073.6MW | 20 | ≤ 30.4% gap",
+  "rows": 73,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 0.31,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 30.4 % of the bound",
+  "card": "147 | 7306.2MW | 767.4MW | 8073.6MW | 20 | ≤ 30.4% gap",
+  "rows": 73,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 0.83,
+  "solving": "Solving 1 s of ≤ 4 s · best plan so far, within 30.4 % of the bound",
+  "card": "147 | 7306.2MW | 767.4MW | 8073.6MW | 20 | ≤ 30.4% gap",
+  "rows": 73,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 1.87,
+  "solving": "Solving 2 s of ≤ 4 s · best plan so far, within 30.4 % of the bound",
+  "card": "147 | 7306.2MW | 767.4MW | 8073.6MW | 20 | ≤ 30.4% gap",
+  "rows": 73,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 2.69,
+  "solving": "Solving 2 s of ≤ 4 s · best plan so far, within 14.3 % of the bound",
+  "card": "146 | 7499.7MW | 760.4MW | 8260.1MW | 20 | ≤ 14.3% gap",
+  "rows": 76,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 2.79,
+  "solving": "Solving 3 s of ≤ 4 s · best plan so far, within 14.3 % of the bound",
+  "card": "146 | 7499.7MW | 760.4MW | 8260.1MW | 20 | ≤ 14.3% gap",
+  "rows": 76,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 3.41,
+  "solving": "Solving 3 s of ≤ 4 s · best plan so far, within 10 % of the bound",
+  "card": "139 | 5398.5MW | 812.8MW | 6211.3MW | 20 | ≤ 10% gap",
+  "rows": 79,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 3.82,
+  "solving": "Solving 4 s of ≤ 4 s · best plan so far, within 10 % of the bound",
+  "card": "139 | 5398.5MW | 812.8MW | 6211.3MW | 20 | ≤ 10% gap",
+  "rows": 79,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "sloop",
+  "t": 4.23,
+  "solving": null,
+  "card": "139 | 5398.5MW | 812.8MW | 6211.3MW | 20 | ≤ 10% gap",
+  "rows": 79,
+  "note": "Best plan found in 4 s: within 10 % of the lower bound, not proven optimal. More time can improve it or prove it.Keep solving (+4 s)Time limit sUse fractional buildings",
+  "warn": null,
+  "buttons": [
+   "Solve again",
+   "Keep solving (+4 s)"
+  ]
+ },
+ {
+  "case": "sloop",
+  "event": "final",
+  "solving": null,
+  "card": "139 | 5398.5MW | 812.8MW | 6211.3MW | 20 | ≤ 10% gap",
+  "rows": 79,
+  "note": "Best plan found in 4 s: within 10 % of the lower bound, not proven optimal. More time can improve it or prove it.Keep solving (+4 s)Time limit sUse fractional buildings",
+  "warn": null,
+  "buttons": [
+   "Solve again",
+   "Keep solving (+4 s)"
+  ],
+  "sloops": [
+   "20Somersloops"
+  ]
+ },
+ {
+  "case": "dsp_compute",
+  "t": 0.0,
+  "solving": null,
+  "card": "",
+  "rows": 0,
+  "note": null,
+  "warn": null,
+  "buttons": []
+ },
+ {
+  "case": "dsp_compute",
+  "t": 0.1,
+  "solving": "Solving of ≤ 4 s",
+  "card": "",
+  "rows": 0,
+  "note": null,
+  "warn": null,
+  "buttons": []
+ },
+ {
+  "case": "dsp_compute",
+  "event": "first plan visible",
+  "t": 0.21,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 3.1 % of the bound",
+  "card": "211 | 277.5MW | 3.7MW | 281.2MW | 32 | ≈ 16 µs | ≤ 3.1% gap",
+  "rows": 50,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "dsp_compute",
+  "t": 0.21,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 3.1 % of the bound",
+  "card": "211 | 277.5MW | 3.7MW | 281.2MW | 32 | ≈ 16 µs | ≤ 3.1% gap",
+  "rows": 50,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "dsp_compute",
+  "t": 0.42,
+  "solving": "Solving of ≤ 4 s · best plan so far, within 1.2 % of the bound",
+  "card": "211 | 274.9MW | 3.7MW | 278.5MW | 32 | ≈ 16 µs | ≤ 1.2% gap",
+  "rows": 62,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Stop"
+  ]
+ },
+ {
+  "case": "dsp_compute",
+  "t": 0.52,
+  "solving": null,
+  "card": "211 | 273.9MW | 3.7MW | 277.6MW | 32 | ≈ 16 µs | optimal",
+  "rows": 62,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Solve again"
+  ]
+ },
+ {
+  "case": "dsp_compute",
+  "event": "final",
+  "solving": null,
+  "card": "211 | 273.9MW | 3.7MW | 277.6MW | 32 | ≈ 16 µs | optimal",
+  "rows": 62,
+  "note": null,
+  "warn": null,
+  "buttons": [
+   "Solve again"
+  ]
+ }
+]

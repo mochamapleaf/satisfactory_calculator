@@ -39,3 +39,18 @@ Plan: `../00-最终报告.md` §6 + review `00-最终报告.review.md` (S1: hint
   Keep solving resumes, Somersloop budget plan (20/20), DSP compute. Screenshots `shots/`. Fixed after the first run: gap in the card / status
   now follows bound updates; elapsed counter reset at solve start.
 - `cargo test -q`: 63 pass. Next: commit, then HiGHS.
+
+## Committed 52083d0 (code) + a017580 (bench/results). HiGHS engine (in progress, uncommitted)
+- Rust: `Model` records bounds/rows; `Run::model_lp` (CPLEX LP text), `best_values`, `offer_values` (row + bound check,
+  budget check via `offer`), `finish_now`, `heuristics_done`; WASM `solve_model_lp / solve_best_values / solve_heuristics_done /
+  solve_offer / solve_finish`. Test `external_engine_round_trip` (7 solve_tests pass).
+- Frontend: `highs@1.15.4` (exact), `src/highsEngine.ts` (lazy `import('highs')`, MIP start via setSolution, improving-solution
+  and logging callbacks streamed), worker switches to HiGHS after microlp heuristics, `engine` setting (auto/microlp/HiGHS) in
+  Sidebar; Stop during HiGHS terminates the worker (plan kept in UI). Dist: highs chunk 101 KB js + 3.53 MB wasm (gzip 1.22 MB), lazy.
+- Browser bench: `react-frontend/bench.html` + `src/bench.ts` (dev only), driver `bench/browser_bench.py` (vite dev :5174).
+  Smoke: HMF alt bld 42.59 (microlp 42.64), Somersloop bld 148.8 (microlp 156.7), HiGHS load 442 ms.
+- Running: full browser bench microlp vs HiGHS, 4 s -> scratchpad bb_*.jsonl. Next: decide auto, live test, commit.
+
+## HiGHS done (to commit)
+- Browser bench done (`data/browser_*4s.jsonl`, `browser_table.md`), Auto = HiGHS. Live test `shots/highs/` (fixes: busy signal before HiGHS
+  blocks, stopped elapsed, restarted Keep solving keeps the better plan, gap tightened by any same-model bound). cargo test 64 pass.

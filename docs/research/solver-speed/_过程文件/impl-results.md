@@ -67,3 +67,35 @@ Node 26,WASM,各 2 轮(`data/impl_wasm_opt_s_vs_3.txt`):
 - **第 3 步 分段求解 + 逐步返回**:`wasm_api.rs` 的 `solve_start / solve_step / solve_extend`;Worker 每 150 ms 一步并推送;界面在求解中显示"best plan so far, within x %",Stop 保留方案,超时 / 停止后显示蓝色提示和 "Keep solving"(续同一棵树)。没有方案时的红色超时提示保留。
 - **测试**:`src/planner/solve_tests.rs` 6 个(化简前后最优值相同:9 个 MILP 都被两边证明 + 2 个大 LP;DSP Buildings 可证明;Somersloop / shard 预算有方案;2439 列模型 200 ms 也有方案;分段求解单调且 extend 续跑)。`cargo test -q` 63 通过。
 - **局部搜索(可选的第 4 步)没有做**。
+
+---
+
+# HiGHS(WASM)做整栋 MILP 引擎(报告 §6 第 5 步,Xinyu 2026-11-22 批准)
+
+## 做法
+
+- npm `highs@1.15.4`(lovasoa/highs-js,MIT,2026-10-16 发布,满两周),只在整栋求解需要时动态加载:`dist/assets/highs-*.js` 101 KB + `highs-*.wasm` 3 531 401 B(gzip 1.22 MB)。不选 HiGHS 或分数建筑时不下载。
+- microlp 仍做 LP、首个方案、重加权 LP 和受限 MILP;之后 Worker 把**化简后**的模型(`solve_model_lp`,CPLEX LP 文本)交给 HiGHS,用手里最好的方案做 MIP 初始解(`setSolution`),时限 = 剩余时间,`mip_rel_gap` 1e-4。HiGHS 的每个新 incumbent(`mipImprovingSolution` 回调)和下界(`mipLogging`)回到 Rust 的 `offer_values`:先逐行、逐界检查,再检查 Somersloop / shard 预算,更便宜才采用。所以 HiGHS 更差、出错或超时无解时,界面上始终是 microlp 的方案。
+- 设置 "Solver engine: Auto / microlp / HiGHS"(侧栏,整栋模式下)。根据下表,**Auto = HiGHS**。
+- HiGHS 运行时 Worker 收不到消息:此时点 Stop 会结束 Worker(方案已在界面上保留);"Keep solving" 发现搜索已不在,就用"时限 + 一份"重新求解,并且不会用更差的方案替换保留的方案。
+
+## 浏览器实测(Chromium headless,真实 Worker + WASM,4 s,报告的 105 个可行场景)
+
+驱动:`bench/browser_bench.py` + 开发用页面 `react-frontend/bench.html` / `src/bench.ts`;数据 `data/browser_microlp4s.jsonl`、`data/browser_highs4s.jsonl`;逐场景表 `browser_table.md`。
+
+| 引擎 | 有方案 | 4 s 内证明 | 与已知最好解差距 中位 | 平均 | >1 % | 首个方案 中位 / 最大 | HiGHS 加载 |
+|---|---|---|---|---|---|---|---|
+| microlp | 105/105 | 45 | +0.95 % | +2.68 % | 30 | 10 / 329 ms | – |
+| HiGHS(Auto) | 105/105 | **63** | **+0.06 %** | **+1.22 %** | **14** | 8 / 341 ms | 65 ms(本机,冷启动,不含网络) |
+
+- 41 个场景 HiGHS 更好(例:Factorio 7 包 beacon 8 Buildings −7.9 %,Space Age 6 包 beacon 8 Power −8.1 %,核子面 全替代 Buildings −5.7 %,Somersloop 预算 Buildings 156.7 → 148.8),**1 个更差**:`sf_phase4_sloop20_res` 5725 → 6239(+9.0 %)。这一例 HiGHS 4 s 内没有改进保底方案,而 microlp 的全量 B&B 碰巧找到了 5725。
+- 加载时间 65 ms 是本机 localhost 冷启动(浏览器新配置,无缓存)的编译 + 实例化;线上还要加 1.22 MB(gzip)的下载。加载与 microlp 的前几步并行,不推迟首个方案。
+
+## 浏览器手动流程(Auto = HiGHS,`shots/highs/`)
+
+| 流程 | 结果 |
+|---|---|
+| 太空电梯 5–9 等 7 个目标,Buildings,全替代,4 s | 0.37 s 首个方案(2.6 %),HiGHS 接手后 1.8 s 降到 1 %,4 s 结束 0.95 %(microlp 同场景 1.7 %) |
+| 同上 10 s,1.5 s 时 Stop(HiGHS 正在跑) | 保留 1 % 的方案;Keep solving 重新求解(20 s),界面一直显示保留的方案,直到新运行找到更好的(0.7 %) |
+| Somersloop 预算 20,Buildings | 0.31 s 首个方案;4 s 时 139 栋、20 个 Somersloop、差距 10 %(microlp:147 栋、27 %) |
+| DSP Compute | 0.21 s 首个方案,0.56 s **证明最优**(microlp 4 s 仍差 1 %) |

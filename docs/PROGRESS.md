@@ -173,3 +173,7 @@ Plan: `docs/research/solver-speed/00-最终报告.md` §6 steps 0–3; results `
   within x %", Stop keeps the plan, "Keep solving" continues the same search. `opt-level = 3` (+193 KB .wasm).
 - 4 s bench (105 scenarios): plans 104 → 105, proven 43 → 46, first plan median 6 ms (max 279 ms native; 0.24–0.4 s
   in the browser). Known: Somersloop Resources plan 5275 → 5725. HiGHS engine: next.
+- HiGHS engine (2026-11-22): highs-js 1.15.4 (MIT) lazy-loaded in the worker after microlp's first plans and heuristics;
+  gets the reduced model + best plan as MIP start, every incumbent is row/budget-checked back in Rust. Setting
+  "Solver engine: Auto / microlp / HiGHS", Auto = HiGHS. Browser bench 4 s: proven 45 → 63, median gap to best known
+  0.95 % → 0.06 %, 41 better / 1 worse (Somersloop Resources). +3.5 MB wasm (gzip 1.22 MB), downloaded only when used.
