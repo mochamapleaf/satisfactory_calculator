@@ -862,3 +862,24 @@ fn dsp_proliferator_tier_mix_is_optimal_and_explained() {
     let raw = plan(&d, &s);
     assert!(!raw.warnings.iter().any(|w| w.contains("steady-state optimum")), "{:?}", raw.warnings);
 }
+
+/// Review 4 (M4): the tier hint only counts recipes that could have used the best tier in the
+/// same mode. With Mk.III enabled for speed only and Mk.I for extra products, a recipe on
+/// Mk.I extra products had no Mk.III choice: no hint about "lower-tier sprays".
+#[test]
+fn dsp_proliferator_hint_ignores_modes_the_best_tier_does_not_offer() {
+    let (d, mut s) = dsp_compute(&[("universe-matrix", 60.0)]);
+    s.integer = false;
+    s.objective = Objective::Buildings;
+    s.effects = vec!["proliferator-3-speed".into(), "proliferator-1-products".into()];
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal);
+    let modes: Vec<&str> = p.recipes.iter().map(|r| r.mode.as_str()).collect();
+    assert!(modes.iter().any(|m| m.ends_with("proliferator-1-products")), "the case needs a Mk.I extra-products recipe: {modes:?}");
+    assert!(!p.warnings.iter().any(|w| w.contains("steady-state optimum")), "{:?}", p.warnings);
+    // same tiers, both in speed mode: a Mk.I speed recipe is a real tier choice
+    s.effects = vec!["proliferator-3-speed".into(), "proliferator-1-speed".into()];
+    let p = plan(&d, &s);
+    let lower = p.recipes.iter().any(|r| r.mode.ends_with("proliferator-1-speed"));
+    assert_eq!(lower, p.warnings.iter().any(|w| w.contains("steady-state optimum")), "{:?}", p.warnings);
+}

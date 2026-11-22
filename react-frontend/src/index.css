@@ -204,6 +204,16 @@ aside .seg button { flex: 1 0 auto; padding: 2px 4px; }
 .tabs button.tabbtn { align-self: center; margin-left: auto; padding: 2px var(--s2); border: 1px solid var(--rule); border-radius: var(--radius); color: var(--muted); font-size: var(--t-sm); }
 .tabs button.tabbtn:hover { color: var(--fg); border-color: var(--faint); }
 .tabs .solving + button.tabbtn { margin-left: var(--s2); }
+/* the status line can be long ("… best plan so far, within 1.8 % of the bound"): on a narrow
+   bar it moves below the tabs instead of being squeezed into a column of one-word lines */
+.tabs { flex-wrap: wrap; row-gap: 0; }
+.tabs .solving { flex: 0 1 auto; padding: var(--s1) 0; }
+@media (max-width: 800px) {
+  /* phone: the status takes the line below the tabs and wraps beside the Stop button */
+  .tabs .solving { flex: 1 1 calc(100% - 6em); margin-left: 0; align-items: baseline; }
+  .tabs .solving + button.tabbtn { flex: 0 0 auto; }
+  .tabs button.tabbtn { margin-bottom: var(--s2); }
+}
 
 details { margin-top: var(--s2); }
 summary { cursor: pointer; color: var(--fg); font-size: var(--t-sm); padding: var(--s1) 0; }
@@ -247,7 +257,8 @@ td select { min-height: 26px; padding: 1px 4px; }
 .note b { color: var(--accent-text); }
 .bigmodel { margin: var(--s3) 0; display: flex; flex-direction: column; gap: var(--s2); align-items: flex-start; }
 .bigmodel p { margin: 0; max-width: 70ch; }
-.bigmodel .row { gap: var(--s2); }
+.bigmodel .row { gap: var(--s2); flex-wrap: wrap; }
+.bigmodel .row button { white-space: nowrap; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s6); }
 .cols > div { min-width: 0; }
 

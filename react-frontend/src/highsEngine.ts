@@ -21,6 +21,11 @@ export function loadHighs(): Promise<Highs> {
   return loading
 }
 
+/** Forget the loaded instance (after a failed run): the next `loadHighs` starts a new one. */
+export function resetHighs() {
+  loading = null
+}
+
 export interface HighsRun {
   /** HiGHS model status name: optimal, timeLimit, interrupted, infeasible, … */
   status: string
@@ -48,7 +53,9 @@ export function runHighs(
     for (let j = 0; j < n; j++) col[j] = model.getColByName(`v${j}`)
     const toModel = (x: Float64Array) => { const y = new Float64Array(n); for (let j = 0; j < n; j++) y[col[j]] = x[j]; return y }
     const fromModel = (y: Float64Array) => { const x = new Float64Array(n); for (let j = 0; j < n; j++) x[j] = y[col[j]]; return x }
-    model.options.set({ output_flag: false, time_limit: Math.max(0.05, seconds), mip_rel_gap: 1e-4 })
+    // the relative gap alone decides (lp.rs MIP_GAP): HiGHS's default absolute gap of 1e-6 would call
+    // plans with a small objective (DSP: 0.01 per building) optimal at a larger relative gap
+    model.options.set({ output_flag: false, time_limit: Math.max(0.05, seconds), mip_rel_gap: 1e-4, mip_abs_gap: 1e-10 })
     if (start.length && start.some(v => v !== 0)) {
       try { model.setSolution({ colValue: toModel(start) }) } catch { /* start refused: solve without */ }
     }

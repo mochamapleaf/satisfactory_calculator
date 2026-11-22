@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AUTO_SOLVE_COLUMNS, cancelSolve, keepSolving, MAX_TIME_MS, fmt, GAMES, loadSolver, solveStream, type Game, type GameData, type Plan, type Settings, type SolveUpdate } from './solver'
 import { loadGame, loadSettings, saveSettings } from './urlState'
 import Sidebar from './Sidebar'
@@ -22,7 +22,7 @@ export default function App() {
 
   useEffect(() => {
     setData(null)
-    setPlan(null)
+    show(null, '')
     loadSolver(settings.game, settings.dataset).then(setData).catch(e => setError(String(e)))
   }, [settings.game, settings.dataset])
   const switchGame = (g: Game) => setSettings(() => loadGame(g))
@@ -35,12 +35,19 @@ export default function App() {
   }, [])
 
   const [plan, setPlan] = useState<Plan | null>(null)
+  // The plan on screen and the model it solves (the settings without time limit and engine, which
+  // change the search, not the model). Read by the stream handlers, which must decide at once.
+  const cur = useRef<{ plan: Plan | null; model: string }>({ plan: null, model: '' })
+  const show = (p: Plan | null, model = cur.current.model) => { cur.current = { plan: p, model }; setPlan(p) }
+  // newest solve request: updates still arriving from an older one are ignored (review 4 M2)
+  const live = useRef(0)
   const [planKey, setPlanKey] = useState('') // settings the shown plan was solved for
   const [solving, setSolving] = useState(false)
   // Large models (e.g. Factorio "recycle everything", ~16 000 columns, minutes in WASM) are not
   // solved automatically, also when they come from saved settings or a link: the solver returns
   // their size and the user starts the solve (`approved` = the settings it was started for).
   const key = JSON.stringify(settings)
+  const modelKey = JSON.stringify({ ...settings, time_limit_ms: 0, engine: 'auto' })
   const [big, setBig] = useState<{ columns: number; rows: number; key: string } | null>(null)
   const [approved, setApproved] = useState<string | null>(null)
   const [stopped, setStopped] = useState(false)
@@ -64,27 +71,33 @@ export default function App() {
     return g < (p.gap ?? Infinity) ? { ...p, gap: g } : p
   }
   // one handler per solve: plans and progress as they stream in
-  const onUpdate = (k: string, more: number, keepBetter = false) => (u: SolveUpdate) => {
+  const onUpdate = (k: string, model: string, more: number, token: number) => (u: SolveUpdate) => {
+    if (token !== live.current) return
     if (u.gone) { setExtra(more); setRerun(n => n + 1); return }
     if (u.plan) {
       const p = u.plan
       if (p.status === 'too_large') {
         setBig({ columns: p.columns ?? 0, rows: p.rows ?? 0, key: k })
-        setPlan(null)
+        show(null, '')
       } else {
         setBig(null)
-        // a restarted "Keep solving" (the search was gone) never shows a worse plan than the one kept
-        setPlan(prev => (keepBetter && prev?.status === 'optimal' && p.status === 'optimal' && prev.objective <= p.objective + 1e-9 ? tighten(prev, u.bound) : p))
+        // A search started again for the same model (Keep solving after its worker was gone, a new
+        // time limit, another engine) never shows a dearer plan than the one in hand.
+        const prev = cur.current.model === model ? cur.current.plan : null
+        const keep = !!prev && prev.status === 'optimal' && p.status === 'optimal' && !p.proven_optimal
+          && prev.objective < p.objective - 1e-9 * Math.max(1, Math.abs(p.objective))
+        show(keep ? tighten(prev, u.bound) : p, model)
         setPlanKey(k)
       }
     } else if (u.bound !== undefined) {
       // the bound moved: same plan, smaller gap
-      setPlan(p => tighten(p, u.bound))
+      show(tighten(cur.current.plan, u.bound))
     }
     setProgress(u)
     if (u.done) { setSolving(false); setNow(Date.now()) }
   }
   useEffect(() => {
+    const token = ++live.current
     if (!data || data.game !== settings.game) return
     if (data.game === 'factorio' && data.dataset !== (settings.dataset || '2.0')) return
     setSolving(true)
@@ -92,11 +105,12 @@ export default function App() {
     setProgress(null)
     setStarted(Date.now()); setNow(Date.now())
     const run = approved === key
+    // the extra time belongs to this request only (not to settings changed during the delay below)
     const more = extra
+    if (more) setExtra(0)
     const t = setTimeout(() => {
       setStarted(Date.now()); setNow(Date.now())
-      if (more) setExtra(0)
-      setRunId(solveStream({ ...settings, time_limit_ms: settings.time_limit_ms + more, max_columns: run ? 0 : AUTO_SOLVE_COLUMNS }, onUpdate(key, settings.time_limit_ms, more > 0)))
+      setRunId(solveStream({ ...settings, time_limit_ms: settings.time_limit_ms + more, max_columns: run ? 0 : AUTO_SOLVE_COLUMNS }, onUpdate(key, modelKey, settings.time_limit_ms, token)))
     }, run ? 0 : 150)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,7 +126,8 @@ export default function App() {
     setStopped(false)
     setSolving(true)
     setStarted(Date.now() - (progress?.elapsed_ms ?? 0)); setNow(Date.now())
-    if (!keepSolving(runId, settings.time_limit_ms, onUpdate(key, settings.time_limit_ms))) {
+    const token = ++live.current
+    if (!keepSolving(runId, settings.time_limit_ms, onUpdate(key, modelKey, settings.time_limit_ms, token))) {
       setExtra(settings.time_limit_ms); setRerun(n => n + 1)
     }
   }
@@ -121,6 +136,8 @@ export default function App() {
   const limited = current && settings.integer && plan!.warnings.some(w => w.startsWith('Time limit reached'))
   // a whole-building plan in hand that is not proven optimal (timed out, stopped, or still solving)
   const unproven = current && settings.integer && plan!.status === 'optimal' && !plan!.proven_optimal
+  // a budget plan that has no whole-building plan yet while the search still runs: not "infeasible"
+  const pending = solving && current && settings.integer && plan!.status === 'infeasible'
   const gapPct = (g: number | null | undefined) => fmt(100 * (g ?? 0), (g ?? 0) < 0.01 ? 2 : 1)
   const elapsed = Math.max(0, Math.round((now - started) / 1000))
 
@@ -172,7 +189,7 @@ export default function App() {
           )}
           {unproven && !solving && (
             <div className="note bigmodel" role="status">
-              <p><b>Best plan found{stopped ? ' (stopped)' : ''}</b> in {fmt((stopped ? Math.max(progress?.elapsed_ms ?? 0, now - started) : progress?.elapsed_ms ?? plan!.solve_ms) / 1000, 1)} s: within {gapPct(plan!.gap)} % of the lower bound, not proven optimal. More time can improve it or prove it.</p>
+              <p><b>Best plan found{stopped ? ' (stopped)' : ''}</b> in {fmt((stopped ? Math.max(progress?.elapsed_ms ?? 0, now - started) : progress?.elapsed_ms ?? plan!.solve_ms) / 1000, 1)} s: within {gapPct(plan!.gap)} % of the lower bound, not proven optimal. More time can improve it or prove it.{/^(load )?failed/.test(progress?.highs_status ?? '') ? ' HiGHS could not be loaded or run (offline?), so the built-in solver worked alone.' : ''}</p>
               <span className="row">
                 <button onClick={keepGoing}>Keep solving (+{fmt(settings.time_limit_ms / 1000, 1)} s)</button>
                 <label className="row small">Time limit
@@ -194,7 +211,8 @@ export default function App() {
           )}
           {stopped && !solving && !showBig && plan && !current && <p className="warn">The solve was cancelled; the plan shown is from the previous settings. Use “Solve again” to finish it.</p>}
           {!plan && !showBig && <p className="muted">{stopped && !solving ? 'Solve cancelled. Use “Solve again” to run it.' : 'Working out the first plan…'}</p>}
-          {plan && tab === 'table' && <Results data={data} plan={plan} settings={settings} setSettings={setSettings} />}
+          {pending && <p className="muted">No whole-building plan yet; still searching…</p>}
+          {plan && !pending && tab === 'table' && <Results data={data} plan={plan} settings={settings} setSettings={setSettings} />}
           {plan && tab === 'flow' && <ItemFlow data={data} plan={plan} />}
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}
           {plan && tab === 'values' && <ItemValues plan={plan} settings={settings} />}

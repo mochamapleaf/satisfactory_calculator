@@ -244,7 +244,7 @@ fn shards_per_machine(c_max: f64) -> u32 {
 /// segment rows; the MW go straight onto the objective of x and n. Exact (report §4.2): at
 /// c_max = 1 every segment reads p ≥ P·x/speed + beacons·n, and p appears only in the objective.
 fn linear_power(w: &CostWeights, f: &Mode) -> bool {
-    w.power > 0.0 && f.power_exp == 1.0 && !f.overclock
+    shrink() && w.power > 0.0 && f.power_exp == 1.0 && !f.overclock
 }
 
 /// Objective weight of one building of `u`: building weight with the per-building compute terms,
@@ -830,8 +830,8 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
 
 #[cfg(test)]
 thread_local! {
-    /// Tests: build the model without the exact reductions (dominated columns, linear power),
-    /// to check that they leave the optimum unchanged.
+    /// Tests: build the model without the exact reductions (dominated columns, linear power:
+    /// see `shrink` in `linear_power` and `start_units`), to check that they leave the optimum unchanged.
     pub(crate) static NO_SHRINK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 fn shrink() -> bool {
@@ -1159,7 +1159,7 @@ impl<'a> Run<'a> {
                 }
             }
             Err(microlp::Error::Infeasible) => {
-                self.failure = Some("No whole-building plan fits (check the shard budget).".into());
+                self.failure = Some("No whole-building plan fits the Somersloop / power shard budget.".into());
                 self.phase = Phase::Done;
             }
             Err(e) => {
@@ -1196,7 +1196,9 @@ impl<'a> Run<'a> {
 
     /// A whole-building solution from an external engine (values per column of `model_lp`): taken
     /// as the best plan when it fits the budgets and is cheaper. `bound`: the engine's proven lower
-    /// bound (its optimum when it proved optimality); `proven` ends the solve.
+    /// bound (its optimum when it proved optimality). `proven` ends the solve as optimal only when
+    /// the plan in hand is within the gap of that bound: when the engine's own solution was refused
+    /// (row or budget check) the plan in hand is an older, dearer one, and stays unproven (review 4 H1).
     pub fn offer_values(&mut self, values: &[f64], bound: Option<f64>, proven: bool) {
         if values.len() == self.m.cost.len() && values.iter().all(|v| v.is_finite()) {
             let m = &self.m;
@@ -1211,7 +1213,7 @@ impl<'a> Run<'a> {
             let cap = self.best.as_ref().map(|b| b.0).unwrap_or(f64::INFINITY);
             self.bound = self.bound.max(b.min(cap));
         }
-        if proven && self.best.is_some() {
+        if proven && self.gap().is_some_and(|g| g <= 2.0 * MIP_GAP) {
             self.proven = true;
             self.phase = Phase::Done;
         }

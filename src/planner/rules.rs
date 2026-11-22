@@ -379,9 +379,13 @@ pub fn proliferator_tier_hint(data: &GameData, s: &PlanSettings, recipes: &[supe
     })?;
     let mut lower: Vec<String> = vec![];
     let mut tiers: Vec<String> = vec![];
+    // the best tier's enabled modes (extra products / speed): a recipe run in a mode the best tier
+    // does not offer had no choice of tier, so it is not part of the hint (review 4 M4)
+    let best_modes: Vec<bool> =
+        s.effects.iter().filter_map(|e| prolif(e)).filter(|e| e.item == best.item).map(|e| e.products_only).collect();
     for r in recipes {
         let Some(e) = r.mode.rsplit('|').next().and_then(prolif) else { continue };
-        if e.item != best.item && e.sprays.unwrap_or(0.0) < best.sprays.unwrap_or(0.0) {
+        if e.item != best.item && e.sprays.unwrap_or(0.0) < best.sprays.unwrap_or(0.0) && best_modes.contains(&e.products_only) {
             lower.push(r.name.clone());
             let t = data.item_name(&e.item);
             if !tiers.contains(&t) {
@@ -395,7 +399,7 @@ pub fn proliferator_tier_hint(data: &GameData, s: &PlanSettings, recipes: &[supe
     let shown: Vec<&str> = lower.iter().take(4).map(|x| x.as_str()).collect();
     let more = if lower.len() > 4 { format!(" and {} more", lower.len() - 4) } else { String::new() };
     Some(format!(
-        "{} recipe(s) are sprayed with {} although {} is enabled ({}{more}). This is the steady-state optimum for this objective, not a build-order effect: a lower-tier spray needs far fewer upstream buildings ({} is made from the lower tiers plus extra ingredients), and on these recipes that outweighs its smaller bonus. To spray everything with {}, untick the lower-tier proliferator modes (in tests this costs about 0.5–1 % more by the objective).",
+        "{} recipe(s) are sprayed with {} although {} is enabled ({}{more}). This is the steady-state optimum for this objective, not a build-order effect: a lower-tier spray needs far fewer upstream buildings ({} is made from the lower tiers plus extra ingredients), and on these recipes that outweighs its smaller bonus. To spray everything with {}, untick the lower-tier proliferator modes; the plan then costs a little more by the objective (0.6 % on 60 universe matrix/min, Buildings).",
         lower.len(),
         tiers.join(" / "),
         data.item_name(&best.item),

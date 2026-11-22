@@ -301,20 +301,43 @@ export interface SolveUpdate {
 type OnUpdate = (u: SolveUpdate) => void
 
 /** One worker and the solve it runs (or holds, idle, for "Keep solving"). */
+type Held = { id: number; onUpdate: OnUpdate; gotPlan: boolean; busy: boolean }
 class Lane {
   worker: Worker | null = null
-  running: { id: number; onUpdate: OnUpdate; gotPlan: boolean; busy: boolean } | null = null
+  running: Held | null = null
   idle: number | null = null
+  /** the solve just stopped: its worker may still post the step it was in (review 4 L3) */
+  private late: Held | null = null
   private open() {
-    this.worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
-    this.worker.onmessage = (e: MessageEvent<{ id: number; update: string }>) => {
-      const r = this.running
-      if (r?.id !== e.data.id) return
+    const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
+    this.worker = w
+    w.onmessage = (e: MessageEvent<{ id: number; update: string }>) => {
+      if (this.worker !== w) return
       const u = JSON.parse(e.data.update) as SolveUpdate
+      // error plans carry only status and warnings: complete them, so every tab can render
+      if (u.plan) u.plan = { ...emptyPlan(), ...u.plan }
+      const r = this.running
+      if (r?.id !== e.data.id) {
+        const l = this.late
+        if (l?.id !== e.data.id) return
+        // HiGHS started just before the stop reached the worker: it cannot be stopped, end it
+        if (u.engine_busy) { this.stop(); return }
+        // the step that was running when the solve was stopped: its plan is the newest
+        if (u.plan?.status === 'optimal') l.onUpdate({ ...u, done: true })
+        return
+      }
       if (u.plan) r.gotPlan = true
       r.busy = !!u.engine_busy
       if (u.done) { this.running = null; this.idle = u.gone ? null : r.id }
+      // a solver error (a WASM trap) leaves the module unusable: the next solve gets a new worker
+      if (u.done && u.plan?.status === 'error') this.stop()
       r.onUpdate(u)
+    }
+    w.onerror = e => {
+      if (this.worker !== w) return
+      const r = this.running
+      this.stop()
+      r?.onUpdate({ done: true, plan: { ...emptyPlan(), status: 'error', warnings: [`The solver worker failed: ${e.message || 'it could not be loaded'}. Use "Solve again" to retry.`] } })
     }
   }
   stop() {
@@ -322,18 +345,21 @@ class Lane {
     this.worker = null
     this.running = null
     this.idle = null
+    this.late = null
   }
-  start(id: number, s: Settings, onUpdate: OnUpdate) {
+  start(id: number, s: Settings, onUpdate: OnUpdate, race = false) {
     if (this.running) this.stop()
     if (!this.worker) this.open()
     this.running = { id, onUpdate, gotPlan: false, busy: false }
     this.idle = null
-    this.worker!.postMessage({ type: 'solve', id, settings: JSON.stringify(s) })
+    this.late = null
+    this.worker!.postMessage({ type: 'solve', id, settings: JSON.stringify(s), race })
   }
   keep(id: number, ms: number, onUpdate: OnUpdate): boolean {
     if (this.running || this.idle !== id || !this.worker) return false
     this.running = { id, onUpdate, gotPlan: true, busy: false }
     this.idle = null
+    this.late = null
     this.worker.postMessage({ type: 'resume', id, ms })
     return true
   }
@@ -346,6 +372,7 @@ class Lane {
       this.worker.postMessage({ type: 'stop', id: r.id })
       this.running = null
       this.idle = r.id
+      this.late = r
     } else this.stop()
   }
 }
@@ -354,8 +381,18 @@ class Lane {
 const lanes = [new Lane(), new Lane()]
 let seq = 0
 
-const better = (a: Plan | null, b: Plan | null) =>
-  !a || a.status !== 'optimal' ? b : !b || b.status !== 'optimal' ? a : (b.proven_optimal && !a.proven_optimal) || b.objective < a.objective - 1e-9 * Math.max(1, Math.abs(a.objective)) ? b : a
+/** The cheaper plan; at equal cost the proven one (both lanes solve the same model). */
+export const better = (a: Plan | null, b: Plan | null) => {
+  if (!a || a.status !== 'optimal') return b ?? a
+  if (!b || b.status !== 'optimal') return a
+  const tol = 1e-9 * Math.max(1, Math.abs(a.objective))
+  if (b.objective < a.objective - tol) return b
+  if (a.objective < b.objective - tol) return a
+  return b.proven_optimal && !a.proven_optimal ? b : a
+}
+/** A proof by either lane covers the cheaper plan of the two: it is within the same gap. */
+export const asProven = (p: Plan): Plan =>
+  p.status !== 'optimal' || p.proven_optimal ? p : { ...p, proven_optimal: true, gap: null, warnings: p.warnings.filter(w => !w.startsWith('Time limit reached')) }
 
 /** Auto: microlp and HiGHS solve the same plan in two workers; the page sees the better plan at
  *  every moment, so Auto is never worse than microlp alone. A proof by either ends both. */
@@ -363,17 +400,23 @@ let raceBest: (Plan | null)[] = [null, null]
 function race(onUpdate: OnUpdate, keep = false) {
   const last: (SolveUpdate | null)[] = [null, null]
   let shown: Plan | null = null
+  let over = false
   // "Keep solving": a lane whose search is gone still holds its best plan
   const best: (Plan | null)[] = keep ? raceBest : [null, null]
   raceBest = best
   return (k: number) => (u: SolveUpdate) => {
     last[k] = { ...u, plan: null }
     if (u.plan) best[k] = u.plan
+    // a result without a search (too large, infeasible, a fractional quality plan) is the same
+    // in both lanes: the first one ends the solve
+    const direct = u.done && u.phase === undefined && !u.gone && !!u.plan && u.plan.status !== 'error'
     const proven = last.some(x => x?.proven) || best.some(p => p?.proven_optimal)
-    const done = proven || last.every(x => x?.done)
-    if (proven) for (const l of lanes) l.cancel()
-    const pick = better(best[0], best[1])
-    const plan = pick !== shown || done ? pick : null
+    const done = direct || proven || last.every(x => x?.done)
+    if ((proven || direct) && !over) { over = true; for (const l of lanes) l.cancel() }
+    let pick = direct ? u.plan : better(best[0], best[1])
+    if (pick && proven && !direct) pick = asProven(pick)
+    const changed = !!pick && (!shown || pick.objective !== shown.objective || pick.proven_optimal !== shown.proven_optimal || pick.status !== shown.status)
+    const plan = changed || done ? pick : null
     if (plan) shown = plan
     const bounds = last.map(x => x?.bound).filter((b): b is number => typeof b === 'number' && Number.isFinite(b))
     const one = last[k]!
@@ -386,6 +429,7 @@ function race(onUpdate: OnUpdate, keep = false) {
       elapsed_ms: Math.max(...last.map(x => x?.elapsed_ms ?? 0)),
       deadline_ms: Math.max(...last.map(x => x?.deadline_ms ?? 0)),
       engine: `race (${last.map(x => x?.engine ?? '–').join(' / ')})`,
+      highs_status: last[1]?.highs_status,
       engine_busy: false,
       gone: last.every(x => x?.gone) || undefined,
     })
@@ -394,13 +438,18 @@ function race(onUpdate: OnUpdate, keep = false) {
 
 let raceIds: [number, number] | null = null
 
+/** Quality plans are solved with fractional machines (lp.rs): there is no search to race. */
+const fractionalQuality = (s: Settings) =>
+  s.game === 'factorio' && !!DATASETS.find(d => d.id === (s.dataset || '2.0'))?.quality
+  && [...s.targets, ...s.supplies].some(t => qsplit(t.item)[1] > 0)
+
 /** Start a solve; `onUpdate` gets the streamed updates. Returns the solve id. */
 export function solveStream(s: Settings, onUpdate: OnUpdate): number {
   const id = ++seq
-  if (s.integer && (s.engine ?? 'auto') === 'auto') {
+  if (s.integer && (s.engine ?? 'auto') === 'auto' && !fractionalQuality(s)) {
     const h = race(onUpdate)
     lanes[0].start(id, { ...s, engine: 'microlp' }, h(0))
-    lanes[1].start(id, { ...s, engine: 'highs' }, h(1))
+    lanes[1].start(id, { ...s, engine: 'highs' }, h(1), true)
     raceIds = [id, id]
   } else {
     lanes[1].cancel()
@@ -421,7 +470,7 @@ export function keepSolving(id: number, ms: number, onUpdate: OnUpdate): boolean
     const b = lanes[1].keep(id, ms, h(1))
     if (a !== b) {
       // only one search is left: it alone continues (the other counts as done)
-      h(a ? 1 : 0)({ plan: null, done: true })
+      h(a ? 1 : 0)({ plan: null, done: true, phase: 'done' })
     }
     return a || b
   }
