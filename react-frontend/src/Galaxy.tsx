@@ -33,8 +33,15 @@ interface GalaxyPlan {
   rares: { item: string; per_cube: number; quota_per_cube: number; binding: boolean }[]; raw_per_cube: ItemRate[]
   columns: number; rows: number; solve_ms: number; warnings: string[]; error?: string
 }
+interface TotalReport {
+  status: string; cubes: number; cubes_no_util: number; levels_done: number; stars: number; hub: string | null; warpers: number
+  finite: { item: string; available: number; used: number; per_cube: number; binding: boolean; marginal: number }[]
+  unlimited: string[]; raw_per_cube: ItemRate[]; recipes: { recipe: string; mode: string; building: string; machines_per_rate: number }[]
+  solve_ms: number; warnings: string[]; error?: string
+}
 interface Opts {
   seed: SeedSettings
+  total_levels: number; total_scope: 'all' | 'ticked'; total_warpers: boolean; total_alts: boolean; stock_quotas: boolean
   rate: number; remaining: number; level: number
   goal: 'target' | 'max'; target: number; objective: 'buildings' | 'photons'; rho: number; phi: number
   oil: 'initial' | 'floor'; building_cap: number | null; photon_gw: number | null; vessel_capacity: number; warpers_per_trip: number
@@ -45,6 +52,7 @@ interface Opts {
 const DEFAULTS: Opts = {
   seed: { seed: 12345678, stars: 32, resource_multiplier: 0.1, hive_initial_colonize: 1, hive_max_density: 1 },
   rate: 750, remaining: 100, level: 81,
+  total_levels: 0, total_scope: 'all', total_warpers: false, total_alts: true, stock_quotas: true,
   goal: 'target', target: 1000, objective: 'buildings', rho: 1, phi: 0,
   oil: 'initial', building_cap: null, photon_gw: null, vessel_capacity: 400, warpers_per_trip: 2,
   systems: null,
@@ -77,7 +85,7 @@ const RARE = new Set(['fire-ice', 'kimberlite-ore', 'fractal-silicon', 'organic-
 /** Thousands-separated number with at most `d` decimals. */
 const num = (x: number, d = 0) => (Number.isFinite(x) ? (Number(x.toFixed(d)) + 0).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 }) : '–')
 /** Compact: 1.23 M, 456 k. */
-const compact = (x: number) => (Math.abs(x) >= 1e6 ? `${fmt(x / 1e6, 2)} M` : Math.abs(x) >= 1e4 ? `${fmt(x / 1e3, 0)} k` : num(x, 1))
+const compact = (x: number) => (Math.abs(x) >= 1e9 ? `${fmt(x / 1e9, 2)} G` : Math.abs(x) >= 1e6 ? `${fmt(x / 1e6, 2)} M` : Math.abs(x) >= 1e4 ? `${fmt(x / 1e3, 0)} k` : num(x, 1))
 const lv = (l: number | null | undefined) => (l === null || l === undefined ? '—' : `L${l}`)
 
 /** Number field: typing is free; the value is clamped and applied on Enter or when the field is left
@@ -105,7 +113,7 @@ function NumField({ value, onCommit, lo, hi, integer, nullable, ...rest }: {
 let worker: Worker | null = null
 let nextId = 1
 const waiting = new Map<number, (s: string) => void>()
-function call<T>(fn: 'galaxy' | 'thresholds' | 'plan', payload: unknown): Promise<T> {
+function call<T>(fn: 'galaxy' | 'thresholds' | 'plan' | 'total', payload: unknown): Promise<T> {
   if (!worker) {
     worker = new Worker(new URL('./galaxyWorker.ts', import.meta.url), { type: 'module' })
     worker.onmessage = (e: MessageEvent<{ id: number; out: string }>) => {
@@ -140,6 +148,8 @@ export default function GalaxyTab({ data, settings }: Props) {
   const [busy, setBusy] = useState('')
   const [th, setTh] = useState<ThresholdReport | null>(null)
   const [gp, setGp] = useState<GalaxyPlan | null>(null)
+  const [tot, setTot] = useState<TotalReport | null>(null)
+  const [totKey, setTotKey] = useState('')
   const [open, setOpen] = useState<number | null>(null)
   const name = (id: string) => itemName(data, id)
   const gen = useRef(0)
@@ -151,7 +161,7 @@ export default function GalaxyTab({ data, settings }: Props) {
   const importSeed = (s: SeedSettings) => {
     const t = ++gen.current
     setBusy('Generating the galaxy…')
-    setTh(null); setGp(null)
+    setTh(null); setGp(null); setTot(null)
     void call<Galaxy>('galaxy', s).then(r => {
       if (t !== gen.current) return
       setBusy('')
@@ -176,9 +186,21 @@ export default function GalaxyTab({ data, settings }: Props) {
   }), [o.seed, plan, o.rate, o.remaining, darkFog, o.level])
   const gpPayload = useMemo(() => JSON.stringify({
     seed: o.seed, plan, goal: o.goal, target: o.target, objective: o.objective, level: o.level, rho: o.rho, phi: o.phi / 100,
-    stock_quotas: true, remaining: o.remaining / 100, systems, oil: o.oil, building_cap: o.building_cap, photon_gw: o.photon_gw,
+    stock_quotas: o.stock_quotas, remaining: o.remaining / 100, systems, oil: o.oil, building_cap: o.building_cap, photon_gw: o.photon_gw,
     vessel_capacity: o.vessel_capacity, warpers_per_trip: o.warpers_per_trip, dark_fog: darkFog,
   }), [o, plan, systems, darkFog])
+  const totPayload = useMemo(() => JSON.stringify({
+    // "every recipe": all alternates and both Mk.III modes, so the LP picks what gives the most cubes
+    seed: o.seed, plan: o.total_alts ? { ...plan, allow_all_alternates: true, effects: [...new Set([...plan.effects, 'proliferator-3-speed', 'proliferator-3-products'])] } : plan,
+    levels_done: o.total_levels, remaining: o.remaining / 100, stock_override: {},
+    systems: o.total_scope === 'all' ? [] : systems, warpers: o.total_warpers, vessel_capacity: o.vessel_capacity, warpers_per_trip: o.warpers_per_trip,
+  }), [o.seed, plan, o.total_alts, o.total_levels, o.remaining, o.total_scope, o.total_scope === 'all' ? null : systems, o.total_warpers, o.vessel_capacity, o.warpers_per_trip])
+  const runTotal = () => {
+    const t = gen.current, sent = totPayload
+    setBusy('Solving the galaxy total…')
+    void call<TotalReport>('total', JSON.parse(sent)).then(r => { if (t !== gen.current) return; setBusy(''); setTot(r); setTotKey(sent) })
+  }
+  const totStale = !!tot && !tot.error && totKey !== totPayload
   const [thKey, setThKey] = useState('')
   const [gpKey, setGpKey] = useState('')
   const runThresholds = () => {
@@ -240,6 +262,33 @@ export default function GalaxyTab({ data, settings }: Props) {
       {g && !g.error && <GalaxyTables g={g} name={name} systems={systems} toggle={toggleSystem} open={open} setOpen={setOpen}
         resetSystems={() => set({ systems: null })} />}
 
+      {/* ---- galaxy total */}
+      {g && !g.error && <>
+        <h3>理想总产量 Galaxy total</h3>
+        <p className="hint">
+          How many universe matrices the galaxy's finite veins make at best, with no quota and no rate: machines, stations, sails and time are unlimited,
+          so oceans, gas giants, oil seeps (never mined below their floor) and Dyson photons are unlimited too, and only the veins run out.
+          One LP picks the recipes (sidebar alternates and proliferator) that turn the stock into the most cubes. Ore spent on research before then is not counted yet.
+        </p>
+        <div className="mbsettings">
+          <label>Vein utilisation levels done<NumField value={o.total_levels} lo={0} hi={500} integer onCommit={v => set({ total_levels: v ?? 0 })} /></label>
+          <label>Stock of
+            <select value={o.total_scope} onChange={e => set({ total_scope: e.target.value as Opts['total_scope'] })}>
+              <option value="all">every star ({g.stars.length})</option>
+              <option value="ticked">the ticked systems ({systems.length})</option>
+            </select>
+          </label>
+          <label className="check"><input type="checkbox" checked={o.total_alts} onChange={e => set({ total_alts: e.target.checked })} /> every recipe and Mk.III proliferator (used only where they give more)</label>
+          <label className="check"><input type="checkbox" checked={o.total_warpers} onChange={e => set({ total_warpers: e.target.checked })} /> ship with warpers (faster; off: vessels fly slowly, no cost)</label>
+          <label>Stock remaining %<NumField value={o.remaining} lo={0} hi={100} onCommit={v => set({ remaining: v ?? 100 })} /></label>
+          <button onClick={runTotal} disabled={!!busy || (o.total_scope === 'ticked' && systems.length === 0)}>Compute total</button>
+        </div>
+        {tot?.error && <p className="warn">{tot.error}</p>}
+        {totStale && <p className="warn stale" role="status"><b>Out of date</b> — settings changed since this total was computed. Press Compute total.</p>}
+        {tot && !tot.error && <div className={totStale ? 'staleresult' : undefined}><TotalView t={tot} name={name} level={o.level}
+          recipeName={id => { const r = data.recipes.find(x => x.id === id); return r ? (r.name_zh ?? r.name) : id }} /></div>}
+      </>}
+
       {/* ---- thresholds */}
       {g && !g.error && <>
         <h3>无限阈值 Infinite threshold</h3>
@@ -296,7 +345,7 @@ export default function GalaxyTab({ data, settings }: Props) {
           <label>Dyson GW<NumField placeholder="none" nullable value={o.photon_gw} lo={0} hi={1e6} onCommit={v => set({ photon_gw: v })} /></label>
           <button onClick={runPlan} disabled={!!busy || systems.length === 0}>Plan galaxy</button>
           <details>
-            <summary>More: oil, cubes not researched, logistics</summary>
+            <summary>More: oil, quotas, cubes not researched, logistics</summary>
             <div className="mbsettings">
               <label>Oil rate
                 <select value={o.oil} onChange={e => set({ oil: e.target.value as Opts['oil'] })}>
@@ -304,6 +353,7 @@ export default function GalaxyTab({ data, settings }: Props) {
                   <option value="floor">depleted floor 0.1/s per seep</option>
                 </select>
               </label>
+              <label className="check"><input type="checkbox" checked={o.stock_quotas} onChange={e => set({ stock_quotas: e.target.checked })} /> stock quotas (off: rates only)</label>
               <label>φ cubes elsewhere %<NumField value={o.phi} lo={0} hi={95} onCommit={v => set({ phi: v ?? 0 })} /></label>
               <label>Vessel capacity<NumField value={o.vessel_capacity} lo={1} hi={10000} onCommit={v => set({ vessel_capacity: v ?? 400 })} /></label>
               <label>Warpers per trip<NumField step={1} value={o.warpers_per_trip} lo={0} hi={4} onCommit={v => set({ warpers_per_trip: v ?? 2 })} /></label>
@@ -526,5 +576,43 @@ function PlanView({ gp, name, starName, recipeName }: { gp: GalaxyPlan; name: (i
         </tbody>
       </table>
     </div>
+  </>
+}
+
+function TotalView({ t, name, recipeName, level }: { t: TotalReport; name: (id: string) => string; recipeName: (id: string) => string; level: number }) {
+  if (t.status !== 'optimal') {
+    return <div className="warn"><b>{t.status === 'unbounded' ? 'Unlimited' : 'No result'}</b>{t.warnings.map((w, i) => <p key={i}>{w}</p>)}</div>
+  }
+  const binding = t.finite.filter(u => u.binding)
+  return <>
+    <div className="cards">
+      <div className="card"><span className="big">{compact(t.cubes)}</span><span className="muted">Universe matrices in total{t.levels_done > 0 ? `, ${t.levels_done} vein utilisation levels done` : ', no vein utilisation'}</span></div>
+      {level > 1 && <div className="card"><span className="big">{compact(t.cubes_no_util / Math.pow(0.94, level - 1))}</span><span className="muted">with L{level - 1} vein utilisation done (×{fmt(1 / Math.pow(0.94, level - 1), 0)})</span></div>}
+      <div className="card"><span className="big">{binding.length}</span><span className="muted">Limiting: {binding.map(u => name(u.item)).join(', ') || '—'}</span></div>
+      {t.hub && <div className="card"><span className="big">{compact(t.warpers)}</span><span className="muted">Warpers (hub {t.hub})</span></div>}
+    </div>
+    <p className="small muted">
+      {t.stars} stars. Each level of vein utilisation multiplies the total by 1/0.94 (+6.4 %); with unlimited levels it has no limit, which is what the
+      infinite-threshold section below is about (research cubes and their ore are not counted here yet). Unlimited here: {t.unlimited.map(name).join(', ')}. {fmt(t.solve_ms, 0)} ms.
+    </p>
+    {t.warnings.map((w, i) => <p key={i} className="warn">{w}</p>)}
+    <h4>Finite stock</h4>
+    <div className="tablewrap">
+      <table className="mbtable">
+        <thead><tr><th>Resource</th><th className="num">Available</th><th className="num">Used</th><th className="num">Use</th><th className="num">Per cube</th><th className="num">+cubes per 1000 more</th></tr></thead>
+        <tbody>
+          {t.finite.map(u => (
+            <tr key={u.item}><td><Icon id={u.item} size={18} />{name(u.item)}</td><td className="num">{compact(u.available)}</td><td className="num">{compact(u.used)}</td>
+              <td className="num">{u.binding ? <span className="st-warn">all, limiting</span> : `${fmt(100 * u.used / Math.max(u.available, 1e-12), 0)} %`}</td>
+              <td className="num">{fmt(u.per_cube, 3)}</td><td className="num">{u.binding ? fmt(1000 * u.marginal, 2) : '—'}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <h4>Recipes, machines per 1 cube/min</h4>
+    <p className="small muted">The mix that gives the most cubes, scaled to a rate: build this many machines per cube/min you want.</p>
+    <p className="small">{t.recipes.slice(0, 60).map(r => `${recipeName(r.recipe)}${r.mode ? ` [${r.mode}]` : ''} ×${fmt(r.machines_per_rate, 2)}`).join(' · ')}{t.recipes.length > 60 ? ` … +${t.recipes.length - 60}` : ''}</p>
+    <h4>Raw per cube</h4>
+    <p className="small">{t.raw_per_cube.map(r => `${name(r.item)} ${fmt(r.rate, 2)}`).join(' · ')} <span className="muted">(unlimited items: gross intake)</span></p>
   </>
 }

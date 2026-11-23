@@ -334,3 +334,57 @@ fn twelve_systems_solve_in_reasonable_time() {
     eprintln!("12 systems: {:?} {} cols × {} rows, {:.0} ms", p.status, p.columns, p.rows, t.elapsed().as_secs_f64() * 1e3);
     assert_eq!(p.systems.len().max(1), if p.status == Status::Optimal { 12 } else { 1 });
 }
+
+#[test]
+fn galaxy_total_needs_no_quota_and_no_magnets() {
+    // Xinyu 2026-11-23: total cubes from the whole galaxy's stock, machines unlimited, no quota
+    let ts = TotalSettings::default();
+    let r = galaxy_total(dsp(), galaxy(), &ts);
+    // conservation: used ≤ available, per cube × cubes = used
+    for u in &r.finite {
+        assert!(u.used <= u.available * (1.0 + 1e-7) + 1e-6, "{}", u.item);
+        assert!((u.per_cube * r.cubes - u.used).abs() <= 1e-6 * u.used.max(1.0), "{}", u.item);
+    }
+    assert_eq!(r.status, Status::Optimal, "{:?}", r.warnings);
+    eprintln!("total {:.3e} cubes, hub {:?}, warpers {:.0}, {:.0} ms", r.cubes, r.hub, r.warpers, r.solve_ms);
+    for u in &r.finite {
+        eprintln!("  {:32} avail {:>12.0} used {:>12.0} per cube {:8.3} {} marginal {:.4}", u.item, u.available, u.used, u.per_cube, if u.binding { "BIND" } else { "" }, u.marginal);
+    }
+    for x in r.recipes.iter().take(12) {
+        eprintln!("  {:40} {:10} {:.3}", x.recipe, x.mode, x.machines_per_rate);
+    }
+    assert!(r.cubes > 0.0);
+    assert!(r.finite.iter().any(|u| u.binding));
+    // his words: without the unipolar-magnet alternate there are still many cubes, only fewer
+    let mut no_mag = ts.clone();
+    let mag_recipes: Vec<String> =
+        dsp().recipes.iter().filter(|x| x.inputs.iter().any(|(i, _)| i == "unipolar-magnet")).map(|x| x.id.clone()).collect();
+    assert!(!mag_recipes.is_empty());
+    no_mag.plan.disabled_recipes.extend(mag_recipes);
+    let r0 = galaxy_total(dsp(), galaxy(), &no_mag);
+    assert_eq!(r0.status, Status::Optimal);
+    assert!(r0.finite.iter().all(|u| u.item != "unipolar-magnet" || u.used == 0.0));
+    eprintln!("without magnet recipes: {:.3e}", r0.cubes);
+    assert!(r0.cubes > 0.5 * r.cubes, "{} vs {}", r0.cubes, r.cubes);
+    assert!(r0.cubes <= r.cubes * (1.0 + 1e-6));
+    // warpers only cost; proliferator modes only add options
+    let mut w = ts.clone();
+    w.warpers = true;
+    let rw = galaxy_total(dsp(), galaxy(), &w);
+    assert!(rw.cubes <= r.cubes * (1.0 + 1e-6) && rw.cubes > 0.5 * r.cubes, "{} vs {}", rw.cubes, r.cubes);
+    let mut pr = ts.clone();
+    pr.plan.effects = vec!["proliferator-3-speed".into(), "proliferator-3-products".into()];
+    let rp = galaxy_total(dsp(), galaxy(), &pr);
+    eprintln!("with proliferator Mk.III: {:.3e}, warpers on: {:.3e}", rp.cubes, rw.cubes);
+    assert!(rp.cubes >= r.cubes * (1.0 - 1e-6));
+    // vein utilisation scales the total by 1/0.94^done
+    let mut l = ts.clone();
+    l.levels_done = 10;
+    let r10 = galaxy_total(dsp(), galaxy(), &l);
+    assert!((r10.cubes * 0.94f64.powi(10) / r.cubes - 1.0).abs() < 1e-4);
+    // using fewer systems never gives more
+    let mut few = ts.clone();
+    few.systems = vec![0, 1, 2];
+    let rf = galaxy_total(dsp(), galaxy(), &few);
+    assert!(rf.cubes <= r.cubes * (1.0 + 1e-6));
+}

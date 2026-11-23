@@ -264,3 +264,15 @@ pub fn dsp_galaxy_plan_json(settings_json: &str) -> String {
         Err(e) => bad(e),
     }
 }
+
+/// Galaxy total: `TotalSettings` JSON → `TotalReport` JSON (most cubes the finite stock makes).
+#[wasm_bindgen]
+pub fn dsp_galaxy_total_json(settings_json: &str) -> String {
+    match serde_json::from_str::<planner::dsp_galaxy::TotalSettings>(settings_json) {
+        Ok(ts) => {
+            let g = galaxy_for(&ts.seed);
+            serde_json::to_string(&planner::dsp_galaxy::galaxy_total(data("dsp", ""), &g, &ts)).unwrap()
+        }
+        Err(e) => bad(e),
+    }
+}

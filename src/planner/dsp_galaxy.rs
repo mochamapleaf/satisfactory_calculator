@@ -1287,3 +1287,323 @@ fn infeasible_hint(gs: &GalaxyPlanSettings, g: &Galaxy, sys: &[usize]) -> String
     }
     s
 }
+
+// ---------------------------------------------------------------------------------------------
+// Galaxy total: how many cubes the galaxy's finite stock makes at best (Xinyu 2026-11-23:
+// 「必须要求有一个 quota 是不合理的…机器和太阳帆的总数其实是不受限制的…这个星系的所有物质够我最优解的生产白糖能生产多少」)
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TotalSettings {
+    pub seed: SeedSettings,
+    /// Recipe settings from the sidebar (alternates, proliferator); targets are set by the model.
+    pub plan: PlanSettings,
+    /// Vein-utilisation levels done (stock consumed per unit mined = 0.94^done); 0 = none.
+    pub levels_done: u32,
+    pub remaining: f64,
+    pub stock_override: HashMap<String, f64>,
+    /// Star indices whose stock counts (empty = every star of the galaxy).
+    pub systems: Vec<usize>,
+    /// Charge interstellar warpers for ore mined outside the hub (off: vessels fly without warpers,
+    /// slower, which costs nothing when time is unlimited).
+    pub warpers: bool,
+    pub vessel_capacity: f64,
+    pub warpers_per_trip: f64,
+}
+
+impl Default for TotalSettings {
+    fn default() -> Self {
+        Self {
+            seed: SeedSettings::default(),
+            plan: ThresholdSettings::default().plan,
+            levels_done: 0,
+            remaining: 1.0,
+            stock_override: HashMap::new(),
+            systems: vec![],
+            warpers: false,
+            vessel_capacity: 400.0,
+            warpers_per_trip: 2.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TotalUse {
+    pub item: String,
+    /// Units minable: stock points / points per unit / 0.94^done.
+    pub available: f64,
+    pub used: f64,
+    pub per_cube: f64,
+    /// All of it used and more of it would give more cubes (marginal > 0).
+    pub binding: bool,
+    /// Extra cubes per extra unit of this stock (0 when not binding).
+    pub marginal: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TotalRecipe {
+    pub recipe: String,
+    pub mode: String,
+    pub building: String,
+    /// Machines per 1 cube/min.
+    pub machines_per_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TotalReport {
+    pub status: Status,
+    /// Total cubes over the life of the stock.
+    pub cubes: f64,
+    /// The same with no vein utilisation (the total scales with 1/0.94^done).
+    pub cubes_no_util: f64,
+    pub levels_done: u32,
+    pub stars: usize,
+    pub hub: Option<String>,
+    pub warpers: f64,
+    pub finite: Vec<TotalUse>,
+    /// Sources taken as unlimited over unlimited time (oceans, gas giants, oil seep floor, photons).
+    pub unlimited: Vec<String>,
+    pub raw_per_cube: Vec<ItemRate>,
+    pub recipes: Vec<TotalRecipe>,
+    pub solve_ms: f64,
+    pub warnings: Vec<String>,
+}
+
+type TotalSol = (f64, Vec<f64>, Vec<(f64, f64)>);
+
+/// One LP over totals (not rates): maximise cubes N with every finite vein used at most once.
+/// Machines, stations, sails and time are unlimited, so rate-limited sources (oceans, gas giants,
+/// oil seeps at their floor, Dyson photons) are unlimited in total and only finite veins bind.
+/// `bump` multiplies one item's stock (for marginals).
+fn total_lp(
+    units: &[UnitCol],
+    avail: &BTreeMap<String, (f64, f64)>,
+    unlimited: &BTreeSet<String>,
+    wpi: f64,
+    bump: Option<(&str, f64)>,
+) -> Result<TotalSol, String> {
+    let mut items: BTreeSet<String> = units.iter().flat_map(|u| u.net.iter().map(|(i, _)| i.clone())).collect();
+    items.insert(CUBE.into());
+    items.insert(WARPER.into());
+    let items: Vec<String> = items.into_iter().collect();
+    let idx: HashMap<&str, usize> = items.iter().enumerate().map(|(k, i)| (i.as_str(), k)).collect();
+    let mut p = Problem::new(OptimizationDirection::Maximize);
+    let mut bal: Vec<Vec<(Variable, f64)>> = vec![vec![]; items.len()];
+    let n = p.add_var(1.0, (0.0, f64::INFINITY));
+    bal[idx[CUBE]].push((n, -1.0));
+    // MINE: a 1e-9 cost per machine-minute picks the leanest of equally many cubes (totals are ~1e6+)
+    let xs: Vec<Variable> = units
+        .iter()
+        .map(|u| {
+            let v = p.add_var(-1e-9, (0.0, f64::INFINITY));
+            for (i, q) in &u.net {
+                bal[idx[i.as_str()]].push((v, *q));
+            }
+            v
+        })
+        .collect();
+    // finite stock: (hub part, elsewhere part); elsewhere costs warpers to ship
+    let mut mined = vec![];
+    for (item, (hub, away)) in avail {
+        let Some(&k) = idx.get(item.as_str()) else {
+            mined.push(None);
+            continue;
+        };
+        let f = match bump {
+            Some((b, s)) if b == item => s,
+            _ => 1.0,
+        };
+        // MINE: 1e-10 per unit mined so stock that adds no cube stays in the ground (else "used" is noise)
+        let h = p.add_var(-1e-10, (0.0, hub * f));
+        let a = p.add_var(-1e-10, (0.0, away * f));
+        bal[k].push((h, 1.0));
+        bal[k].push((a, 1.0));
+        if wpi > 0.0 {
+            bal[idx[WARPER]].push((a, -wpi));
+        }
+        mined.push(Some((h, a)));
+    }
+    for it in unlimited {
+        if let Some(&k) = idx.get(it.as_str()) {
+            let v = p.add_var(-1e-12, (0.0, f64::INFINITY));
+            bal[k].push((v, 1.0));
+        }
+    }
+    for terms in &bal {
+        if !terms.is_empty() {
+            let mut merged: BTreeMap<usize, (Variable, f64)> = BTreeMap::new();
+            for (v, c) in terms {
+                merged.entry(v.idx()).or_insert((*v, 0.0)).1 += c;
+            }
+            let t: Vec<(Variable, f64)> = merged.into_values().collect();
+            p.add_constraint(t.as_slice(), ComparisonOp::Ge, 0.0);
+        }
+    }
+    let sol = match p.solve() {
+        Ok(o) => o.into_solution().map_err(|_| "solver stopped before finding a plan".to_string())?,
+        Err(microlp::Error::Unbounded) => return Err("unbounded".into()),
+        Err(e) => return Err(e.to_string()),
+    };
+    let xv = xs.iter().map(|v| sol[*v]).collect();
+    let mv = mined.iter().map(|m| m.map(|(h, a)| (sol[h], sol[a])).unwrap_or((0.0, 0.0))).collect();
+    Ok((sol[n], xv, mv))
+}
+
+pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalReport {
+    let t0 = web_time::Instant::now();
+    // above ~500 levels 0.94^done underflows the bounds; the UI caps at 500 too
+    let mut out = TotalReport { levels_done: ts.levels_done.min(500), ..Default::default() };
+    let mut sys: Vec<usize> = if ts.systems.is_empty() { (0..g.stars.len()).collect() } else { ts.systems.clone() };
+    sys.retain(|i| *i < g.stars.len());
+    sys.sort();
+    sys.dedup();
+    out.stars = sys.len();
+    if sys.is_empty() {
+        out.status = Status::Infeasible;
+        out.warnings.push("no star systems chosen".into());
+        return out;
+    }
+    if g.infinite {
+        out.status = Status::Unbounded;
+        out.warnings.push("infinite resources: the total is unlimited".into());
+        return out;
+    }
+    let mut ps = ts.plan.clone();
+    ps.game = "dsp".into();
+    let mut units = unit_cols(data, &ps, &[CUBE, WARPER]);
+    // Dark Fog items, logs and plant fuel have no source here (drops are a rate, not a stock: left out)
+    units.retain(|u| u.net.iter().all(|(i, q)| *q > 0.0 || !(i.starts_with("df-") || i == "log" || i == "plant-fuel")));
+    let mult = g.settings.resource_multiplier;
+    let consume = Q.powi(out.levels_done as i32);
+    let scale = ts.remaining.clamp(0.0, 1.0);
+    // unlimited over unlimited time: oceans, gas giants, oil seeps (never mined below the floor), photons
+    let mut unlimited: BTreeSet<String> = [PHOTON.to_string()].into();
+    let mut stock: BTreeMap<String, Vec<(usize, f64)>> = BTreeMap::new();
+    for &i in &sys {
+        for pl in &g.stars[i].planets {
+            if let Some(o) = &pl.ocean {
+                unlimited.insert(o.clone());
+            }
+            for gr in &pl.gases {
+                if gr.base > 0.0 {
+                    unlimited.insert(gr.item.clone());
+                }
+            }
+            if pl.seeps > 0 {
+                unlimited.insert("crude-oil".into());
+            }
+            for v in &pl.veins {
+                stock.entry(v.item.clone()).or_default().push((i, stock_of(v)));
+            }
+        }
+    }
+    // stock split (hub, elsewhere), at level 0: the total at `done` levels is exactly 1/0.94^done times
+    // that (every finite bound scales alike), and level-0 bounds keep the LP well scaled
+    let avail_for = |hub: Option<usize>| -> BTreeMap<String, (f64, f64)> {
+        let mut avail: BTreeMap<String, (f64, f64)> = BTreeMap::new();
+        for (it, v) in &stock {
+            if unlimited.contains(it) {
+                continue;
+            }
+            let k = points_per_unit(it, mult);
+            // an override is the remaining galaxy stock itself (as in `thresholds`), spread over the
+            // stars in proportion to their stock; with a subset of stars, that subset's share of it
+            let over = ts.stock_override.get(it).filter(|o| o.is_finite() && **o >= 0.0).map(|o| o / total_stock(g, it).max(1e-9));
+            let e = avail.entry(it.clone()).or_default();
+            for (s, b) in v {
+                let b = b * over.unwrap_or(scale) / k;
+                if hub.is_none_or(|h| h == *s) {
+                    e.0 += b;
+                } else {
+                    e.1 += b;
+                }
+            }
+        }
+        avail
+    };
+    let wpi = if ts.warpers { ts.warpers_per_trip.max(0.0) / ts.vessel_capacity.max(1.0) } else { 0.0 };
+    // hub: with warpers, every system is tried and the one giving the most cubes kept
+    let hubs: Vec<Option<usize>> = if wpi > 0.0 { sys.iter().map(|s| Some(*s)).collect() } else { vec![None] };
+    let mut best: Option<(Option<usize>, BTreeMap<String, (f64, f64)>, TotalSol)> = None;
+    let mut err = None;
+    for h in hubs {
+        let avail = avail_for(h);
+        match total_lp(&units, &avail, &unlimited, wpi, None) {
+            Ok(r) => {
+                if best.as_ref().is_none_or(|b| r.0 > b.2 .0) {
+                    best = Some((h, avail, r));
+                }
+            }
+            Err(e) => err = Some(e),
+        }
+    }
+    let res = match best {
+        Some(b) => Ok(b),
+        None => Err(err.unwrap_or_default()),
+    };
+    let (hub, avail, (n, xv, mv)) = match res {
+        Ok(r) => r,
+        Err(e) if e == "unbounded" => {
+            out.status = Status::Unbounded;
+            out.warnings.push("unbounded: cubes can be made from unlimited sources alone".into());
+            return out;
+        }
+        Err(e) => {
+            out.status = Status::Infeasible;
+            out.warnings.push(format!("solver: {e}"));
+            return out;
+        }
+    };
+    out.status = Status::Optimal;
+    out.hub = hub.map(|h| g.stars[h].name.clone());
+    out.cubes = n / consume;
+    out.cubes_no_util = n;
+    if n <= 1e-9 {
+        out.warnings.push("no cubes: a needed finite resource is missing from these systems".into());
+    }
+    for (k, (it, (ah, aa))) in avail.iter().enumerate() {
+        let (h, a) = mv[k];
+        out.warpers += a * wpi;
+        let (used, available) = ((h + a) / consume, (ah + aa) / consume);
+        let binding = n > 1e-9 && available > 0.0 && used >= available * (1.0 - 1e-6);
+        out.finite.push(TotalUse { item: it.clone(), available, used, per_cube: if n > 1e-9 { (h + a) / n } else { 0.0 }, binding, marginal: 0.0 });
+    }
+    // marginal cubes per unit: re-solve with that stock 1 % larger
+    // (cubes and stock both scale by 1/consume, so the ratio is the level-0 one)
+    for u in out.finite.iter_mut().filter(|u| u.binding) {
+        if let Ok((n2, _, _)) = total_lp(&units, &avail, &unlimited, wpi, Some((&u.item, 1.01))) {
+            u.marginal = ((n2 - n) / (0.01 * u.available * consume)).max(0.0);
+        }
+        // fully used but more gives nothing (a degenerate vertex): not a limit
+        u.binding = u.marginal > 1e-9;
+    }
+    if n > 1e-9 {
+        let mut raw: BTreeMap<String, f64> = BTreeMap::new();
+        for u in out.finite.iter().filter(|u| u.used > 0.0) {
+            raw.insert(u.item.clone(), u.per_cube);
+        }
+        for (k, u) in units.iter().enumerate() {
+            let x = xv[k];
+            if x <= 1e-9 * n {
+                continue;
+            }
+            out.recipes.push(TotalRecipe {
+                recipe: u.recipe.id.clone(),
+                mode: u.mode.label.clone(),
+                building: u.mode.building.clone(),
+                machines_per_rate: x / n,
+            });
+            // unlimited raw items: what the recipes take of them, gross (MINE, for reading only)
+            for (i, q) in &u.net {
+                if *q < 0.0 && unlimited.contains(i) {
+                    *raw.entry(i.clone()).or_default() += -q * x / n;
+                }
+            }
+        }
+        out.raw_per_cube = raw.into_iter().map(|(item, rate)| ItemRate { item, rate }).collect();
+        out.recipes.sort_by(|a, b| b.machines_per_rate.partial_cmp(&a.machines_per_rate).unwrap());
+    }
+    out.unlimited = unlimited.into_iter().collect();
+    out.solve_ms = t0.elapsed().as_secs_f64() * 1e3;
+    out
+}
