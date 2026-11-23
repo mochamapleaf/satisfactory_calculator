@@ -187,13 +187,18 @@ export interface BeltLayoutSettings {
   hint_machines: number
   end_pile_a: number
   end_pile_b: number
+  /** station feeding a line: interstellar ("ils") or planetary ("pls"); slots used (≤ 12) */
+  station: 'ils' | 'pls'
+  station_slots: number
+  /** one ring through several stations on one control unit (else one module per station) */
+  station_ring: boolean
   /** per "recipe|mode" */
   overrides: Record<string, TwoOverride>
 }
 export const defaultBeltLayout = (): BeltLayoutSettings => ({
   belt: 2, stack: 4, rows: 1, row_len: null, unit_max: null, sorter_max: 2, pile_level: 0, margin: 1.5,
   ladder_rho: 1 / 12, ladder_short: 12, ladder_cap: 24, unit_cap: null, hint_items: 12, hint_machines: 60,
-  end_pile_a: 2, end_pile_b: 3, overrides: {},
+  end_pile_a: 2, end_pile_b: 3, station: 'ils', station_slots: 12, station_ring: false, overrides: {},
 })
 /** Mixed-belt settings from anything (a link, saved settings, a typed number): every count a whole
  * number in its range, optional counts null, unknown fields dropped. Mirrors
@@ -225,6 +230,7 @@ export function cleanBeltLayout(raw: unknown): BeltLayoutSettings {
     margin: real('margin', 0, 1000), ladder_rho: real('ladder_rho', 0, 10), ladder_short: int('ladder_short', 0, 1000000),
     ladder_cap: int('ladder_cap', 1, 1000), unit_cap: opt(v, 'unit_cap', 20000), hint_items: real('hint_items', 0, 1e9),
     hint_machines: int('hint_machines', 0, 10000000), end_pile_a: int('end_pile_a', 0, 1000), end_pile_b: int('end_pile_b', 0, 1000),
+    station: v.station === 'pls' ? 'pls' : 'ils', station_slots: int('station_slots', 1, 12), station_ring: v.station_ring === true,
     overrides,
   }
 }
@@ -257,6 +263,16 @@ export interface RecipeLayout {
   trace: Trace
   /** machines left out of the trace (whole periods of a long line); 0 = the whole line */
   trace_omitted: number
+  stations: StationPlan | null
+}
+// station module (src/planner/mixed_station.rs)
+export interface StationPort { slot: number; dir: 'in' | 'out'; item: string; name: string; role: string; items: number; serves: number[] }
+export interface StationPlan {
+  kind: 'ils' | 'pls'; slots: number; lines: number; stations_total: number
+  stations: { index: number; first: number; last: number; ports: StationPort[]; items: number; limit: number }[]
+  refills: { after: number; item: string; name: string; amount: number; station: number; slots: number[] }[]
+  machines: { n: number; station: number; pos: number; side: 'L' | 'R'; input: string; outputs: [number, string][] }[]
+  sequence: string[]; notes: string[]
 }
 export interface MixedBeltReport { capacity: number; stack: number; margin: number; recipes: RecipeLayout[]; single: string[]; warnings: string[]; error?: string }
 /** Mixed-belt layout of a solved plan (fast, runs on the page thread; no re-solve). */

@@ -9,6 +9,7 @@ pub mod flows;
 pub mod lp;
 pub mod matrix;
 pub mod mixed_belt;
+pub mod mixed_station;
 pub mod quality;
 pub mod rules;
 #[cfg(test)]

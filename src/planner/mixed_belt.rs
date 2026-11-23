@@ -94,6 +94,13 @@ pub struct BeltLayoutSettings {
     /// Last machines with a pile-sorter input: before the control unit (A) / the recovery (B).
     pub end_pile_a: u32,
     pub end_pile_b: u32,
+    /// Station feeding a line: "ils" (interstellar) or "pls" (planetary; throughput per 笑笑, see
+    /// `mixed_station::station_belts`), and the slots used (12 on both; 笑笑 leaves the 3 back ones free).
+    pub station: String,
+    pub station_slots: u32,
+    /// Scheme A: one ring through several stations on one control unit (笑笑's 180-machine line)
+    /// instead of one module (own control unit) per station (Xinyu: 「用两个塔的话，那还不如分别就是做两个模块了」).
+    pub station_ring: bool,
     /// Per "recipe|mode".
     pub overrides: HashMap<String, TwoOverride>,
 }
@@ -117,6 +124,9 @@ impl Default for BeltLayoutSettings {
             hint_machines: 60,
             end_pile_a: 2,
             end_pile_b: 3,
+            station: "ils".into(),
+            station_slots: 12,
+            station_ring: false,
             overrides: HashMap::new(),
         }
     }
@@ -176,6 +186,12 @@ impl BeltLayoutSettings {
             hint_machines: int(v, "hint_machines", 0, 10_000_000).unwrap_or(d.hint_machines),
             end_pile_a: int(v, "end_pile_a", 0, 1000).unwrap_or(d.end_pile_a),
             end_pile_b: int(v, "end_pile_b", 0, 1000).unwrap_or(d.end_pile_b),
+            station: match v.get("station").and_then(|x| x.as_str()) {
+                Some("pls") => "pls".into(),
+                _ => "ils".into(),
+            },
+            station_slots: int(v, "station_slots", 1, 12).unwrap_or(d.station_slots),
+            station_ring: v.get("station_ring").and_then(|x| x.as_bool()).unwrap_or(d.station_ring),
             overrides,
         }
     }
@@ -1244,6 +1260,8 @@ pub struct RecipeLayout {
     pub trace: Trace,
     /// Machines left out of `trace` (whole periods of a long scheme-A line; 0 = the whole line).
     pub trace_omitted: u32,
+    /// Stations, ports, refill points and per-machine sorters (`mixed_station`).
+    pub stations: Option<super::mixed_station::StationPlan>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -1292,7 +1310,33 @@ pub fn layout_for_plan(plan: &Plan, data: &GameData, s: &PlanSettings) -> MixedB
     out
 }
 
+/// One module per station (unless `station_ring`): a scheme-A line too long for one station is laid
+/// out again with a control-unit cap of what one station holds, so each station is its own module.
 fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe, machines: u32) -> RecipeLayout {
+    let mut lay = layout_recipe_once(data, s, r, pr, machines);
+    if s.belt_layout.station_ring || lay.two.is_none() || lay.status == "fail" {
+        return lay;
+    }
+    let mut cap = lay.stations.as_ref().filter(|p| p.stations.len() > 1).map(|p| p.stations[0].last);
+    let mut s2 = s.clone();
+    // the period changes with the cap, so step down until one station holds the whole module
+    for _ in 0..64 {
+        let Some(c) = cap.filter(|c| *c >= 1) else { break };
+        s2.belt_layout.unit_cap = Some(s.belt_layout.unit_cap.map_or(c, |u| u.min(c)));
+        let next = layout_recipe_once(data, &s2, r, pr, machines);
+        let st = next.stations.as_ref().map(|p| p.stations.len()).unwrap_or(1);
+        let per = next.two.as_ref().map(|d| d.machines_per_unit).unwrap_or(c);
+        if next.status != "fail" && st <= 1 {
+            lay = next;
+            lay.notes.push(Note::info(format!("one module per station: at most {per} machines per control unit so one station's slots hold a whole module"), ""));
+            return lay;
+        }
+        cap = Some(per.min(c).saturating_sub(1));
+    }
+    lay
+}
+
+fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe, machines: u32) -> RecipeLayout {
     let ls = &s.belt_layout;
     let capacity = ls.capacity();
     let stack = ls.stack();
@@ -1504,5 +1548,8 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
     }
     .into();
     lay.notes = notes;
+    if lay.status != "fail" {
+        lay.stations = super::mixed_station::plan_stations(&lay, ls, capacity, stack, mode.sprayed);
+    }
     lay
 }

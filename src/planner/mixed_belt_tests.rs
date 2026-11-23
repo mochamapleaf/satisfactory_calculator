@@ -460,6 +460,8 @@ fn long_lines_are_bounded() {
     let err = design_two(C, [0.75, 0.375], ["A", "B"], 3_000_000, &ls, &none()).unwrap_err();
     assert!(err.contains("unit cap"), "{err}");
     let (d, mut s) = dsp_settings(&["proliferator-3-products"]);
+    // one ring through many stations: the line is not cut into one module per station
+    s.belt_layout.station_ring = true;
     // 12 000 Mk.III proliferator machines on one unit: the diagram is the equivalent short line
     let rep = mixed_belt::layout_for_plan(&one_recipe("proliferator-3", "df-recomposing-assembler|proliferator-3-products", 12_011.0), &d, &s);
     let l = &rep.recipes[0];
@@ -544,7 +546,7 @@ fn every_dsp_recipe_lays_out_with_finite_numbers() {
     fn nulls(v: &serde_json::Value, path: &str, out: &mut Vec<String>) {
         match v {
             serde_json::Value::Null => {
-                if !["two", "ladder", "coaters", "item", "best", "recommended"].iter().any(|k| path.ends_with(k)) {
+                if !["two", "ladder", "coaters", "item", "best", "recommended", "stations"].iter().any(|k| path.ends_with(k)) {
                     out.push(path.to_string())
                 }
             }
@@ -582,4 +584,123 @@ fn every_dsp_recipe_lays_out_with_finite_numbers() {
     }
     assert!(layouts > 2000, "{layouts}");
     println!("layouts {layouts}; scheme A on a blue belt: {a_fail_blue} of {a_total} fail");
+}
+fn check_stations(l: &mixed_belt::RecipeLayout, slots: usize) -> &crate::planner::mixed_station::StationPlan {
+    let st = l.stations.as_ref().expect("stations");
+    let stack = 4.0;
+    for x in &st.stations {
+        assert!(x.ports.len() <= slots, "{} slots", x.ports.len());
+        assert!(x.items <= x.limit * crate::planner::mixed_station::THROUGHPUT_TOL + 1e-6, "{} > {}", x.items, x.limit);
+        for p in &x.ports {
+            assert!(p.items <= 30.0 * stack + 1e-6, "belt over capacity: {p:?}");
+        }
+        // what the station's input belts carry = what its machines use + what comes back (refills
+        // and the control unit replace exactly what was taken; ladder surplus returns by recovery)
+        let n = (x.last + 1 - x.first) as f64;
+        let use_: f64 = l.inputs.iter().map(|r| r.items).sum::<f64>() * n;
+        let fed: f64 = x.ports.iter().filter(|p| p.dir == "in" && p.role != "proliferator").map(|p| p.items).sum();
+        let back: f64 = x.ports.iter().filter(|p| p.role == "recovery").map(|p| p.items).sum();
+        if l.ladder.is_some() {
+            assert!((fed - back - use_).abs() < 1e-6 * fed.max(1.0) || x.last < l.machines, "fed {fed} back {back} use {use_}");
+        }
+        // every product belt carries its machines' output
+        for o in &l.outputs {
+            let out: f64 = x.ports.iter().filter(|p| p.role == "product" && p.item == o.item).map(|p| p.items).sum();
+            assert!((out - o.items * n).abs() < 1e-6 * out.max(1.0));
+        }
+    }
+    // every machine once, every refill on a slot that carries its item
+    let total: u32 = st.stations.iter().map(|x| x.last + 1 - x.first).sum();
+    assert_eq!(st.machines.len() as u32, total);
+    for (k, m) in st.machines.iter().enumerate() {
+        assert_eq!(m.n, st.machines[0].n + k as u32);
+        assert_eq!(m.outputs.len(), l.outputs.len());
+    }
+    for r in &st.refills {
+        assert!(!r.slots.is_empty());
+        let x = &st.stations[r.station as usize - 1];
+        for sl in &r.slots {
+            assert_eq!(x.ports[*sl as usize - 1].item, r.item);
+        }
+    }
+    if let Some(t) = &l.two {
+        let fed: f64 = t.feeds.iter().filter(|f| f.pos <= total).map(|f| f.amount).sum();
+        let laid: f64 = st.refills.iter().map(|r| r.amount).sum();
+        assert!((fed - laid).abs() < 1e-9);
+    }
+    st
+}
+
+#[test]
+fn stations_for_his_mk2_line() {
+    // 笑笑: 180 Mk.II machines on one ring through 6 planetary stations of 30, 8–9 belts each,
+    // 4.5 belts of supply each [BV1fXkxYDEbW 50:08, 50:54, 51:40, 51:56]
+    let (d, mut s) = dsp_settings(&["proliferator-3-speed"]);
+    s.belt_layout.row_len = Some(15);
+    s.belt_layout.station = "pls".into();
+    s.belt_layout.station_slots = 12;
+    s.belt_layout.station_ring = true;
+    let plan = one_recipe("proliferator-2", "df-recomposing-assembler|proliferator-3-speed", 180.0);
+    let rep = mixed_belt::layout_for_plan(&plan, &d, &s);
+    let l = &rep.recipes[0];
+    let st = check_stations(l, 12);
+    for x in &st.stations {
+        eprintln!("station {}: {}..{} ({}), {} slots, {:.0}/{:.0} items/s", x.index, x.first, x.last, x.last + 1 - x.first, x.ports.len(), x.items, x.limit);
+    }
+    for q in &st.sequence {
+        eprintln!("{q}");
+    }
+    assert_eq!(st.machines.len(), 180);
+    // the supply limit (4.5 belts) decides as for him: 30 machines per station, 6 stations
+    assert!(st.stations.iter().all(|x| x.last + 1 - x.first <= 30), "{:?}", st.stations.iter().map(|x| x.last + 1 - x.first).collect::<Vec<_>>());
+    assert!((6..=7).contains(&st.stations.len()), "{}", st.stations.len());
+    assert_eq!(st.machines.iter().filter(|m| m.input == "pile").count() as u32, l.sorters.end_pile);
+    // output piles: once the single-stack belt upstream holds full_at machines
+    let full = l.sorters.outputs[0].full_at;
+    for x in &st.stations {
+        for p in x.ports.iter().filter(|p| p.role == "product") {
+            for m in st.machines.iter().filter(|m| p.serves.contains(&m.n)) {
+                let up = p.serves.iter().filter(|&&q| q >= m.n).count() as u32;
+                assert_eq!(m.outputs[0].1 == "pile", up + 1 > full, "#{} up {up} full {full}", m.n);
+            }
+        }
+    }
+    // default: one module (own control unit) per station
+    s.belt_layout.station_ring = false;
+    let rep = mixed_belt::layout_for_plan(&plan, &d, &s);
+    let l = &rep.recipes[0];
+    let st = check_stations(l, 12);
+    let t = l.two.as_ref().unwrap();
+    eprintln!("modules: {} of {} machines, {} stations", t.units, t.machines_per_unit, st.stations_total);
+    assert_eq!(st.stations.len(), 1);
+    assert!(t.units >= 6 && st.stations_total == t.units);
+    assert!(st.stations[0].ports.iter().any(|p| p.role == "control unit"));
+}
+
+#[test]
+fn stations_for_ladder_groups() {
+    let (d, mut s) = dsp_settings(&["proliferator-3-speed"]);
+    s.belt_layout.station_slots = 9;
+    let rep = mixed_belt::layout_for_plan(&one_recipe("electric-motor", "df-recomposing-assembler|proliferator-3-speed", 25.0), &d, &s);
+    let l = &rep.recipes[0];
+    assert_eq!(l.scheme, "B");
+    let st = check_stations(l, 9);
+    let g = l.ladder.as_ref().unwrap();
+    for q in &st.sequence {
+        eprintln!("{q}");
+    }
+    // 3 groups (10, 10, 5): 3 feeds + 3 recoveries + products per group; all 25 machines placed
+    assert_eq!(st.machines.len(), 25);
+    assert_eq!(st.machines.last().unwrap().n, 25);
+    assert!(st.stations.iter().all(|x| x.ports.len() <= 9));
+    // the last machines of every group take pile sorters
+    let piles: Vec<u32> = st.machines.iter().filter(|m| m.input == "pile").map(|m| m.n).collect();
+    assert_eq!(piles, vec![8, 9, 10, 18, 19, 20, 23, 24, 25], "{piles:?}");
+    // the short last group gives more back
+    let back = |x: &crate::planner::mixed_station::Station, at: u32| x.ports.iter().filter(|p| p.role == "recovery" && p.serves == vec![at]).map(|p| p.items).sum::<f64>();
+    let all: Vec<&crate::planner::mixed_station::Station> = st.stations.iter().collect();
+    let b10: f64 = all.iter().map(|x| back(x, 10)).sum();
+    let b25: f64 = all.iter().map(|x| back(x, 25)).sum();
+    assert!(b25 > b10, "{b25} {b10}");
+    assert_eq!(g.groups, 3);
 }

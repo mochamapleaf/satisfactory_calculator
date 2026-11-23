@@ -2,6 +2,7 @@
 // (docs/research/dsp-mixed-belt/00-最终报告.md §3). Settings live in Settings.belt_layout and do not re-solve.
 import { useMemo, useState } from 'react'
 import { Icon } from './Icon'
+import { StationDiagram } from './StationDiagram'
 import {
   cleanBeltLayout, defaultBeltLayout, fmt, mixedBelt, type BeltLayoutSettings, type Plan, type RecipeLayout, type Settings,
   type TwoOverride,
@@ -269,6 +270,17 @@ function Detail({ l, ls, cap, margin, setOverride }: {
           </tbody>
         </table></div>
       )}
+      {l.stations && <>
+        <h4>塔与传送带 Station and belts</h4>
+        <p className="hint">
+          每个口一条带:每种原料至少一个口(控制单元或补料),每种产物至少一个口。{ls.station_ring ? '一个塔的口或运力用完就开下一个塔,大环带穿过各塔,补料由所在塔供(笑笑的做法)。' : '一个塔装不下就把线拆成多个模块,每塔一个控制单元。'}
+          {l.stations.stations.length} 个{l.stations.kind === 'pls' ? '行星' : '星际'}塔 × {l.stations.lines} 个{ls.station_ring ? '控制单元' : '模块'} = {l.stations.stations_total} 个塔。
+          图:左边是塔和口号;上方是产物带(机器上方的点 = 出料爪),中间是混带(机器颜色 = 进料爪),下方是从各口引出的补料带,箭头处并入混带。
+        </p>
+        <StationDiagram key={l.key} l={l} sp={l.stations} />
+        <div className="seqbox"><div className="seq">{l.stations.sequence.map((q, i) => <div key={i}>{q}</div>)}</div></div>
+        {l.stations.notes.length > 0 && <ul className="plain small notes">{l.stations.notes.map((n, i) => <li key={i} className="nl-info"><span className="tag">提示</span> {n}</li>)}</ul>}
+      </>}
       <h4>分拣器 Sorters</h4>
       <ul className="plain small">
         <li>进料 input: {TIER_ZH[l.sorters.input] ?? l.sorters.input} × {l.machines}(每台 {fmt(l.sorters.input_items, 2)} 个/秒,须严格大于){endPile > 0 ? `;${l.scheme === 'A' ? '回控制单元前' : '回收口前'}最后 ${endPile} 台用白爪` : ''}</li>
@@ -331,6 +343,9 @@ export default function MixedBelt({ plan, planSettings, current, settings, setSe
         <label>每带排数 Rows<select value={ls.rows} onChange={e => setL({ rows: +e.target.value })}><option value={1}>1</option><option value={2}>2</option></select></label>
         <label>每排台数 R<input type="number" min={1} placeholder="–" value={ls.row_len ?? ''} onChange={e => setL({ row_len: numOr(e.target.value, null) })} /></label>
         <label>余量 m<input type="number" min={0} step={0.25} value={ls.margin} onChange={e => setL({ margin: numOr(e.target.value, 1.5) ?? 1.5 })} /></label>
+        <label>塔 Station<select value={ls.station} onChange={e => setL({ station: e.target.value as 'ils' | 'pls' })}><option value="ils">星际塔 ILS</option><option value="pls">行星塔 PLS</option></select></label>
+        <label>多塔 Layout<select value={ls.station_ring ? 'ring' : 'module'} onChange={e => setL({ station_ring: e.target.value === 'ring' })}><option value="module">每塔一个模块</option><option value="ring">大环带穿过多塔</option></select></label>
+        <label>每塔用口 Slots<input type="number" min={1} max={12} value={ls.station_slots} onChange={e => setL({ station_slots: Math.min(12, Math.max(1, Math.round(numOr(e.target.value, 12) ?? 12))) })} /></label>
         <label>最高爪 Sorter<select value={ls.sorter_max} onChange={e => setL({ sorter_max: +e.target.value })}>{SORTER_NAMES.map((n, i) => <option key={i} value={i}>{n}</option>)}</select></label>
         <details>
           <summary>More</summary>

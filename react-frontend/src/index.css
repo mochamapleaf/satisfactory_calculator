@@ -446,6 +446,22 @@ svg.belt { display: block; font-family: var(--font-ui); }
 .belt .tier-green { fill: var(--tier-g); }
 .belt .tier-blue { fill: var(--tier-b); }
 .belt .tier-pile { fill: var(--tier-p); stroke: var(--faint); }
+.belt.station .stationrect { fill: var(--raised); stroke: var(--rule-strong); }
+.belt.station .lane { stroke-width: 3; fill: none; }
+.belt.station .lane.mixed { stroke: var(--fg); stroke-width: 4; }
+.belt.station .lane.out { stroke: var(--muted); stroke-dasharray: 6 3; }
+.belt.station .lane.up { stroke-width: 2; }
+.belt.station .lanehead { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.belt.station .tick { stroke: var(--faint); stroke-width: 1; }
+.belt.station .dot { stroke: var(--faint); stroke-width: 0.6; }
+.belt.station .slotlabel { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.belt.station .mnum { font-size: 9px; fill: var(--bg); font-variant-numeric: tabular-nums; }
+.belt.station .tier-pile + .mnum, .belt.station .tier-yellow + .mnum { fill: var(--fg); }
+.stationtabs { flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.stationtabs .tabbtn.on { background: var(--accent-soft); }
+.tierchip { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.tierchip.tier-yellow { background: var(--tier-y); } .tierchip.tier-green { background: var(--tier-g); }
+.tierchip.tier-blue { background: var(--tier-b); } .tierchip.tier-pile { background: var(--tier-p); border: 1px solid var(--faint); }
 .belt .feedarrow, .belt .feedhead { fill: none; stroke-width: 1.5; }
 .belt .refline { stroke: var(--rule-strong); stroke-width: 1; }
 .belt .refline.margin { stroke: var(--faint); stroke-dasharray: 3 3; }

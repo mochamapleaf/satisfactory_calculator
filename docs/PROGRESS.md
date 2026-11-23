@@ -277,3 +277,21 @@ Step log: `docs/research/dsp-seed/_过程文件/progress-impl.md` (checks vs rep
   gap in buildings; shared-mode unit). Browser checked: Pasta under Power is optimal at 1671 buildings in 0.2 s;
   Turbo Motor with all alternates under Buildings shows "gap ≈ 16 bldg" with tooltip; Resources still proves.
   Fable 5.2 reviewed it twice; fixes applied.
+
+## 2026-11-23 · DSP Galaxy total (Xinyu: 「必须要求有一个 quota 是不合理的…这个星系的所有物质够我最优解的生产白糖能生产多少」)
+- `galaxy_total` (src/planner/dsp_galaxy.rs): one LP over totals, maximise universe matrices. Machines, stations, sails and time
+  unlimited, so oceans, gas giants, oil seeps (never below their floor) and photons are unlimited; only veins are finite.
+  The total at `levels_done` vein utilisation is exactly 1/0.94^done times the level-0 one (solved at level 0 for scale).
+- Limiting resources = fully used with a positive marginal (re-solve at +1 %); a 1e-10 cost per unit mined keeps unused stock
+  in the ground. Warpers optional (off by default: slow vessels cost nothing); with them, every system is tried as hub.
+- Galaxy tab section 理想总产量: every recipe + Mk.III modes by default. Seed 12345678 ×0.1: 2.45 M cubes plain, 8.13 M with
+  Mk.III (limits fractal silicon, silicon, stone); without the magnet recipes the same 2.45 M. Multi-system plan: quotas can be off.
+- be1ac1a, preview v15. Fable reviewed, fixes applied.
+
+## 2026-11-23 · Mixed belt: stations, belts and sorters (Xinyu: 「填料口在哪里…这个塔在哪里…每个机器使用什么爪子，从哪个传送带上抓东西」)
+- `src/planner/mixed_station.rs`: a line's machines split over stations by slots (12, or fewer: 笑笑 leaves 3 free); per station
+  a slot per control-unit feed, refill belts (first-fit decreasing of the refill amounts, ≤ C), product belts (C × stack),
+  proliferator; ladder groups with a feed and a recovery slot per item. Throughput above 4 (PLS) / 8 (ILS) full belts is a note.
+- Per machine: station, position, side, input sorter (mixed belt; pile at the end), output sorter and its product slot (pile
+  once the single-stack belt upstream is full). Step list per station.
+- Mixed belts tab: station / slots settings; per recipe an SVG per station (tabs), the step list and a per-machine table.
