@@ -377,11 +377,43 @@ fn galaxy_total_needs_no_quota_and_no_magnets() {
     let rp = galaxy_total(dsp(), galaxy(), &pr);
     eprintln!("with proliferator Mk.III: {:.3e}, warpers on: {:.3e}", rp.cubes, rw.cubes);
     assert!(rp.cubes >= r.cubes * (1.0 - 1e-6));
-    // vein utilisation scales the total by 1/0.94^done
+    // without research counted, vein utilisation scales the total by 1/0.94^done
     let mut l = ts.clone();
     l.levels_done = 10;
+    l.research = false;
     let r10 = galaxy_total(dsp(), galaxy(), &l);
     assert!((r10.cubes * 0.94f64.powi(10) / r.cubes - 1.0).abs() < 1e-4);
+    // research counted: done levels are sunk; going on from d0 to d costs ρ(S(d0+1) − S(d+1)) level-0 cubes
+    let mut lr = l.clone();
+    lr.research = true;
+    let rr = galaxy_total(dsp(), galaxy(), &lr);
+    assert!((rr.cubes / r10.cubes - 1.0).abs() < 1e-9, "no further research: the headline is unchanged");
+    // this galaxy (2.45 M level-0 cubes ≥ S(11)) can research forever
+    assert!(rr.infinite && (rr.research_need - s_of(11)).abs() < 1e-6);
+    // brute force: cubes after researching 10 → d by the sum of 4000(n−5)·0.94^(n−1)
+    let brute = |n0: f64, rho: f64, d0: u32, d: u32| -> f64 {
+        let spent: f64 = (d0 + 1..=d).filter(|k| *k >= 6).map(|k| 4000.0 * (k as f64 - 5.0) * 0.94f64.powi(k as i32 - 1)).sum::<f64>() * rho;
+        (n0 - spent) / 0.94f64.powi(d as i32)
+    };
+    for (rem, rho, d0) in [(0.1, 1.0, 0u32), (0.05, 0.8, 3), (0.05, 1.0, 12)] {
+        let mut p = lr.clone();
+        p.remaining = rem;
+        p.rho = rho;
+        p.levels_done = d0;
+        let rp = galaxy_total(dsp(), galaxy(), &p);
+        let n0 = rp.cubes_no_util;
+        let best = (d0..=500).map(|d| brute(n0, rho, d0, d)).fold(f64::MIN, f64::max);
+        eprintln!("{rem} left, ρ {rho}, from {d0}: now {:.4e}, infinite {}, best {} → {:.4e} ({:.0} research cubes)", rp.cubes, rp.infinite, rp.best_levels_done, rp.best_cubes, rp.research_cubes);
+        assert_eq!(rp.infinite, n0 >= rho * s_of((d0 + 1).max(6)));
+        assert!((rp.best_cubes / best - 1.0).abs() < 1e-9, "{} vs {best}", rp.best_cubes);
+        assert!(rp.best_cubes >= rp.cubes * (1.0 - 1e-12));
+        assert!((brute(n0, rho, d0, rp.best_levels_done) / rp.best_cubes - 1.0).abs() < 1e-9);
+    }
+    // sunk research: 10 % left with 50 levels done is infinite (S(51) ≈ 186 k < 245 k)
+    let mut late = lr.clone();
+    late.remaining = 0.1;
+    late.levels_done = 50;
+    assert!(galaxy_total(dsp(), galaxy(), &late).infinite);
     // using fewer systems never gives more
     let mut few = ts.clone();
     few.systems = vec![0, 1, 2];

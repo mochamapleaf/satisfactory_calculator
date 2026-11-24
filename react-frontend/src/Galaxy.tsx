@@ -36,7 +36,7 @@ interface GalaxyPlan {
 }
 interface RecipeUse { recipe: string; mode: string; building: string; machines_per_rate: number }
 interface TotalReport {
-  status: string; cubes: number; cubes_no_util: number; levels_done: number; stars: number; hub: string | null; warpers: number
+  status: string; cubes: number; cubes_no_util: number; levels_done: number; research_cubes: number; research_need: number; infinite: boolean; best_levels_done: number; best_cubes: number; stars: number; hub: string | null; warpers: number
   finite: { item: string; available: number; used: number; per_cube: number; binding: boolean; marginal: number }[]
   unlimited: string[]; raw_per_cube: ItemRate[]; recipes: RecipeUse[]
   solve_ms: number; warnings: string[]; error?: string
@@ -54,7 +54,7 @@ interface RateReport {
 interface Opts {
   seed: SeedSettings
   rate_level: number; miners_per_node: number; miner_speed: number; dyson: boolean; dyson_share: number; swarm: boolean
-  total_levels: number; total_scope: 'all' | 'ticked'; total_warpers: boolean; total_alts: boolean; stock_quotas: boolean
+  total_levels: number; total_research: boolean; total_scope: 'all' | 'ticked'; total_warpers: boolean; total_alts: boolean; stock_quotas: boolean
   rate: number; remaining: number; level: number
   goal: 'target' | 'max'; target: number; objective: 'buildings' | 'photons'; rho: number; phi: number
   oil: 'initial' | 'floor'; building_cap: number | null; photon_gw: number | null; vessel_capacity: number; warpers_per_trip: number
@@ -66,7 +66,7 @@ const DEFAULTS: Opts = {
   seed: { seed: 12345678, stars: 32, resource_multiplier: 0.1, hive_initial_colonize: 1, hive_max_density: 1 },
   rate_level: 81, miners_per_node: 1, miner_speed: 100, dyson: true, dyson_share: 100, swarm: true,
   rate: 750, remaining: 100, level: 81,
-  total_levels: 0, total_scope: 'all', total_warpers: false, total_alts: true, stock_quotas: true,
+  total_levels: 0, total_research: true, total_scope: 'all', total_warpers: false, total_alts: true, stock_quotas: true,
   goal: 'target', target: 1000, objective: 'buildings', rho: 1, phi: 0,
   oil: 'initial', building_cap: null, photon_gw: null, vessel_capacity: 400, warpers_per_trip: 2,
   systems: null,
@@ -235,8 +235,9 @@ export default function GalaxyTab({ data, settings }: Props) {
   const totPayload = useMemo(() => JSON.stringify({
     seed: o.seed, plan: bestPlan, levels_done: o.total_levels, remaining: o.remaining / 100, stock_override: {},
     systems: scopeSystems, warpers: o.total_warpers, vessel_capacity: o.vessel_capacity, warpers_per_trip: o.warpers_per_trip,
+    research: o.total_research, rho: o.rho,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [o.seed, bestPlan, o.total_levels, o.remaining, JSON.stringify(scopeSystems), o.total_warpers, o.vessel_capacity, o.warpers_per_trip])
+  }), [o.seed, bestPlan, o.total_levels, o.total_research, o.rho, o.remaining, JSON.stringify(scopeSystems), o.total_warpers, o.vessel_capacity, o.warpers_per_trip])
   const runTotal = () => {
     const t = gen.current, sent = totPayload
     setBusy('正在求总产量…')
@@ -330,17 +331,20 @@ export default function GalaxyTab({ data, settings }: Props) {
         <h3>总量：储量一共能做多少白糖</h3>
         <p className="hint">
           另一个问题：不升矿物利用（或只升到某一级）时，整个星区的有限矿脉一共能变成多少白糖。机器和时间不限，所以海洋、气巨、油井（不采到底线以下）和光子都算无限，
-          只有矿脉会用完。每多升一级矿物利用，总量 ×1/0.94（+6.4%），等级无限时总量也无限，这就是上面「最高白糖速率」的前提。
-          爬科技时消耗的矿还没算进去。
+          只有矿脉会用完。每多升一级矿物利用，之后每个白糖少用 6% 的矿；但研究第 n 级要花 4000(n−5) 个白糖，这些白糖也是用矿做的。
+          填已经完成的级数，剩余储量填现在还剩多少；勾上「算上研究耗的矿」就会算：从现在起再研究几级最划算（研究花掉的白糖和它们用的矿都扣掉）。
+          如果从现在起把白糖全拿去研究也永远用不完，总量就是无限的，这就是上面「最高白糖速率」的前提。
+          只算矿物利用的研究，1–5 级和其他科技、给研究站喷的增产剂没算。
         </p>
         <div className="mbsettings">
           <label>已完成的矿物利用级数<NumField value={o.total_levels} lo={0} hi={500} integer onCommit={v => set({ total_levels: v ?? 0 })} /></label>
+          <label className="check"><input type="checkbox" checked={o.total_research} onChange={e => set({ total_research: e.target.checked })} /> 算上研究耗的矿（6 级起，研究 ρ 在通用设置里）</label>
           <label>剩余储量 %<NumField value={o.remaining} lo={0} hi={100} onCommit={v => set({ remaining: v ?? 100 })} /></label>
           <button onClick={runTotal} disabled={busyNow || (o.total_scope === 'ticked' && systems.length === 0)}>计算总量</button>
         </div>
         {tot?.error && <p className="warn">{tot.error}</p>}
         {totStale && <Stale what="计算总量" />}
-        {tot && !tot.error && <div className={totStale ? 'staleresult' : undefined}><TotalView t={tot} name={name} level={o.level} recipeName={recipeName} /></div>}
+        {tot && !tot.error && <div className={totStale ? 'staleresult' : undefined}><TotalView t={tot} name={name} level={o.level} recipeName={recipeName} research={o.total_research} /></div>}
       </>}
 
       {/* ---- thresholds */}
@@ -746,18 +750,28 @@ function PlanView({ gp, name, starName, recipeName }: { gp: GalaxyPlan; name: (i
   </>
 }
 
-function TotalView({ t, name, recipeName, level }: { t: TotalReport; name: (id: string) => string; recipeName: (id: string) => string; level: number }) {
+function TotalView({ t, name, recipeName, level, research }: { t: TotalReport; name: (id: string) => string; recipeName: (id: string) => string; level: number; research: boolean }) {
   if (t.status !== 'optimal') {
     return <div className="warn"><b>{STATUS_ZH[t.status] ?? '没有结果'}</b>{t.warnings.map((w, i) => <p key={i}>{w}</p>)}</div>
   }
   const binding = t.finite.filter(u => u.binding)
   return <>
     <div className="cards">
-      <div className="card"><span className="big">{compact(t.cubes)}</span><span className="muted">白糖总数{t.levels_done > 0 ? `（已完成 ${t.levels_done} 级矿物利用）` : '（不升矿物利用）'}</span></div>
-      {level > 1 && <div className="card"><span className="big">{compact(t.cubes_no_util / Math.pow(0.94, level - 1))}</span><span className="muted">完成 {level - 1} 级时（×{fmt(1 / Math.pow(0.94, level - 1), 0)}）</span></div>}
+      <div className="card"><span className="big">{compact(t.cubes)}</span><span className="muted">白糖总数{t.levels_done > 0 ? `（已完成 ${t.levels_done} 级，不再研究）` : '（不升矿物利用）'}</span></div>
+      {research && (t.infinite
+        ? <div className="card"><span className="big">无限</span><span className="muted">从现在起一直研究矿物利用，矿永远用不完</span></div>
+        : <div className="card"><span className="big">{compact(t.best_cubes)}</span><span className="muted">{t.best_levels_done > t.levels_done ? `最多：再研究到 ${t.best_levels_done} 级（花 ${compact(t.research_cubes)} 白糖）后全力生产` : '最多：不再研究，直接生产'}</span></div>)}
+      {!research && level > 1 && <div className="card"><span className="big">{compact(t.cubes_no_util / Math.pow(0.94, level - 1))}</span><span className="muted">完成 {level - 1} 级时（×{fmt(1 / Math.pow(0.94, level - 1), 0)}，不算研究耗的矿）</span></div>}
       <div className="card"><span className="big">{binding.length}</span><span className="muted">卡住：{binding.map(u => name(u.item)).join('、') || '—'}</span></div>
       {t.hub && <div className="card"><span className="big">{compact(t.warpers)}</span><span className="muted">翘曲器（中心 {t.hub}）</span></div>}
     </div>
+    {research && <p className="small">
+      {t.infinite
+        ? <>剩下的矿按不升级的消耗折算能做 {compact(t.cubes_no_util)} 个白糖；从现在起把矿物利用一直研究下去，折算后一共只要 {compact(t.research_need)} 个，
+          比它少，所以只要一直研究，矿就永远用不完，总量没有上限（笑笑：用有限的矿造出无限的白糖）。</>
+        : <>剩下的矿（折算 {compact(t.cubes_no_util)} 个白糖）不够一直研究下去（要 {compact(t.research_need)} 个）：研究得太少，每个白糖用矿多；研究得太多，矿都花在研究上。
+          {t.best_levels_done > t.levels_done ? `最好再研究到 ${t.best_levels_done} 级，之后全部用来生产，一共 ${compact(t.best_cubes)} 个白糖。` : '最好不再研究，直接全部用来生产。'}</>}
+    </p>}
     <p className="small muted">{t.stars} 颗星。这里算作无限的：{t.unlimited.map(name).join('、')}。{fmt(t.solve_ms, 0)} ms。</p>
     {t.warnings.map((w, i) => <p key={i} className="warn">{w}</p>)}
     <h4>有限储量</h4>

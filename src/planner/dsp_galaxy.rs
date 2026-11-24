@@ -1312,6 +1312,14 @@ pub struct TotalSettings {
     pub warpers: bool,
     pub vessel_capacity: f64,
     pub warpers_per_trip: f64,
+    /// Count the ore spent on further vein-utilisation research (Xinyu 2026-11-23: 「之后的 improvement
+    /// 可以是考虑一下我在爬科技的时候需要消耗的矿石」). `levels_done` are done already (sunk; the stock is
+    /// what is left now); researching on to d costs Σ_{n=done+1..d} 4000(n−5) cubes made at 0.94^(n−1),
+    /// in level-0 cubes ρ·(S(done+1) − S(d+1)) (report §4.1). MINE: levels 1–5 and every other tech are
+    /// not counted (they use lower matrices), nor the spray for ρ = 0.8.
+    pub research: bool,
+    /// Cubes per research level factor: 1, or 0.8 with sprayed labs.
+    pub rho: f64,
 }
 
 impl Default for TotalSettings {
@@ -1326,6 +1334,8 @@ impl Default for TotalSettings {
             warpers: false,
             vessel_capacity: 400.0,
             warpers_per_trip: 2.0,
+            research: true,
+            rho: 1.0,
         }
     }
 }
@@ -1360,6 +1370,16 @@ pub struct TotalReport {
     /// The same with no vein utilisation (the total scales with 1/0.94^done).
     pub cubes_no_util: f64,
     pub levels_done: u32,
+    /// The stock never runs out if every cube goes into research from now on (ρ·S(done+1) ≤ level-0
+    /// cubes): the total has no limit (笑笑 BV1QF24YDE7H 03:22).
+    pub infinite: bool,
+    /// Level-0 cubes that researching from now to infinity costs: ρ·S(done+1).
+    pub research_need: f64,
+    /// Finite case: research on to this many levels done, then produce; the cubes left for production
+    /// and the cubes spent on that research.
+    pub best_levels_done: u32,
+    pub best_cubes: f64,
+    pub research_cubes: f64,
     pub stars: usize,
     pub hub: Option<String>,
     pub warpers: f64,
@@ -1575,6 +1595,21 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
     out.hub = hub.map(|h| g.stars[h].name.clone());
     out.cubes = n / consume;
     out.cubes_no_util = n;
+    if ts.research {
+        let rho = if ts.rho.is_finite() && ts.rho > 0.0 { ts.rho } else { 1.0 };
+        let d0 = out.levels_done;
+        // research of levels 1..=5 uses lower matrices: not in S (s_of clamps L < 6 to 6)
+        let s_from = |d: u32| if d + 1 >= 6 { s_of(d + 1) } else { s_of(6) };
+        // cubes left for production after researching on from d0 to d, made at 0.94^d each
+        let left = |d: u32| -> f64 { (n - rho * (s_from(d0) - s_from(d))) / Q.powi(d as i32) };
+        out.research_need = rho * s_from(d0);
+        out.infinite = n >= out.research_need;
+        let (bd, bc) = (d0..=500u32.max(d0)).map(|d| (d, left(d))).fold((d0, left(d0)), |b, x| if x.1 > b.1 { x } else { b });
+        out.best_levels_done = bd;
+        out.best_cubes = bc;
+        let reach = |d: u32| if d >= 6 { cubes_to_reach(d + 1, rho) } else { 0.0 };
+        out.research_cubes = reach(bd) - reach(d0);
+    }
     if n <= 1e-9 {
         out.warnings.push("造不出白糖：这些星系缺一种必需的有限资源".into());
     }
