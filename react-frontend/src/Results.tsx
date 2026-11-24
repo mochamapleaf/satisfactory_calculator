@@ -102,6 +102,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
               )
   }
 
+  const generated = plan.recipes.reduce((a, r) => a + r.outputs.filter(o => o.item === 'Electricity').reduce((x, o) => x + o.rate, 0), 0)
   return (
     <div className="results">
       <div className="cards">
@@ -109,6 +110,7 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
         <div className="card"><div className="big">{fmt(plan.production_power, 1)}<span className="unit">MW</span></div><div className="muted">production power</div></div>
         <div className="card"><div className="big">{fmt(plan.extraction_power, 1)}<span className="unit">MW</span></div><div className="muted">extraction, est.</div></div>
         <div className="card"><div className="big">{fmt(plan.production_power + plan.extraction_power, 1)}<span className="unit">MW</span></div><div className="muted">total power</div></div>
+        {generated > 0 && <div className="card" title="Generators in this plan (fuel → Electricity). Self-powered plans cover their own production + extraction draw."><div className="big">{fmt(generated, 1)}<span className="unit">MW</span></div><div className="muted">generated</div></div>}
         {plan.shards > 0 && <div className="card"><div className="big">{fmt(plan.shards, 0)}</div><div className="muted">power shards</div></div>}
         {totalSloops > 0 && <div className="card"><div className="big">{fmt(totalSloops, 0)}</div><div className="muted">Somersloops</div></div>}
         {plan.compute && (
@@ -189,12 +191,12 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                     <td><Icon id={l.item} />{l.name}</td>
                     <td className="num">{fmt(l.rate)}</td>
                     <td className="num">{lim ? `${fmt((100 * l.rate) / lim, 1)}%` : '—'}</td>
-                    <td className="small">{carrier(l.rate, liquid(l.item), data)}</td>
+                    <td className="small">{l.item === 'Electricity' ? 'power lines' : carrier(l.rate, liquid(l.item), data)}</td>
                   </tr>
                 )
               })}
               {plan.supplied.map(l => (
-                <tr key={'s' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">input</span></td><td className="num">{fmt(l.rate)}</td><td /><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
+                <tr key={'s' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">input</span></td><td className="num">{fmt(l.rate)}</td><td /><td className="small">{l.item === 'Electricity' ? 'power lines' : carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
             </tbody>
           </table></div>
@@ -205,10 +207,10 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
             <thead><tr><th>Item</th><th className="num">/min</th><th>Carrier</th></tr></thead>
             <tbody>
               {plan.targets.map(l => (
-                <tr key={l.item}><td><Icon id={l.item} />{l.name}</td><td className="num">{fmt(l.rate)}</td><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
+                <tr key={l.item}><td><Icon id={l.item} />{l.name}</td><td className="num">{fmt(l.rate)}</td><td className="small">{l.item === 'Electricity' ? 'power lines' : carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
               {plan.surplus.map(l => (
-                <tr key={'x' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">byproduct</span></td><td className="num">{fmt(l.rate)}</td><td className="small">{carrier(l.rate, liquid(l.item), data)}</td></tr>
+                <tr key={'x' + l.item}><td><Icon id={l.item} />{l.name} <span className="tag">byproduct</span></td><td className="num">{fmt(l.rate)}</td><td className="small">{l.item === 'Electricity' ? 'power lines' : carrier(l.rate, liquid(l.item), data)}</td></tr>
               ))}
             </tbody>
           </table></div>

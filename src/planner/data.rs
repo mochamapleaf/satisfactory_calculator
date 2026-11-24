@@ -50,6 +50,9 @@ pub struct Recipe {
     /// quality plans, within the recycling scope (`quality.rs`).
     #[serde(default)]
     pub recycling: bool,
+    /// Satisfactory generator (fuel → "Electricity" MW), memo step 8.
+    #[serde(default)]
+    pub generator: bool,
     /// Quality modules allowed (Factorio `disallowedEffects`).
     #[serde(default = "yes")]
     pub quality_allowed: bool,

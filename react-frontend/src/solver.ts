@@ -112,6 +112,8 @@ export const scarcity = (limit: number | null) => (limit && limit > 0 ? 92100 / 
 export interface ItemRate { item: string; rate: number }
 export interface Settings {
   game: Game
+  /** Satisfactory: build generators for the plan's own power (generators as recipes, memo step 8). */
+  self_power?: boolean
   targets: ItemRate[]
   supplies: ItemRate[]
   objective: Objective

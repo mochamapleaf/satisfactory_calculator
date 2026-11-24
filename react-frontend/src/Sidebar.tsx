@@ -75,7 +75,7 @@ function ItemRates({ data, list, onChange, producibleOnly, quality }: {
             </button>
             <input type="number" min={0} step="any" value={t.rate} aria-label={`${name(t.item)} per minute`}
               onChange={e => onChange(list.map((x, j) => j === i ? { ...x, rate: Math.max(0, +e.target.value) } : x))} />
-            <span className="muted">/min</span>
+            <span className="muted">{t.item === 'Electricity' ? 'MW' : '/min'}</span>
             <button className="x" title={`Remove ${name(t.item)}`} aria-label={`Remove ${name(t.item)}`} onClick={() => onChange(list.filter((_, j) => j !== i))}><RemoveMark /></button>
           </div>
           {quality && !liquid(t.item) && (
@@ -389,6 +389,13 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
           {s.objective === 'compute' && 'CPU per logic tick: every building costs the same whether working or idle, plus its sorters, belts, stations, coaters and the generators for its power. The solver picks tier and proliferator mode per recipe.'}
           {s.objective === 'custom' && 'Minimise the weighted sum below. Edit any weight; the plan re-solves.'}
         </p>
+        {sf && data.items.some(i => i.id === 'Electricity') && <>
+          <label className="row small">
+            <input type="checkbox" checked={!!s.self_power} onChange={e => set({ self_power: e.target.checked })} />
+            <span>Self-powered: build generators for the plan's own power</span>
+          </label>
+          <p className="hint">Generators are recipes: fuel (+ water) in, Electricity (MW) out. Add Electricity as a target to plan a power plant on its own.</p>
+        </>}
         {dsp && <>
           <div className="row small">
             <span className="grow">Power from</span>

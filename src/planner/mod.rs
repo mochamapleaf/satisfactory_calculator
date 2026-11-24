@@ -111,6 +111,10 @@ pub struct ItemRate {
 pub struct PlanSettings {
     /// "satisfactory" (default) | "dsp" | "factorio"
     pub game: String,
+    /// Satisfactory: the plan builds its own generators for the power it draws (memo step 8: generators
+    /// as recipes, fuel → "Electricity" MW). Solved by raising an Electricity target until it covers the
+    /// plan's production + extraction power.
+    pub self_power: bool,
     pub targets: Vec<ItemRate>,
     /// Items already available (e.g. from another factory), up to `rate`, free.
     pub supplies: Vec<ItemRate>,
@@ -196,6 +200,7 @@ impl Default for PlanSettings {
     fn default() -> Self {
         Self {
             game: "satisfactory".into(),
+            self_power: false,
             targets: vec![],
             supplies: vec![],
             objective: Objective::Resources,
@@ -402,6 +407,48 @@ pub struct Plan {
     pub quality: bool,
 }
 
+pub const ELECTRICITY: &str = "Electricity";
+
+/// Self-powered plans (memo step 8): the LP puts the plan's own draw on the Electricity row
+/// (`lp.rs`), so Electricity must be among the items: add it as a target of the rate asked (0 if none).
+pub fn self_powered_settings(data: &GameData, settings: &PlanSettings) -> PlanSettings {
+    let mut out = settings.clone();
+    if settings.self_power && data.item(ELECTRICITY).is_some() && !settings.targets.iter().any(|t| t.item == ELECTRICITY) {
+        out.targets.push(ItemRate { item: ELECTRICITY.into(), rate: 0.0 });
+    }
+    out
+}
+
+/// Waste that cannot be sunk or dumped in game (satisfactory.wiki.gg Uranium_Waste, Plutonium_Waste).
+pub const UNSINKABLE: [&str; 2] = ["Desc_NuclearWaste_C", "Desc_PlutoniumWaste_C"];
+
 pub fn plan(data: &GameData, settings: &PlanSettings) -> Plan {
-    lp::solve(data, settings)
+    let mut p = lp::solve(data, &self_powered_settings(data, settings));
+    finish_power(data, settings, &mut p);
+    p
+}
+
+/// Notes after a solve: what the generators make against the plan's draw, and nuclear waste left over.
+pub fn finish_power(data: &GameData, settings: &PlanSettings, p: &mut Plan) {
+    if p.status != Status::Optimal {
+        return;
+    }
+    if settings.self_power && data.item(ELECTRICITY).is_some() {
+        let made: f64 = p.recipes.iter().flat_map(|r| r.outputs.iter()).filter(|o| o.item == ELECTRICITY).map(|o| o.rate).sum();
+        let draw = p.production_power + p.extraction_power;
+        let asked: f64 = settings.targets.iter().filter(|t| t.item == ELECTRICITY).map(|t| t.rate).sum();
+        let extra = if asked > 0.0 { format!(" + {asked:.0} MW asked") } else { String::new() };
+        p.warnings.push(format!("Self-powered: generators make {made:.0} MW for the plan's own {draw:.0} MW{extra} (average draw; variable-power buildings peak higher)."));
+        // drop the zero Electricity target the model needed
+        p.targets.retain(|t| !(t.item == ELECTRICITY && t.rate <= 0.0 && asked <= 0.0));
+    }
+    let waste: Vec<String> = p
+        .surplus
+        .iter()
+        .filter(|l| UNSINKABLE.contains(&l.item.as_str()) && l.rate > 1e-9)
+        .map(|l| format!("{:.2}/min {}", l.rate, l.name))
+        .collect();
+    if !waste.is_empty() {
+        p.warnings.push(format!("Nuclear waste left over ({}): it cannot be sunk; store it or process it (Plutonium / Ficsonium chain).", waste.join(", ")));
+    }
 }

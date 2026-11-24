@@ -56,10 +56,25 @@ thread_local! {
     static RUN: std::cell::RefCell<Option<planner::lp::Run<'static>>> = const { std::cell::RefCell::new(None) };
 }
 
+thread_local! {
+    /// The settings as the page sent them (before `self_powered_settings`), for `finish`.
+    static ASKED: std::cell::RefCell<Option<PlanSettings>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Power notes on a plan (self-powered cover, nuclear waste), as `planner::plan` adds them.
+fn finish(mut p: planner::Plan) -> planner::Plan {
+    ASKED.with(|a| {
+        if let Some(s) = a.borrow().as_ref() {
+            planner::finish_power(data(&s.game, &s.dataset), s, &mut p);
+        }
+    });
+    p
+}
+
 fn update(run: &planner::lp::Run, last_version: Option<u32>) -> String {
     let pr = run.progress();
     let plan = if last_version != Some(pr.version) {
-        serde_json::to_value(run.plan()).unwrap()
+        serde_json::to_value(finish(run.plan())).unwrap()
     } else {
         serde_json::Value::Null
     };
@@ -88,8 +103,10 @@ pub fn solve_start(settings_json: &str) -> String {
             return serde_json::json!({"done": true, "plan": p}).to_string();
         }
     };
+    ASKED.with(|a| *a.borrow_mut() = Some(settings.clone()));
+    let settings = planner::self_powered_settings(data(&settings.game, &settings.dataset), &settings);
     match planner::lp::start(data(&settings.game, &settings.dataset), &settings) {
-        planner::lp::Start::Done(p) => serde_json::json!({"done": true, "plan": p}).to_string(),
+        planner::lp::Start::Done(p) => serde_json::json!({"done": true, "plan": finish(p)}).to_string(),
         planner::lp::Start::Running(run) => {
             let out = update(&run, None);
             SENT.with(|s| s.set(Some(run.progress().version)));

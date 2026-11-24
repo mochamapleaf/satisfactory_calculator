@@ -205,6 +205,8 @@ struct Model {
     segments: Vec<Vec<(f64, f64)>>,
     /// Shared-machine groups (`Inputs::shared`): whole machines per group key.
     groups: Vec<(String, Variable)>,
+    /// Self-powered plans: the Electricity balance row (index into `rows`) and its surplus column.
+    elec: Option<(usize, usize)>,
 }
 
 /// One way of running one recipe: a column of the model.
@@ -306,6 +308,8 @@ fn build_scaled(
     let w = &inp.weights;
     let c_max = s.max_clock();
     let k_max = shards_per_machine(c_max);
+    // self-powered (memo step 8): the plan's own draw is a demand on the Electricity row
+    let selfp = s.self_power && inp.items.iter().any(|i| i == super::ELECTRICITY);
     let mut p = Problem::new(OptimizationDirection::Minimize);
     let mut cost: Vec<f64> = Vec::new();
     let mut bounds: Vec<(f64, f64, bool)> = Vec::new();
@@ -354,7 +358,7 @@ fn build_scaled(
             None
         };
         let segs = power_segments(f.power_exp, c_max);
-        let pv = if !lin && w.power > 0.0 && (f.power_base > 0.0 || f.beacon_power > 0.0) {
+        let pv = if !lin && (w.power > 0.0 || selfp) && (f.power_base > 0.0 || f.beacon_power > 0.0) {
             let pv = var(&mut p, w.power, (0.0, f64::INFINITY), false);
             for (a, b) in &segs {
                 // p ≥ P·(a·x + b·n) + beacons·n (beacons draw full power whatever the clock)
@@ -414,6 +418,7 @@ fn build_scaled(
     }
 
     let mut raw = Vec::new();
+    let mut raw_mw = Vec::new();
     for it in &inp.items {
         if let Some(res) = data.resource(it).filter(|r| data.located(&r.locations, &s.planets)) {
             let limit = match s.resource_limits.get(it) {
@@ -424,6 +429,7 @@ fn build_scaled(
             let ext_mw = res.extractor_power / res.extractor_rate;
             let c = w.resources * resource_weight(data, w, it) + w.power * ext_mw;
             raw.push((it.clone(), var(&mut p, c, (0.0, limit.unwrap_or(f64::INFINITY)), false)));
+            raw_mw.push(ext_mw);
         }
     }
     let sup: Vec<(String, Variable)> =
@@ -453,16 +459,45 @@ fn build_scaled(
     for (i, v) in raw.iter().chain(sup.iter()) {
         rows.entry(i.as_str()).or_default().push((*v, 1.0));
     }
+    if selfp {
+        // production draw: the power variable (nonlinear clock curve) or its linear form, plus the
+        // extractors' estimate per unit mined (the same terms `production_power` / `extraction_power` report)
+        let e = rows.entry(super::ELECTRICITY).or_default();
+        for (u, v) in inp.units.iter().zip(&rv) {
+            let f = &u.mode;
+            match v.p {
+                Some(pv) => e.push((pv, -1.0)),
+                None => {
+                    if f.power_base > 0.0 {
+                        e.push((v.x, -f.power_base / f.speed));
+                    }
+                    if f.beacon_power > 0.0 {
+                        e.push((v.n, -f.beacon_power));
+                    }
+                }
+            }
+        }
+        for ((_, v), mw) in raw.iter().zip(&raw_mw) {
+            if *mw > 0.0 {
+                e.push((*v, -mw));
+            }
+        }
+    }
     for (i, v) in &surplus {
         rows.entry(i.as_str()).or_default().push((*v, -1.0));
     }
     let mut balance = Vec::new();
+    let mut elec = None;
     for it in &inp.items {
         let row = rows.remove(it.as_str()).unwrap_or_default();
         let b = inp.targets.get(it).copied().unwrap_or(0.0);
+        if selfp && it == super::ELECTRICITY {
+            let sv = surplus.iter().find(|(i, _)| i == it).map(|(_, v)| v.idx()).unwrap_or(usize::MAX);
+            elec = Some((rows_out.borrow().len(), sv));
+        }
         balance.push((it.clone(), con(&mut p, row.as_slice(), ComparisonOp::Eq, b)));
     }
-    Model { p, cost, bounds, rows: rows_out.into_inner(), rv, raw, sup, surplus, balance, segments, groups }
+    Model { p, cost, bounds, rows: rows_out.into_inner(), rv, raw, sup, surplus, balance, segments, groups, elec }
 }
 
 /// Solver-independent snapshot of a solution, keyed by recipe / item id.
@@ -1131,7 +1166,7 @@ impl<'a> Run<'a> {
             // tolerance), so the objective, the building counts and the rows shown agree
             pt.groups = group_machines(&self.inp, &pt);
         }
-        if !within_budgets(&self.s, &self.inp, &pt) {
+        if !within_budgets(&self.s, &self.inp, &pt) || !self.powered(&pt) {
             return;
         }
         let obj = objective_of(&self.m, &values_of(&self.m, &self.inp, &pt));
@@ -1452,6 +1487,20 @@ impl<'a> Run<'a> {
 
     /// Every row and bound of the whole-building model holds at `pt` (to 1e-6 relative): an
     /// external engine's values are checked before they become a plan.
+    /// Self-powered: the generators cover the point's own draw. Heuristic points round machines
+    /// (fewer, overclocked) after the LP, which raises the draw (review: 1357 MW made for 2627).
+    fn powered(&self, pt: &Point) -> bool {
+        let Some((row, sv)) = self.m.elec else { return true };
+        let mut x = vec![0.0; self.m.cost.len()];
+        for (v, a) in values_of(&self.m, &self.inp, pt) {
+            x[v.idx()] = a;
+        }
+        let (terms, _, rhs) = &self.m.rows[row];
+        // made − drawn ≥ asked; the Electricity surplus column is left out (it takes up the rest)
+        let lhs: f64 = terms.iter().filter(|(i, _)| *i != sv).map(|(i, a)| a * x[*i]).sum();
+        lhs >= rhs - 1e-6 * (1.0 + rhs.abs())
+    }
+
     fn rows_hold(&self, pt: &Point) -> bool {
         let vals = values_of(&self.m, &self.inp, pt);
         let mut x = vec![0.0; self.m.cost.len()];

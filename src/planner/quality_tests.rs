@@ -201,6 +201,7 @@ fn loop_data(building: &str, productivity: bool) -> GameData {
         id: id.into(),
         name: id.into(),
         name_zh: None,
+        generator: false,
         alt: false,
         building: b.into(),
         producers: vec![b.into()],

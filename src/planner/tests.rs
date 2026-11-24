@@ -883,3 +883,67 @@ fn dsp_proliferator_hint_ignores_modes_the_best_tier_does_not_offer() {
     let lower = p.recipes.iter().any(|r| r.mode.ends_with("proliferator-1-speed"));
     assert_eq!(lower, p.warnings.iter().any(|w| w.contains("steady-state optimum")), "{:?}", p.warnings);
 }
+
+#[test]
+fn generators_make_electricity_and_power_the_plan() {
+    let d = data();
+    // memo step 8: 750 MW from coal = 10 coal generators, 150 coal and 450 water per minute
+    let mut s = settings(&[(ELECTRICITY, 750.0)]);
+    s.disabled_recipes = d.recipes.iter().filter(|r| r.generator && r.building != "Desc_GeneratorCoal_C").map(|r| r.id.clone()).collect();
+    s.disabled_recipes.push("Generator_Desc_CompactedCoal_C".into());
+    s.disabled_recipes.push("Generator_Desc_PetroleumCoke_C".into());
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    assert_balanced(&p);
+    let g = p.recipes.iter().find(|r| r.id == "Generator_Desc_Coal_C").expect("coal generators");
+    assert!(close(g.throughput, 10.0), "{}", g.throughput);
+    let coal: f64 = g.inputs.iter().filter(|i| i.item == "Desc_Coal_C").map(|i| i.rate).sum();
+    assert!(close(coal, 150.0), "{coal}");
+    // nuclear: 2500 MW per plant, 0.2 rods/min, 10 uranium waste/min
+    let n = d.recipe("Generator_Desc_NuclearFuelRod_C").unwrap();
+    assert!(n.inputs.iter().any(|(i, q)| i == "Desc_NuclearFuelRod_C" && close(*q, 0.2)));
+    assert!(n.inputs.iter().any(|(i, q)| i == "Desc_Water_C" && close(*q, 240.0)));
+    assert!(n.outputs.iter().any(|(i, q)| i == "Desc_NuclearWaste_C" && close(*q, 10.0)));
+    // self-powered: generators cover the plan's own draw, fuel chain included
+    let mut sp = settings(&[("Desc_Computer_C", 10.0)]);
+    sp.self_power = true;
+    let p = plan(&d, &sp);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    let made: f64 = p
+        .recipes
+        .iter()
+        .filter_map(|r| d.recipe(&r.id).filter(|x| x.generator).map(|x| x.outputs[0].1 * r.throughput))
+        .sum();
+    let draw = p.production_power + p.extraction_power;
+    eprintln!("self-powered computers: {made:.1} MW made, {draw:.1} MW drawn; {:?}", p.warnings.last());
+    for r in p.recipes.iter().filter(|r| d.recipe(&r.id).is_some_and(|x| x.generator)) {
+        eprintln!("  {} ×{} ({})", r.name, r.machines, r.mode_label);
+    }
+    assert!(draw > 0.0 && made >= draw * (1.0 - 1e-6), "{made} vs {draw}");
+    // whole buildings with shards (review: the relaxation-sized target under-covered these)
+    for (item, rate) in [("Desc_AluminumIngot_C", 10.0), ("Desc_ModularFrameHeavy_C", 7.0), ("Desc_Motor_C", 10.0), ("Desc_Computer_C", 10.0)] {
+        for obj in [Objective::Buildings, Objective::Resources, Objective::Power] {
+            let mut si = settings(&[(item, rate)]);
+            si.self_power = true;
+            si.integer = true;
+            si.objective = obj;
+            si.max_clock_percent = 250.0;
+            let pi = plan(&d, &si);
+            assert_eq!(pi.status, Status::Optimal, "{item} {obj:?} {:?}", pi.warnings);
+            let made_i: f64 = pi.recipes.iter().flat_map(|r| r.outputs.iter()).filter(|o| o.item == ELECTRICITY).map(|o| o.rate).sum();
+            let draw = pi.production_power + pi.extraction_power;
+            eprintln!("{item} {obj:?}: {made_i:.1} MW made, {draw:.1} drawn");
+            assert!(made_i >= draw * (1.0 - 1e-6) - 1e-6, "{item} {obj:?}: {made_i} < {draw}");
+            assert!(pi.targets.iter().all(|t| t.item != ELECTRICITY));
+        }
+    }
+    // nuclear waste left over is flagged
+    let mut nuc = settings(&[(ELECTRICITY, 10000.0)]);
+    nuc.disabled_recipes = d.recipes.iter().filter(|r| r.generator && r.building != "Desc_GeneratorNuclear_C").map(|r| r.id.clone()).collect();
+    let pn = plan(&d, &nuc);
+    assert!(pn.warnings.iter().any(|w| w.contains("Nuclear waste")), "{:?}", pn.warnings);
+    // without the option nothing changes
+    let p0 = plan(&d, &settings(&[("Desc_Computer_C", 10.0)]));
+    assert!(p0.recipes.iter().all(|r| !d.recipe(&r.id).is_some_and(|x| x.generator)));
+}
+

@@ -105,6 +105,40 @@ def main(src, dst):
             rec["power_range"] = [r["minPower"], r["maxPower"]]
         recipes.append(rec)
 
+    # generators as recipes (memo step 8): fuel (+ water) → "Electricity" units/min = MW. Fuel per minute
+    # = MW·60 / energy value (MJ per item or per m³); water m³/min = waterToPowerRatio·MW·60/1000
+    # (coal 75 MW → 15 coal, 45 water; nuclear 2500 MW → 0.2 rods, 240 water). Waste per rod is not in
+    # the dump: 50 uranium waste per uranium rod, 10 plutonium waste per plutonium rod, none for
+    # ficsonium (satisfactory.wiki.gg Nuclear_Power_Plant, 1.0).
+    waste = {"Desc_NuclearFuelRod_C": ("Desc_NuclearWaste_C", 50), "Desc_PlutoniumFuelRod_C": ("Desc_PlutoniumWaste_C", 10)}
+    generators = {}
+    for g in d["generators"].values():
+        mw = g["powerProduction"]
+        water = g.get("waterToPowerRatio", 0) * mw * 60 / 1000
+        for f in g["fuel"]:
+            e = d["items"][f]["energyValue"]
+            if not e:
+                continue
+            rate = round(mw * 60 / e, 6)
+            ins = [[f, rate]] + ([["Desc_Water_C", round(water, 6)]] if water else [])
+            outs = [["Electricity", float(mw)]]
+            if f in waste:
+                w, k = waste[f]
+                outs.append([w, round(rate * k, 6)])
+            for it, _ in ins + outs[1:]:
+                items_used.add(it)
+            generators[g["className"]] = g
+            recipes.append({
+                "id": f"Generator_{f}",
+                "name": f"{d['buildings'][g['className']]['name']}: {d['items'][f]['name']}",
+                "alt": False,
+                "building": g["className"],
+                "time": 60.0,
+                "in": ins,
+                "out": outs,
+                "generator": True,
+            })
+
     raw = set(d["resources"].keys())
     # item picker groups: by the building of the item's own recipe, i.e. the first standard recipe that
     # has it as its main (first) product. Byproducts (Silica from Alumina Solution) and "Unpackage ..."
@@ -132,7 +166,14 @@ def main(src, dst):
                 "row": 0,
                 "order": v.get("sinkPoints", 0),
             })
+    if generators:
+        items.append({"id": "Electricity", "name": "Electricity (MW)", "liquid": False, "sink": 0, "raw": False,
+                      "group": "power", "row": 0, "order": 0})
     buildings = []
+    for k in sorted(generators):
+        v = d["buildings"][k]
+        # generators draw no power; clocking scales fuel and output alike (no power exponent)
+        buildings.append({"id": k, "name": v["name"], "power": 0, "power_exp": 1.0, "somersloop_slots": 0, "generator": True})
     for k in sorted(buildings_used):
         v = d["buildings"][k]
         buildings.append({
