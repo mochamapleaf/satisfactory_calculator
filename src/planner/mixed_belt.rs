@@ -17,7 +17,7 @@
 //! data's recipe, never from `PlanRecipe.inputs` (which also holds proliferator and fuel, §2.1).
 //! The model is a statistical average-flow model; margins and the ladder surplus are fitted to
 //! 笑笑's lines (MINE) and need sandbox calibration (report §4 P5).
-use super::data::{GameData, Recipe};
+use super::data::{tr, GameData, Recipe};
 use super::rules::{self, Mode};
 use super::{Plan, PlanRecipe, PlanSettings};
 use serde::{Deserialize, Serialize};
@@ -311,7 +311,7 @@ fn pass(events: &[Event], capacity: f64, start: &[f64], ret: &[f64]) -> Trace {
                 let free = (capacity - f.iter().sum::<f64>()).max(0.0);
                 let add = free.min(*rate);
                 if add < rate - EPS {
-                    violations.push(format!("feed of item {item} limited to {add:.3} by a full belt"));
+                    violations.push(tr(&format!("feed of item {item} limited to {add:.3} by a full belt"), &format!("物品 {item} 的补料被满带限制在 {add:.3}")));
                 }
                 f[*item] += add;
                 ("feed", Some(*item), add)
@@ -326,7 +326,10 @@ fn pass(events: &[Event], capacity: f64, start: &[f64], ret: &[f64]) -> Trace {
                 // up into the unit and upsets the ratio [BV1iQrKYoEoy 27:50–28:15]
                 for (i, s) in shares.iter().enumerate() {
                     if ret.get(i).copied().unwrap_or(0.0) > s + EPS {
-                        violations.push(format!("return of item {i} {:.3} > its share {:.3}: it backs up into the control unit", ret[i], s));
+                        violations.push(tr(
+                            &format!("return of item {i} {:.3} > its share {:.3}: it backs up into the control unit", ret[i], s),
+                            &format!("物品 {i} 的回收量 {:.3} > 它的份额 {:.3}：会堵回控制单元", ret[i], s),
+                        ));
                     }
                 }
                 let _ = jump;
@@ -339,7 +342,7 @@ fn pass(events: &[Event], capacity: f64, start: &[f64], ret: &[f64]) -> Trace {
             Event::Coater => ("coater", None, 0.0),
         };
         if f.iter().sum::<f64>() > capacity + 1e-6 {
-            violations.push(format!("belt over capacity after machine {pos}"));
+            violations.push(tr(&format!("belt over capacity after machine {pos}"), &format!("第 {pos} 台机器之后传送带超载")));
         }
         points.push(TracePoint { pos, kind: kind.into(), item, amount, flows: f.clone() });
     }
@@ -371,7 +374,7 @@ pub fn simulate(events: &[Event], capacity: f64, items: usize) -> Trace {
     }
     let mut t = last.unwrap_or_default();
     t.converged = false;
-    t.violations.push("returns did not settle (flow keeps growing or shrinking)".into());
+    t.violations.push(tr("returns did not settle (flow keeps growing or shrinking)", "回收流量没有稳定（流量持续增大或减小）"));
     t
 }
 
@@ -621,10 +624,10 @@ pub fn choose_period(capacity: f64, c: [f64; 2], margin: f64, step: u32, row_len
         let unit = row_len.map(|r| lcm(period as u64, step as u64 * r as u64).min(u32::MAX as u64) as u32).unwrap_or(0);
         let mut cand = Candidate { period, n, sum, unit, ..Default::default() };
         if n[0] % step != 0 || n[1] % step != 0 {
-            cand.reason = "positions".into();
+            cand.reason = tr("positions", "位置不对齐");
         } else if let Some(r) = row_len.filter(|&r| r > 0) {
             if unit > unit_max.unwrap_or(r.saturating_mul(4)) {
-                cand.reason = "repeat unit too large".into();
+                cand.reason = tr("repeat unit too large", "重复单元太大");
             }
         }
         cands.push(cand);
@@ -635,7 +638,7 @@ pub fn choose_period(capacity: f64, c: [f64; 2], margin: f64, step: u32, row_len
             continue;
         }
         let Some(b) = best_for(capacity, c, cands[i].n, step, &TwoOverride::default()) else {
-            cands[i].reason = "positions".into();
+            cands[i].reason = tr("positions", "位置不对齐");
             continue;
         };
         cands[i].best = Some(b.min);
@@ -644,7 +647,7 @@ pub fn choose_period(capacity: f64, c: [f64; 2], margin: f64, step: u32, row_len
             chosen = Some((i, b));
             break;
         }
-        cands[i].reason = "min < m".into();
+        cands[i].reason = tr("min < m", "最低流量 < m");
     }
     (p, q, cands, chosen)
 }
@@ -658,10 +661,10 @@ pub fn unit_kind(ret: [f64; 2], jump: usize) -> (&'static str, Vec<String>) {
     let other = 1 - jump;
     let mut why = vec![];
     if ret[jump] > 2.0 * GREEN_BELT + EPS {
-        why.push(format!("jumping item returns {:.3} > 24 (two green belts)", ret[jump]));
+        why.push(tr(&format!("jumping item returns {:.3} > 24 (two green belts)", ret[jump]), &format!("跳变物品的回收量 {:.3} > 24（两条绿带）", ret[jump])));
     }
     if ret[other] > GREEN_BELT + EPS {
-        why.push(format!("limited item returns {:.3} > 12 (one green belt)", ret[other]));
+        why.push(tr(&format!("limited item returns {:.3} > 12 (one green belt)", ret[other]), &format!("限流物品的回收量 {:.3} > 12（一条绿带）", ret[other])));
     }
     if why.is_empty() {
         ("double", vec![])
@@ -820,7 +823,7 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
     let margin = ls.margin();
     let step = ls.step();
     if !(c[0] > 0.0 && c[1] > 0.0 && c[0].is_finite() && c[1].is_finite()) {
-        return Err("an ingredient has zero use".into());
+        return Err(tr("an ingredient has zero use", "有一种原料的用量为零"));
     }
     if c[0] + c[1] >= capacity - EPS {
         return Err(format!("one machine uses {:.3} stacks/s, a whole belt ({capacity})", c[0] + c[1]));
@@ -834,13 +837,20 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
         None => (1, machines.max(1)),
     };
     if per_unit > LINE_MAX {
-        return Err(format!(
-            "{per_unit} machines on one control unit: lines over {LINE_MAX} machines are not laid out; set a unit cap (单控制单元台数上限) to split the line"
+        return Err(tr(
+            &format!("{per_unit} machines on one control unit: lines over {LINE_MAX} machines are not laid out; set a unit cap (单控制单元台数上限) to split the line"),
+            &format!("一个控制单元下有 {per_unit} 台机器：超过 {LINE_MAX} 台的线不排布；请设置单控制单元台数上限来拆线"),
         ));
     }
     let (p, q, ratio_dev) = ratio(c[0], c[1]);
     if ratio_dev > 0.0 {
-        notes.push(Note::warn(format!("use ratio is not a small integer ratio; using {p}:{q} ({:.1} % off), flows drift", 100.0 * ratio_dev), ""));
+        notes.push(Note::warn(
+            tr(
+                &format!("use ratio is not a small integer ratio; using {p}:{q} ({:.1} % off), flows drift", 100.0 * ratio_dev),
+                &format!("用量比不是小整数比；按 {p}:{q} 计（偏差 {:.1} %），流量会漂移", 100.0 * ratio_dev),
+            ),
+            "",
+        ));
     }
     let (_, _, mut cands, chosen) = choose_period(capacity, c, margin, step, ls.row_len, ls.unit_max);
     let i0 = chosen.map(|x| x.0);
@@ -853,9 +863,9 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
             cands[*i].reason = if pk.feasible {
                 String::new()
             } else if pk.best.min < margin - EPS {
-                "min < m".into()
+                tr("min < m", "最低流量 < m")
             } else {
-                "return flow on this line".into()
+                tr("return flow on this line", "本线回收流量超限")
             };
         }
         found.or(seen.first().copied())
@@ -868,7 +878,13 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
             let t = pp / (p + q);
             fixed = Some((pp, [t * p, t * q]));
         } else {
-            notes.push(Note::warn(format!("period {pp} is not a multiple of {} (ratio {p}:{q}); using the recommended one", p + q), ""));
+            notes.push(Note::warn(
+                tr(
+                    &format!("period {pp} is not a multiple of {} (ratio {p}:{q}); using the recommended one", p + q),
+                    &format!("周期 {pp} 不是 {} 的倍数（比例 {p}:{q}）；改用推荐周期", p + q),
+                ),
+                "",
+            ));
         }
     }
     let overridden = fixed.is_some() || ov.first.is_some() || ov.k.is_some() || ov.sigma5.is_some();
@@ -893,40 +909,64 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
             None => (smallest.0, smallest.1, at(smallest.1, ov)),
         }
     };
-    let Some(pick) = pick else { return Err("no layout".into()) };
+    let Some(pick) = pick else { return Err(tr("no layout", "排不出布局")) };
     let best = pick.best;
     if i0.is_none() && fixed.is_none() {
         // nothing feasible: one period (the smallest) is shown with its shortfall
         notes.push(Note::fail(
-            format!("no period keeps both ingredients ≥ m = {margin} (best S(P)/2 = {:.3}); shown with P = {period}", closed_sum(capacity, period as f64, c[0], c[1]) / 2.0),
+            tr(
+                &format!("no period keeps both ingredients ≥ m = {margin} (best S(P)/2 = {:.3}); shown with P = {period}", closed_sum(capacity, period as f64, c[0], c[1]) / 2.0),
+                &format!("没有哪个周期能让两种原料都 ≥ m = {margin}（最优 S(P)/2 = {:.3}）；按 P = {period} 显示", closed_sum(capacity, period as f64, c[0], c[1]) / 2.0),
+            ),
             "BV1iQrKYoEoy 01:44",
         ));
     }
     if let (false, Some(i0)) = (overridden, i0) {
         if period < cands[i0].period {
             notes.push(Note::info(
-                format!(
-                    "P = {period} instead of the largest feasible steady state P = {}: with that one this line of {per_unit} machines sends an item back above its control-unit share",
-                    cands[i0].period
+                tr(
+                    &format!(
+                        "P = {period} instead of the largest feasible steady state P = {}: with that one this line of {per_unit} machines sends an item back above its control-unit share",
+                        cands[i0].period
+                    ),
+                    &format!(
+                        "用 P = {period}，而不是最大可行稳态 P = {}：用那个周期时这条 {per_unit} 台机器的线会让某种物品的回收量超过控制单元的份额",
+                        cands[i0].period
+                    ),
                 ),
                 "BV1iQrKYoEoy 27:50",
             ));
         }
     }
     if overridden && best.min < margin - EPS {
-        notes.push(Note::warn(format!("manual layout: lowest flow {:.3} < m = {margin}", best.min), "BV1fXkxYDEbW 33:31"));
+        notes.push(Note::warn(
+            tr(&format!("manual layout: lowest flow {:.3} < m = {margin}", best.min), &format!("手动布局：最低流量 {:.3} < m = {margin}", best.min)),
+            "BV1fXkxYDEbW 33:31",
+        ));
     }
     if step == 2 && (n[0] % 2 != 0 || n[1] % 2 != 0 || best.k % 2 != 0) {
         notes.push(Note::warn(
-            format!(
-                "two rows per belt: refills exist only after an even number of machines, but this layout needs one after {}",
-                if best.k % 2 != 0 { format!("{} (k)", best.k) } else { format!("an interval of {} / {}", n[0], n[1]) }
+            tr(
+                &format!(
+                    "two rows per belt: refills exist only after an even number of machines, but this layout needs one after {}",
+                    if best.k % 2 != 0 { format!("{} (k)", best.k) } else { format!("an interval of {} / {}", n[0], n[1]) }
+                ),
+                &format!(
+                    "每条带两排机器：补料只能放在偶数台机器之后，但这个布局需要在 {} 之后补料",
+                    if best.k % 2 != 0 { format!("第 {} 台 (k)", best.k) } else { format!("间隔 {} / {}", n[0], n[1]) }
+                ),
             ),
             "BV1fXkxYDEbW 77:08",
         ));
     }
     if (period as f64) * c[0].max(c[1]) > capacity + EPS {
-        notes.push(Note::fail(format!("a refill of {:.2} stacks/s exceeds one belt", period as f64 * c[0].max(c[1])), "BV1fXkxYDEbW 39:00"));
+        notes.push(Note::fail(
+            tr(
+                &format!("a refill of {:.2} stacks/s exceeds one belt", period as f64 * c[0].max(c[1])),
+                &format!("一次补料 {:.2} 组/秒，超过一条传送带", period as f64 * c[0].max(c[1])),
+            ),
+            "BV1fXkxYDEbW 39:00",
+        ));
     }
     for cd in cands.iter_mut() {
         if cd.period == period && overridden {
@@ -941,17 +981,30 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
     let shares = [capacity * s5 / 5.0, capacity * (5.0 - s5) / 5.0];
     let (line_mins, feeds, returns) = run_two(capacity, c, shares, best.first as usize, best.k, n, per_unit);
     if line_mins[0].min(line_mins[1]) < margin - EPS && best.min >= margin - EPS {
-        notes.push(Note::warn(format!("lowest flow on this line {:.3} < m", line_mins[0].min(line_mins[1])), "BV1fXkxYDEbW 79:26"));
+        notes.push(Note::warn(
+            tr(
+                &format!("lowest flow on this line {:.3} < m", line_mins[0].min(line_mins[1])),
+                &format!("这条线的最低流量 {:.3} < m", line_mins[0].min(line_mins[1])),
+            ),
+            "BV1fXkxYDEbW 79:26",
+        ));
     }
     let jump = if best.sigma5 >= 3 { 0 } else { 1 };
     let limited_share = best.sigma5.min(5 - best.sigma5);
-    let limiter_lane = if limited_share == 2 { "green belt (2/5)" } else { "yellow belt, or blue belt + blue sorter (1/5)" }.to_string();
+    let limiter_lane = if limited_share == 2 {
+        tr("green belt (2/5)", "传送带 Mk.II（绿）(2/5)")
+    } else {
+        tr("yellow belt, or blue belt + blue sorter (1/5)", "传送带 Mk.I（黄），或 Mk.III（蓝）+ 蓝爪 (1/5)")
+    };
     // §2.4 checks
     let mut unit = "standard";
     for i in 0..2 {
         if returns[i] > shares[i] + EPS {
             notes.push(Note::fail(
-                format!("{} returns {:.3} > its control-unit share {:.3}: it backs up and upsets the ratio", names[i], returns[i], shares[i]),
+                tr(
+                    &format!("{} returns {:.3} > its control-unit share {:.3}: it backs up and upsets the ratio", names[i], returns[i], shares[i]),
+                    &format!("{} 的回收量 {:.3} > 它的控制单元份额 {:.3}：会堵住并打乱比例", names[i], returns[i], shares[i]),
+                ),
                 "BV1iQrKYoEoy 27:50",
             ));
         }
@@ -962,18 +1015,30 @@ pub fn design_two(capacity: f64, c: [f64; 2], names: [&str; 2], machines: u32, l
         "double" => {
             unit = "double";
             notes.push(Note::info(
-                format!("returns {} {:.3} + {} {:.3} = {:.3} > one green belt (12): use the two-green-belt control unit", names[0], returns[0], names[1], returns[1], returns[0] + returns[1]),
+                tr(
+                    &format!("returns {} {:.3} + {} {:.3} = {:.3} > one green belt (12): use the two-green-belt control unit", names[0], returns[0], names[1], returns[1], returns[0] + returns[1]),
+                    &format!("回收 {} {:.3} + {} {:.3} = {:.3} > 一条绿带（12）：改用双绿带控制单元", names[0], returns[0], names[1], returns[1], returns[0] + returns[1]),
+                ),
                 "BV1fXkxYDEbW 66:46",
             ))
         }
         _ => {
             unit = "unknown";
-            notes.push(Note::fail(format!("return flow beyond the known control units: {}", why.join("; ")), "BV1fXkxYDEbW 66:03"));
+            notes.push(Note::fail(
+                tr(&format!("return flow beyond the known control units: {}", why.join("; ")), &format!("回收流量超出已知的控制单元类型：{}", why.join("；"))),
+                "BV1fXkxYDEbW 66:03",
+            ));
         }
     }
     let complete_add = (period - per_unit % period) % period;
     if complete_add > 0 && returns.iter().zip(&shares).any(|(r, s)| r > &(s + EPS)) {
-        notes.push(Note::info(format!("adding {complete_add} machine(s) completes the period (returns then equal the unit's shares)"), "BV1iQrKYoEoy 28:05"));
+        notes.push(Note::info(
+            tr(
+                &format!("adding {complete_add} machine(s) completes the period (returns then equal the unit's shares)"),
+                &format!("再加 {complete_add} 台机器即可补满一个周期（回收量随之等于控制单元的份额）"),
+            ),
+            "BV1iQrKYoEoy 28:05",
+        ));
     }
     // tower belts per item: first-fit decreasing of refill amounts into belts of C (§2.9)
     let mut tower_belts = [0u32; 2];
@@ -1052,12 +1117,18 @@ pub fn two_events(d: &TwoItemDesign, capacity: f64, sprayed: bool) -> Vec<Event>
 pub fn feed_options(belt: u8, sorter_max: u8) -> Vec<(f64, String)> {
     let mut belts: Vec<(f64, String)> = vec![(0.0, String::new())];
     for (i, b) in BELTS.iter().enumerate().take(belt as usize + 1) {
-        belts.push((*b, format!("{} belt", ["yellow", "green", "blue"][i])));
+        belts.push((*b, tr(&format!("{} belt", ["yellow", "green", "blue"][i]), ["传送带 Mk.I（黄）", "传送带 Mk.II（绿）", "传送带 Mk.III（蓝）"][i])));
     }
     let mut sorters: Vec<(f64, String)> = vec![(0.0, String::new())];
     for t in 0..=(sorter_max as usize).min(2) {
         for g in 0..3 {
-            sorters.push((SORTERS[t][g], format!("{} sorter ({} grid{})", SORTER_NAMES[t], g + 1, if g == 0 { "" } else { "s" })));
+            sorters.push((
+                SORTERS[t][g],
+                tr(
+                    &format!("{} sorter ({} grid{})", SORTER_NAMES[t], g + 1, if g == 0 { "" } else { "s" }),
+                    &format!("{}爪（{} 格）", ["黄", "绿", "蓝"][t], g + 1),
+                ),
+            ));
         }
     }
     let mut out: Vec<(f64, String, usize)> = vec![];
@@ -1292,7 +1363,7 @@ pub fn layout_for_plan(plan: &Plan, data: &GameData, s: &PlanSettings) -> MixedB
     let stack = ls.stack();
     let mut out = MixedBeltReport { capacity, stack, margin: ls.margin(), ..Default::default() };
     if data.game != "dsp" {
-        out.warnings.push("mixed belts are modelled for Dyson Sphere Program only".into());
+        out.warnings.push(tr("mixed belts are modelled for Dyson Sphere Program only", "混带只针对戴森球计划建模"));
         return out;
     }
     for pr in &plan.recipes {
@@ -1328,7 +1399,13 @@ fn layout_recipe(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRecipe,
         let per = next.two.as_ref().map(|d| d.machines_per_unit).unwrap_or(c);
         if next.status != "fail" && st <= 1 {
             lay = next;
-            lay.notes.push(Note::info(format!("one module per station: at most {per} machines per control unit so one station's slots hold a whole module"), ""));
+            lay.notes.push(Note::info(
+                tr(
+                    &format!("one module per station: at most {per} machines per control unit so one station's slots hold a whole module"),
+                    &format!("每座物流塔一个模块：每个控制单元最多 {per} 台机器，这样一座物流塔的槽位刚好装下一个完整模块"),
+                ),
+                "",
+            ));
             return lay;
         }
         cap = Some(per.min(c).saturating_sub(1));
@@ -1354,7 +1431,7 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
     };
     let Some(mode) = find_mode(data, s, r, &pr.mode) else {
         lay.status = "fail".into();
-        lay.notes.push(Note::fail("this recipe's machine / proliferator mode is no longer enabled: solve again".into(), ""));
+        lay.notes.push(Note::fail(tr("this recipe's machine / proliferator mode is no longer enabled: solve again", "这个配方的机器 / 增产剂模式已不再启用：请重新求解"), ""));
         return lay;
     };
     let (ins, outs) = per_machine(r, &mode);
@@ -1366,7 +1443,13 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
     // §2.2: a single machine over a refill / the belt
     if c.iter().any(|&x| x > capacity + EPS) || c.iter().sum::<f64>() >= capacity - EPS {
         lay.status = "fail".into();
-        lay.notes.push(Note::fail(format!("one machine uses {:.2} stacks/s, more than a {capacity} cells/s belt: no mixed belt", c.iter().sum::<f64>()), ""));
+        lay.notes.push(Note::fail(
+            tr(
+                &format!("one machine uses {:.2} stacks/s, more than a {capacity} cells/s belt: no mixed belt", c.iter().sum::<f64>()),
+                &format!("一台机器用 {:.2} 组/秒，超过一条 {capacity} 格/秒的传送带：无法混带", c.iter().sum::<f64>()),
+            ),
+            "",
+        ));
         return lay;
     }
     let effect = pr.mode.rsplit('|').next().and_then(|e| data.effect(e)).filter(|e| e.kind == "proliferator");
@@ -1384,9 +1467,15 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
                 notes.extend(n);
                 if ls.belt != 2 {
                     notes.push(Note::warn(
-                        format!(
-                            "the control unit is 笑笑's structure for a blue belt: shares in fifths come from a green (2/5) or yellow (1/5) limiter lane, and the return limit is one green belt. On a {} belt nobody has built it; the shares and unit type shown are an extrapolation (MINE)",
-                            ["yellow", "green", "blue"][(ls.belt as usize).min(2)]
+                        tr(
+                            &format!(
+                                "the control unit is 笑笑's structure for a blue belt: shares in fifths come from a green (2/5) or yellow (1/5) limiter lane, and the return limit is one green belt. On a {} belt nobody has built it; the shares and unit type shown are an extrapolation (MINE)",
+                                ["yellow", "green", "blue"][(ls.belt as usize).min(2)]
+                            ),
+                            &format!(
+                                "这个控制单元是笑笑为蓝带设计的结构：五分之几的份额来自绿（2/5）或黄（1/5）限流格，回收上限是一条绿带。在{}带上没人搭过，这里的份额和单元类型是外推（自拟）",
+                                ["黄", "绿", "蓝"][(ls.belt as usize).min(2)]
+                            ),
                         ),
                         "BV1fXkxYDEbW 20:56",
                     ));
@@ -1414,9 +1503,15 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
                 // restart hint (§2.3 step 7)
                 if d_items < ls.hint_items && d.machines_per_unit > ls.hint_machines {
                     notes.push(Note::info(
-                        format!(
-                            "slow recipe ({d_items:.2} items/s per machine) with {} machines on one control unit: restarts after a shortage are slow; consider one unit per tower (set a unit cap)",
-                            d.machines_per_unit
+                        tr(
+                            &format!(
+                                "slow recipe ({d_items:.2} items/s per machine) with {} machines on one control unit: restarts after a shortage are slow; consider one unit per tower (set a unit cap)",
+                                d.machines_per_unit
+                            ),
+                            &format!(
+                                "慢配方（每台 {d_items:.2} 个/秒），一个控制单元下有 {} 台机器：缺料后重启很慢；可考虑每座塔一个控制单元（设置单控制单元台数上限）",
+                                d.machines_per_unit
+                            ),
                         ),
                         "BV1fXkxYDEbW 63:43",
                     ));
@@ -1424,17 +1519,25 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
                 if d.units > 1 {
                     let laid = d.units as u64 * d.machines_per_unit as u64;
                     notes.push(Note::info(
-                        format!(
-                            "split into {} control units of {} machines (unit cap){}",
-                            d.units,
-                            d.machines_per_unit,
-                            if laid > machines as u64 { format!("; that is {laid} places for {machines} machines, the last unit is {} short", laid - machines as u64) } else { String::new() }
+                        tr(
+                            &format!(
+                                "split into {} control units of {} machines (unit cap){}",
+                                d.units,
+                                d.machines_per_unit,
+                                if laid > machines as u64 { format!("; that is {laid} places for {machines} machines, the last unit is {} short", laid - machines as u64) } else { String::new() }
+                            ),
+                            &format!(
+                                "拆成 {} 个控制单元，每个 {} 台机器（单元上限）{}",
+                                d.units,
+                                d.machines_per_unit,
+                                if laid > machines as u64 { format!("；共 {laid} 个位置对应 {machines} 台机器，最后一个单元少 {} 台", laid - machines as u64) } else { String::new() }
+                            ),
                         ),
                         "",
                     ));
                 }
                 if ls.rows >= 2 && per_line % 2 == 1 {
-                    notes.push(Note::info("two rows per belt and an odd machine count: one position has a single machine".into(), ""));
+                    notes.push(Note::info(tr("two rows per belt and an odd machine count: one position has a single machine", "每条带两排机器且机器数为奇数：有一个位置只有一台机器"), ""));
                 }
                 lay.two = Some(d);
             }
@@ -1453,7 +1556,7 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
                 let last = machines - (groups - 1) * n;
                 let best_sorter = SORTERS[(ls.sorter_max as usize).min(2)][0];
                 let recover: Vec<u32> = feeds.iter().map(|f| (f.rate / best_sorter - EPS).ceil().max(1.0) as u32).collect();
-                let feed_sorters: u32 = feeds.iter().map(|f| f.combo.matches("sorter").count() as u32).sum();
+                let feed_sorters: u32 = feeds.iter().map(|f| (f.combo.matches("sorter").count() + f.combo.matches('爪').count()) as u32).sum();
                 unit_sorters = groups.saturating_mul(feed_sorters + recover.iter().sum::<u32>());
                 feed_points = groups.saturating_mul(feeds.len() as u32);
                 end_pile = ls.end_pile_b.min(n);
@@ -1462,21 +1565,33 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
                 let d = LadderDesign { group: n, groups, last_group: last, rho, total: feeds.iter().map(|f| f.rate).sum(), feeds, c: c.clone(), recover_sorters: recover };
                 lay.trace = simulate(&ladder_events(&d, mode.sprayed), capacity, c.len());
                 if n > ls.ladder_short {
-                    notes.push(Note::info(format!("group of {n} > {}: feeds carry the {:.1} % surplus (fitted to his 24-machine particle-container line)", ls.ladder_short, 100.0 * rho), "BV1iQrKYoEoy 40:28"));
+                    notes.push(Note::info(
+                        tr(
+                            &format!("group of {n} > {}: feeds carry the {:.1} % surplus (fitted to his 24-machine particle-container line)", ls.ladder_short, 100.0 * rho),
+                            &format!("一组 {n} 台 > {}：补料带 {:.1} % 的余量（按他那条 24 台粒子容器的线拟合）", ls.ladder_short, 100.0 * rho),
+                        ),
+                        "BV1iQrKYoEoy 40:28",
+                    ));
                 }
-                notes.push(Note::info("leave at least one buffer cell after every feed".into(), "BV1iQrKYoEoy 17:00"));
+                notes.push(Note::info(tr("leave at least one buffer cell after every feed", "每个补料点之后至少留一个缓冲格"), "BV1iQrKYoEoy 17:00"));
                 lay.ladder = Some(d);
             }
             None => {
                 lay.status = "fail".into();
-                notes.push(Note::fail("no ladder group fits one belt, even a single machine".into(), ""));
+                notes.push(Note::fail(tr("no ladder group fits one belt, even a single machine", "没有任何梯形组能放进一条传送带，连单台机器都不行"), ""));
             }
         }
     }
     // sorters (§2.7)
     let input = sorter_tier(d_items, stack, true, ls);
     if input == "pile" && PILE[(ls.pile_level as usize).min(2)].1 <= d_items {
-        notes.push(Note::fail(format!("input {d_items:.2} items/s exceeds a pile sorter at {}", PILE[(ls.pile_level as usize).min(2)].0), ""));
+        notes.push(Note::fail(
+            tr(
+                &format!("input {d_items:.2} items/s exceeds a pile sorter at {}", PILE[(ls.pile_level as usize).min(2)].0),
+                &format!("输入 {d_items:.2} 个/秒，超过 {} 级的集装分拣器（白爪）", PILE[(ls.pile_level as usize).min(2)].0),
+            ),
+            "",
+        ));
     }
     let mut outputs = vec![];
     for (i, o) in &outs {
@@ -1491,12 +1606,21 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
         let tier = sorter_tier(sized_for, 1.0, false, ls);
         let pile = PILE[(ls.pile_level as usize).min(2)];
         if tier == "pile" && pile.1 < sized_for - EPS {
-            notes.push(Note::fail(format!("{}: output {sized_for:.2} items/s exceeds a pile sorter at {}", data.item_name(i), pile.0), ""));
+            notes.push(Note::fail(
+                tr(
+                    &format!("{}: output {sized_for:.2} items/s exceeds a pile sorter at {}", data.item_name(i), pile.0),
+                    &format!("{}：产出 {sized_for:.2} 个/秒，超过 {} 级的集装分拣器（白爪）", data.item_name(i), pile.0),
+                ),
+                "",
+            ));
         }
         let full_at = ((capacity + EPS) / o).floor().min(u32::MAX as f64) as u32;
         if full_at < per_line {
             notes.push(Note::info(
-                format!("{}: the single-stack output belt is full after {full_at} machines; later ones need pile sorters (switch early)", data.item_name(i)),
+                tr(
+                    &format!("{}: the single-stack output belt is full after {full_at} machines; later ones need pile sorters (switch early)", data.item_name(i)),
+                    &format!("{}：单组输出带在 {full_at} 台机器之后就满了；后面的要用集装分拣器（白爪），请提前切换", data.item_name(i)),
+                ),
                 "BV1iQrKYoEoy 34:12",
             ));
         }
@@ -1514,7 +1638,7 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
         lp_estimate: lp_per * machines as f64,
     };
     if !s.mixed_belts {
-        notes.push(Note::info("the solver did not cost sorters as mixed belts (Sidebar: mixed input belts)".into(), ""));
+        notes.push(Note::info(tr("the solver did not cost sorters as mixed belts (Sidebar: mixed input belts)", "求解器没有按混带计分拣器的成本（侧栏：混合输入带）"), ""));
     }
     // coaters (§2.10): on each refill / feed branch, before it joins the belt
     if let (true, Some(e)) = (mode.sprayed, effect) {
@@ -1530,14 +1654,17 @@ fn layout_recipe_once(data: &GameData, s: &PlanSettings, r: &Recipe, pr: &PlanRe
             proliferator_per_s: sprays / e.sprays.unwrap_or(1.0).max(1.0),
             proliferator: data.item_name(&e.item),
         });
-        notes.push(Note::info("spray coaters on the refill branches, before they join, so only new items are sprayed".into(), "BV11R2BYkExW 39:48"));
+        notes.push(Note::info(
+            tr("spray coaters on the refill branches, before they join, so only new items are sprayed", "喷涂机装在补料支路上、并入主带之前，这样只喷新补进去的物品"),
+            "BV11R2BYkExW 39:48",
+        ));
     }
     for v in &lay.trace.violations {
         let mut v = v.clone();
         for (i, x) in lay.inputs.iter().enumerate() {
-            v = v.replace(&format!("item {i} "), &format!("{} ", x.name));
+            v = v.replace(&format!("item {i} "), &format!("{} ", x.name)).replace(&format!("物品 {i} "), &format!("{} ", x.name));
         }
-        notes.push(Note::warn(format!("simulator: {v}"), ""));
+        notes.push(Note::warn(tr(&format!("simulator: {v}"), &format!("模拟器：{v}")), ""));
     }
     lay.status = if notes.iter().any(|n| n.level == "fail") || lay.status == "fail" {
         "fail"

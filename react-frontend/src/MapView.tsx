@@ -3,7 +3,8 @@
 // mine and process, belts / pipes per grid link, and rail lines between candidate hubs; a p sweep over the number of
 // open hubs runs in a worker on highs-js. Drawn as a plain vector map from node coordinates (no game map images).
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fmt, type GameData, type Plan } from './solver'
+import { dn, fmt, type GameData, type Plan } from './solver'
+import { t } from './i18n'
 import { Icon } from './Icon'
 import { haulCosts, stackOf, thresholdBelts, type GeoNode, type SitesDoc, type Summary } from './geo/model.ts'
 import type { SweepEvent, SweepMeta, SweepOptions, SweepRow } from './geo/sweep.ts'
@@ -38,8 +39,8 @@ interface RunState {
 let last: RunState | null = null
 const solKey = (fmult: number, p: number) => `${fmult}|${p}`
 
-const statusText = (s: string) => (s === 'Optimal' ? 'proven optimal' : s === 'timeLimit' || s === 'interrupted' ? 'time limit' : s === 'stuck' ? 'solver stuck, skipped'
-  : s === 'rejected' ? 'solution failed the re-check, dropped' : s)
+const statusText = (s: string) => (s === 'Optimal' ? t('proven optimal', '已证最优') : s === 'timeLimit' || s === 'interrupted' ? t('time limit', '达到时限') : s === 'stuck' ? t('solver stuck, skipped', '求解卡住,已跳过')
+  : s === 'rejected' ? t('solution failed the re-check, dropped', '解未通过复核,已丢弃') : s)
 const km = (m: number) => `${fmt(m / 1000, 1)} km`
 const oe = (x: number | null | undefined) => (x === null || x === undefined ? '—' : fmt(x, 0))
 
@@ -64,8 +65,8 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
     supplied: p.recipes === 'plan' && Object.keys(suppliedIn).length ? suppliedIn : null,
   }
   const key = JSON.stringify(opts)
-  const itemName = (id: string) => data.items.find(i => i.id === id)?.name ?? id
-  const recipeName = (id: string) => data.recipes.find(r => r.id === id)?.name ?? id
+  const itemName = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)
+  const recipeName = (id: string) => dn(data.recipes.find(r => r.id === id), data.game, id)
 
   const runRef = useRef(run)
   runRef.current = run
@@ -97,7 +98,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
     if (!worker.current || !r || !s) return
     const now = performance.now()
     if (s.step && now - s.since > (s.limit + 20) * 1000) skipStuck(r, s.step)
-    else if (now - lastMsg.current > (s.limit + 60) * 1000) stop('The solver stopped responding and was stopped.')
+    else if (now - lastMsg.current > (s.limit + 60) * 1000) stop(t('The solver stopped responding and was stopped.', '求解器无响应,已停止。'))
   }
   useEffect(() => {
     if (!active) return
@@ -108,7 +109,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
   const skipStuck = (r: RunState, step: { fmult: number; p: number }) => {
     worker.current?.terminate()
     worker.current = null
-    if (++restarts.current > 3) { stop('The solver got stuck repeatedly; the sweep was stopped.'); return }
+    if (++restarts.current > 3) { stop(t('The solver got stuck repeatedly; the sweep was stopped.', '求解器多次卡住,扫描已停止。')); return }
     const envOf = (rows: SweepRow[]) => rows.filter(x => x.fmult === 1 && x.obj !== null).reduce<number | null>((m, x) => (m === null ? x.obj! : Math.min(m, x.obj!)), null)
     const stuck: SweepRow = {
       fmult: step.fmult, F: (r.meta?.F ?? 0) * step.fmult, p: step.p, obj: null, bound: null, gap: Infinity, status: 'stuck',
@@ -117,7 +118,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
     const rows = [...r.rows, stuck, ...(step.fmult === 1 && step.p === 0 ? [{ ...stuck, p: 1, copied: true }] : [])]
     const sols = new Map(r.sols)
     for (const x of rows) if (!sols.has(solKey(x.fmult, x.p))) sols.set(solKey(x.fmult, x.p), null)
-    const next: RunState = { ...r, rows, sols, solving: { label: 'restarting', step: null, since: performance.now(), limit: r.solving!.limit, bound: null, best: null } }
+    const next: RunState = { ...r, rows, sols, solving: { label: t('restarting', '重启'), step: null, since: performance.now(), limit: r.solving!.limit, bound: null, best: null } }
     setRun(next)
     launch({ ...JSON.parse(r.key) as SweepOptions, skip: rows.map(x => solKey(x.fmult, x.p)), envStart: envOf(rows) })
   }
@@ -125,7 +126,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
   const start = () => {
     restarts.current = 0
     setPick(null); setSite(null)
-    setRun({ key, rows: [], sols: new Map(), meta: null, solving: { label: 'loading HiGHS', step: null, since: performance.now(), limit: p.timeLimit, bound: null, best: null }, done: false, stopped: false, error: null, ms: 0 })
+    setRun({ key, rows: [], sols: new Map(), meta: null, solving: { label: t('loading HiGHS', '加载 HiGHS'), step: null, since: performance.now(), limit: p.timeLimit, bound: null, best: null }, done: false, stopped: false, error: null, ms: 0 })
     launch(opts)
   }
 
@@ -162,7 +163,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
       w.terminate()
       if (worker.current !== w) return
       worker.current = null
-      setRun(r => (r ? { ...r, solving: null, done: true, error: ev.message ? `The solver worker failed: ${ev.message}` : "The solver worker could not be loaded (offline, or the page is older than the site: reload it)." } : r))
+      setRun(r => (r ? { ...r, solving: null, done: true, error: ev.message ? t(`The solver worker failed: ${ev.message}`, `求解线程出错:${ev.message}`) : t("The solver worker could not be loaded (offline, or the page is older than the site: reload it).", '求解线程无法加载 (离线,或页面比站点旧:请刷新)。') } : r))
     }
     w.postMessage({
       game: {
@@ -170,7 +171,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
         recipes: data.recipes.map(r => ({ id: r.id, alt: r.alt, building: r.building, in: r.in, out: r.out })),
         resources: data.resources.map(r => ({ item: r.item })),
       },
-      opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, i.name])) },
+      opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, dn(i, data.game, i.name)])) },
     })
   }
 
@@ -199,42 +200,42 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
 
   return (
     <div className="geo">
-      <p className="hint">Where to mine and process this plan on the Satisfactory map: its targets are needed at the base site, ore comes from the nodes of 39 one-km grid sites, products travel by belt or pipe between neighbouring sites or by train between candidate hubs. The solver tries 0 … p hubs and keeps the cheapest plan (one-time build cost in raw-ore equivalents, OE). Machines are fractional here; the Plan tab rounds them.</p>
+      <p className="hint">{t('Where to mine and process this plan on the Satisfactory map: its targets are needed at the base site, ore comes from the nodes of 39 one-km grid sites, products travel by belt or pipe between neighbouring sites or by train between candidate hubs. The solver tries 0 … p hubs and keeps the cheapest plan (one-time build cost in raw-ore equivalents, OE). Machines are fractional here; the Plan tab rounds them.', '在幸福工厂地图上,这个方案该在哪里开采和加工:目标产物送到基地站点,原矿来自 39 个 1 km 网格站点的矿点,产品在相邻站点间走传送带或管道,在候选枢纽间走火车。求解器尝试 0 … p 个枢纽,保留成本最低的方案 (一次性建造成本,以原矿当量 OE 计)。这里的机器数是小数,方案页会取整。')}</p>
       <div className="geoctl">
-        <label>Base site
-          <select aria-label="Base site" value={p.base} onChange={e => setP({ ...p, base: e.target.value })}>
-            {GRID.map(s => <option key={s.id} value={s.id}>{s.id}{SITES.hubs.some(h => h.site === s.id) ? ' (hub)' : ''}</option>)}
+        <label>{t('Base site', '基地站点')}
+          <select aria-label={t('Base site', '基地站点')} value={p.base} onChange={e => setP({ ...p, base: e.target.value })}>
+            {GRID.map(s => <option key={s.id} value={s.id}>{s.id}{SITES.hubs.some(h => h.site === s.id) ? t(' (hub)', ' (枢纽)') : ''}</option>)}
           </select></label>
-        <label>Tier
-          <select aria-label="Tier" value={p.tier} onChange={e => setP({ ...p, tier: +e.target.value })}>
-            {[0, 2, 4, 5, 6, 7, 8, 9].map(t => <option key={t} value={t}>T{t}{t < 6 ? ' (no rail)' : ''}</option>)}
+        <label>{t('Tier', '层级')}
+          <select aria-label={t('Tier', '层级')} value={p.tier} onChange={e => setP({ ...p, tier: +e.target.value })}>
+            {[0, 2, 4, 5, 6, 7, 8, 9].map(tt => <option key={tt} value={tt}>T{tt}{tt < 6 ? t(' (no rail)', ' (无铁路)') : ''}</option>)}
           </select></label>
-        <label>Hubs up to
-          <select aria-label="Hubs up to" value={p.pmax} onChange={e => setP({ ...p, pmax: +e.target.value })}>
+        <label>{t('Hubs up to', '枢纽上限')}
+          <select aria-label={t('Hubs up to', '枢纽上限')} value={p.pmax} onChange={e => setP({ ...p, pmax: +e.target.value })}>
             {[2, 3, 4, 6, 8, 12].map(n => <option key={n} value={n}>{n}</option>)}
           </select></label>
-        <label>Player work
-          <select aria-label="Player work" value={p.workKm} onChange={e => setP({ ...p, workKm: +e.target.value })}>
+        <label>{t('Player work', '玩家人工')}
+          <select aria-label={t('Player work', '玩家人工')} value={p.workKm} onChange={e => setP({ ...p, workKm: +e.target.value })}>
             {[0, 250, 1000].map(n => <option key={n} value={n}>{n} OE/km</option>)}
           </select></label>
-        <label>Time per solve
-          <select aria-label="Time per solve" value={p.timeLimit} onChange={e => setP({ ...p, timeLimit: +e.target.value })}>
+        <label>{t('Time per solve', '每次求解时间')}
+          <select aria-label={t('Time per solve', '每次求解时间')} value={p.timeLimit} onChange={e => setP({ ...p, timeLimit: +e.target.value })}>
             {[10, 30, 60, 120].map(n => <option key={n} value={n}>{n} s</option>)}
           </select></label>
-        <label>Recipes
-          <select aria-label="Recipes" value={p.recipes} onChange={e => setP({ ...p, recipes: e.target.value as GeoPrefs['recipes'] })}>
-            <option value="plan">this plan's</option><option value="base">base recipes</option>
+        <label>{t('Recipes', '配方')}
+          <select aria-label={t('Recipes', '配方')} value={p.recipes} onChange={e => setP({ ...p, recipes: e.target.value as GeoPrefs['recipes'] })}>
+            <option value="plan">{t("this plan's", '本方案的')}</option><option value="base">{t('base recipes', '基础配方')}</option>
           </select></label>
-        {run?.solving ? <button onClick={() => stop()}>Stop</button>
-          : <button className="primary" disabled={noTargets} onClick={start}>{current && run?.rows.length ? 'Solve again' : 'Plan sites'}</button>}
+        {run?.solving ? <button onClick={() => stop()}>{t('Stop', '停止')}</button>
+          : <button className="primary" disabled={noTargets} onClick={start}>{current && run?.rows.length ? t('Solve again', '重新求解') : t('Plan sites', '规划选址')}</button>}
       </div>
-      {noTargets && <p className="muted">Add a target to the plan first.</p>}
-      {supplied && <p className="note small">Supplied inputs ({Object.keys(suppliedIn).map(itemName).join(', ')}) are taken at the base site, free, up to the rate the plan uses. Choose “base recipes” to make everything from ore.</p>}
-      {run && !current && run.rows.length > 0 && <p className="note small">The result below is for other inputs (plan or map settings changed). Use “Plan sites” to solve again.</p>}
-      {run?.solving && <p className="solving" role="status">Solving {run.solving.label}: {fmt((performance.now() - run.solving.since) / 1000, 0)} s of ≤ {run.solving.limit} s{run.solving.best !== null ? ` · best ${oe(run.solving.best)}` : ''}{run.solving.bound !== null ? ` · bound ${oe(run.solving.bound)}` : ''}</p>}
+      {noTargets && <p className="muted">{t('Add a target to the plan first.', '请先给方案添加一个目标。')}</p>}
+      {supplied && <p className="note small">{t(`Supplied inputs (${Object.keys(suppliedIn).map(itemName).join(', ')}) are taken at the base site, free, up to the rate the plan uses. Choose “base recipes” to make everything from ore.`, `外部供应的输入 (${Object.keys(suppliedIn).map(itemName).join('、')}) 在基地站点免费取用,上限为方案用量。选“基础配方”则全部从原矿做起。`)}</p>}
+      {run && !current && run.rows.length > 0 && <p className="note small">{t('The result below is for other inputs (plan or map settings changed). Use “Plan sites” to solve again.', '下面的结果对应其他输入 (方案或地图设置已更改)。点“规划选址”重新求解。')}</p>}
+      {run?.solving && <p className="solving" role="status">{t(`Solving ${run.solving.label}: ${fmt((performance.now() - run.solving.since) / 1000, 0)} s of ≤ ${run.solving.limit} s`, `求解中 ${run.solving.label}:${fmt((performance.now() - run.solving.since) / 1000, 0)} 秒 / 上限 ${run.solving.limit} 秒`)}{run.solving.best !== null ? t(` · best ${oe(run.solving.best)}`, ` · 当前最优 ${oe(run.solving.best)}`) : ''}{run.solving.bound !== null ? t(` · bound ${oe(run.solving.bound)}`, ` · 下界 ${oe(run.solving.bound)}`) : ''}</p>}
       {run?.error && <p className="warn small">{run.error}</p>}
-      {run?.stopped && <p className="muted small">Stopped; the points solved so far are kept.</p>}
-      {unsolved.length > 0 && <p className="warn small">Not solved: {unsolved.map(r => `${r.fmult === 1 ? '' : `F ${r.fmult}×, `}p ≤ ${r.p} (${statusText(r.status)})`).join('; ')}. The best plan is the best of the solved points only; a longer time per solve may find more.</p>}
+      {run?.stopped && <p className="muted small">{t('Stopped; the points solved so far are kept.', '已停止;已求解的点会保留。')}</p>}
+      {unsolved.length > 0 && <p className="warn small">{t(`Not solved: ${unsolved.map(r => `${r.fmult === 1 ? '' : `F ${r.fmult}×, `}p ≤ ${r.p} (${statusText(r.status)})`).join('; ')}. The best plan is the best of the solved points only; a longer time per solve may find more.`, `未求解:${unsolved.map(r => `${r.fmult === 1 ? '' : `F ${r.fmult}×, `}p ≤ ${r.p} (${statusText(r.status)})`).join(';')}。最优方案只取自已求解的点;加长每次求解时间可能找到更多。`)}</p>}
 
       <div className="geogrid">
         <div className="geomap">
@@ -242,23 +243,23 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           <Legend sol={sol} itemName={itemName} />
         </div>
         <div className="geoside">
-          {!sol && !run?.solving && !run?.stopped && <p className="muted">{run?.done && pick ? 'No plan at this point.' : current && run?.done ? 'No plan found.' : 'Choose the base site and press “Plan sites”.'}</p>}
+          {!sol && !run?.solving && !run?.stopped && <p className="muted">{run?.done && pick ? t('No plan at this point.', '这个点没有方案。') : current && run?.done ? t('No plan found.', '没有找到方案。') : t('Choose the base site and press “Plan sites”.', '选好基地站点,再点“规划选址”。')}</p>}
           {sol && shownRow && meta && <SummaryPanel sol={sol} row={shownRow} beltOnly={beltOnly ?? null} meta={meta} itemName={itemName} />}
           {f1.length > 0 && <>
-            <h2>Cost by number of hubs</h2>
+            <h2>{t('Cost by number of hubs', '按枢纽数的成本')}</h2>
             <SweepChart rows={f1} shown={shownKey} onPick={r => setPick(solKey(r.fmult, r.p))} />
-            {noRail ? <p className="hint">Trains are not unlocked at tier {meta!.tier}: there is one plan, by belt and pipe.</p>
-              : <p className="hint">Envelope cost(p) = cheapest plan with at most p open hubs; filled dots are proven optimal, hollow ones hit the time limit; the band is HiGHS's lower bound. p = 1 equals p = 0 (one hub cannot run a line). Tap a dot to show that plan.</p>}
-            {!noRail && <table className="small"><thead><tr><th>Hub cost F</th><th className="num">best p*</th><th>proof</th></tr></thead>
+            {noRail ? <p className="hint">{t(`Trains are not unlocked at tier ${meta!.tier}: there is one plan, by belt and pipe.`, `层级 ${meta!.tier} 还没解锁火车:只有一种方案,用传送带和管道。`)}</p>
+              : <p className="hint">{t("Envelope cost(p) = cheapest plan with at most p open hubs; filled dots are proven optimal, hollow ones hit the time limit; the band is HiGHS's lower bound. p = 1 equals p = 0 (one hub cannot run a line). Tap a dot to show that plan.", '包络线 cost(p) = 最多开 p 个枢纽时的最便宜方案;实心点已证最优,空心点达到时限;色带是 HiGHS 的下界。p = 1 等同 p = 0 (一个枢纽跑不了一条线)。点一个点查看对应方案。')}</p>}
+            {!noRail && <table className="small"><thead><tr><th>{t('Hub cost F', '枢纽成本 F')}</th><th className="num">{t('best p*', '最优 p*')}</th><th>{t('proof', '证明')}</th></tr></thead>
               <tbody>{sens.map(s => (
                 <tr key={s.fm} className={pick === solKey(s.fm, p.pmax) && s.fm !== 1 ? 'on' : ''}>
-                  <td>{s.fm}× {meta ? `(${fmt(meta.F * s.fm, 0)} OE)` : ''}{s.fm !== 1 && s.solved && <button className="linkbtn" onClick={() => setPick(solKey(s.fm, p.pmax))}>show</button>}</td>
-                  <td className="num">{s.p ?? (s.n && !run?.solving ? '—' : '…')}</td><td>{s.n ? (s.proven ? 'proven' : s.solved ? 'not proven' : 'not solved') : run?.solving ? 'pending' : '—'}</td>
+                  <td>{s.fm}× {meta ? `(${fmt(meta.F * s.fm, 0)} OE)` : ''}{s.fm !== 1 && s.solved && <button className="linkbtn" onClick={() => setPick(solKey(s.fm, p.pmax))}>{t('show', '查看')}</button>}</td>
+                  <td className="num">{s.p ?? (s.n && !run?.solving ? '—' : '…')}</td><td>{s.n ? (s.proven ? t('proven', '已证明') : s.solved ? t('not proven', '未证明') : t('not solved', '未求解')) : run?.solving ? t('pending', '待求解') : '—'}</td>
                 </tr>))}</tbody></table>}
           </>}
           {sol && site && <SiteDetail id={site} sol={sol} itemName={itemName} recipeName={recipeName} onBase={() => setP({ ...p, base: site })} isBase={site === (meta?.base ?? p.base)} />}
           {sol && meta && <Links sol={sol} meta={meta} itemName={itemName} />}
-          {run?.done && meta && <p className="hint">Model: {fmt(meta.n_vars, 0)} variables ({meta.n_int} integer), {fmt(meta.n_rows, 0)} rows, {meta.recipes.length} recipes; {meta.hubs.length} candidate hubs; Mk.{meta.belt_tier} belts ({meta.belt_cap}/min, {fmt(meta.belt_oe_km, 0)} OE/km), double track {fmt(meta.track_oe_km, 0)} OE/km. Sweep {fmt(run.ms / 1000, 0)} s.</p>}
+          {run?.done && meta && <p className="hint">{t(`Model: ${fmt(meta.n_vars, 0)} variables (${meta.n_int} integer), ${fmt(meta.n_rows, 0)} rows, ${meta.recipes.length} recipes; ${meta.hubs.length} candidate hubs; Mk.${meta.belt_tier} belts (${meta.belt_cap}/min, ${fmt(meta.belt_oe_km, 0)} OE/km), double track ${fmt(meta.track_oe_km, 0)} OE/km. Sweep ${fmt(run.ms / 1000, 0)} s.`, `模型:${fmt(meta.n_vars, 0)} 个变量 (${meta.n_int} 个整数),${fmt(meta.n_rows, 0)} 行,${meta.recipes.length} 个配方;${meta.hubs.length} 个候选枢纽;Mk.${meta.belt_tier} 传送带 (${meta.belt_cap}/min,${fmt(meta.belt_oe_km, 0)} OE/km),双轨 ${fmt(meta.track_oe_km, 0)} OE/km。扫描耗时 ${fmt(run.ms / 1000, 0)} 秒。`)}</p>}
         </div>
       </div>
     </div>
@@ -274,28 +275,28 @@ function SummaryPanel({ sol, row, beltOnly, meta, itemName }: { sol: Summary; ro
   const machines = Object.values(sol.machines_total).reduce((s, n) => s + n, 0)
   const saving = beltOnly?.obj && row.obj !== null ? (beltOnly.obj - row.obj) / beltOnly.obj : null
   const cp = sol.cost_parts
-  const parts: [string, number | undefined][] = [['Machines', cp.x], ['Mining + feed belts', cp.e], ['Belts', cp.b], ['Pipes', cp.bp], ['Hubs (F)', cp.h], ['Track', cp.u], ['Locomotives', cp.z], ['Cars + platforms', (cp.c ?? 0) + (cp.cf ?? 0)]]
+  const parts: [string, number | undefined][] = [[t('Machines', '机器'), cp.x], [t('Mining + feed belts', '开采 + 进料传送带'), cp.e], [t('Belts', '传送带'), cp.b], [t('Pipes', '管道'), cp.bp], [t('Hubs (F)', '枢纽 (F)'), cp.h], [t('Track', '轨道'), cp.u], [t('Locomotives', '机车'), cp.z], [t('Cars + platforms', '车厢 + 站台'), (cp.c ?? 0) + (cp.cf ?? 0)]]
   return (
     <div className="geosum">
       <div className="cards">
-        <div className="card"><span className="big">{sol.hubs.length}</span><span className="muted">train hubs</span></div>
-        <div className="card"><span className="big">{fmt(beltLen / 1000, 1)}<span className="unit"> km</span></span><span className="muted">belts ({sol.belt_count})</span></div>
-        <div className="card"><span className="big">{fmt(track / 1000, 1)}<span className="unit"> km</span></span><span className="muted">rail ({cars} cars)</span></div>
-        <div className="card"><span className="big">{fmt((row.obj ?? 0) / 1000, 1)}<span className="unit">k OE</span></span><span className="muted">build cost</span></div>
+        <div className="card"><span className="big">{sol.hubs.length}</span><span className="muted">{t('train hubs', '火车枢纽')}</span></div>
+        <div className="card"><span className="big">{fmt(beltLen / 1000, 1)}<span className="unit"> km</span></span><span className="muted">{t(`belts (${sol.belt_count})`, `传送带 (${sol.belt_count})`)}</span></div>
+        <div className="card"><span className="big">{fmt(track / 1000, 1)}<span className="unit"> km</span></span><span className="muted">{t(`rail (${cars} cars)`, `铁路 (${cars} 节车厢)`)}</span></div>
+        <div className="card"><span className="big">{fmt((row.obj ?? 0) / 1000, 1)}<span className="unit">k OE</span></span><span className="muted">{t('build cost', '建造成本')}</span></div>
       </div>
       <p className="small">
-        {row.fmult === 1 ? `p ≤ ${row.p}` : `F ${row.fmult}×, p ≤ ${row.p}`}: <b>{statusText(row.status)}</b>{row.status !== 'Optimal' && row.gap < 1 ? `, within ${fmt(row.gap * 100, 1)} % of the bound` : ''}.
-        {row.fmult === 1 && sol.hubs.length === 0 && row.p > 0 && ' No train pays off in this plan: it uses belts and pipes only.'}
-        {saving !== null && sol.hubs.length > 0 && (saving > 1e-6 ? ` Rail saves ${fmt(saving * 100, 1)} % against the best belts-only plan found (${oe(beltOnly!.obj)} OE${beltOnly!.status === 'Optimal' ? '' : ', not proven optimal'}).`
-          : ` Not cheaper than the best belts-only plan found (${oe(beltOnly!.obj)} OE).`)}
-        {sol.hubs.length > 0 && ` Hubs ${sol.hubs.join(', ')}.`} {fmt(machines, 1)} machines, {fmt(sol.rail_flow_items_per_min, 0)}/min by rail{pipeLen > 0 ? `, ${fmt(pipeLen / 1000, 1)} km of pipes (${sol.pipes.reduce((s, b) => s + b.n, 0)})` : ''}.
+        {row.fmult === 1 ? `p ≤ ${row.p}` : `F ${row.fmult}×, p ≤ ${row.p}`}: <b>{statusText(row.status)}</b>{row.status !== 'Optimal' && row.gap < 1 ? t(`, within ${fmt(row.gap * 100, 1)} % of the bound`, `,与下界相差 ${fmt(row.gap * 100, 1)} %`) : ''}{t('.', '。')}
+        {row.fmult === 1 && sol.hubs.length === 0 && row.p > 0 && t(' No train pays off in this plan: it uses belts and pipes only.', ' 这个方案里火车不划算:只用传送带和管道。')}
+        {saving !== null && sol.hubs.length > 0 && (saving > 1e-6 ? t(` Rail saves ${fmt(saving * 100, 1)} % against the best belts-only plan found (${oe(beltOnly!.obj)} OE${beltOnly!.status === 'Optimal' ? '' : ', not proven optimal'}).`, ` 铁路比找到的最佳纯传送带方案省 ${fmt(saving * 100, 1)} % (${oe(beltOnly!.obj)} OE${beltOnly!.status === 'Optimal' ? '' : ',未证最优'})。`)
+          : t(` Not cheaper than the best belts-only plan found (${oe(beltOnly!.obj)} OE).`, ` 不比找到的最佳纯传送带方案便宜 (${oe(beltOnly!.obj)} OE)。`))}
+        {sol.hubs.length > 0 && t(` Hubs ${sol.hubs.join(', ')}.`, ` 枢纽 ${sol.hubs.join('、')}。`)} {t(`${fmt(machines, 1)} machines, ${fmt(sol.rail_flow_items_per_min, 0)}/min by rail${pipeLen > 0 ? `, ${fmt(pipeLen / 1000, 1)} km of pipes (${sol.pipes.reduce((s, b) => s + b.n, 0)})` : ''}.`, `${fmt(machines, 1)} 台机器,铁路运量 ${fmt(sol.rail_flow_items_per_min, 0)}/min${pipeLen > 0 ? `,管道 ${fmt(pipeLen / 1000, 1)} km (${sol.pipes.reduce((s, b) => s + b.n, 0)} 段)` : ''}。`)}
       </p>
-      {sol.cbar_binding && sol.cbar_binding.length > 0 && <p className="warn small">The car bound is reached on {sol.cbar_binding.join(', ')}; the plan may need more cars than the model allowed.</p>}
+      {sol.cbar_binding && sol.cbar_binding.length > 0 && <p className="warn small">{t(`The car bound is reached on ${sol.cbar_binding.join(', ')}; the plan may need more cars than the model allowed.`, `${sol.cbar_binding.join('、')} 的车厢数达到上限;实际方案可能需要比模型允许的更多车厢。`)}</p>}
       <table className="small"><tbody>
         {parts.filter(([, v]) => v).map(([n, v]) => <tr key={n}><td>{n}</td><td className="num">{oe(v)}</td></tr>)}
-        <tr><td><b>Total</b></td><td className="num"><b>{oe(row.obj)}</b></td></tr>
+        <tr><td><b>{t('Total', '合计')}</b></td><td className="num"><b>{oe(row.obj)}</b></td></tr>
       </tbody></table>
-      {Object.keys(sol.extraction).length > 0 && <p className="hint">Mined: {Object.entries(totalsByItem(sol.extraction)).map(([k, v]) => `${itemName(k)} ${fmt(v, 0)}`).join(' · ')} /min. Tier {meta.tier}.</p>}
+      {Object.keys(sol.extraction).length > 0 && <p className="hint">{t(`Mined: ${Object.entries(totalsByItem(sol.extraction)).map(([k, v]) => `${itemName(k)} ${fmt(v, 0)}`).join(' · ')} /min. Tier ${meta.tier}.`, `开采:${Object.entries(totalsByItem(sol.extraction)).map(([k, v]) => `${itemName(k)} ${fmt(v, 0)}`).join(' · ')} /min。层级 ${meta.tier}。`)}</p>}
     </div>
   )
 }
@@ -313,27 +314,27 @@ function Links({ sol, meta, itemName }: { sol: Summary; meta: SweepMeta; itemNam
     ...sol.lines.flatMap(l => Object.entries(l.dirs).filter(([, d]) => d.cars + d.fluid_cars > 0).map(([dir, d]) => {
       const q = Object.values(d.flow).reduce((s, v) => s + v, 0)
       const [belt] = haulCosts(meta, q, effStack(d.flow), l.length_m)
-      return { key: dir, mode: 'rail', dir: dir.replace('->', ' → '), n: `${d.cars + d.fluid_cars} cars`, len: l.length_m, q, flow: d.flow, note: `belts would cost ${oe(belt)} OE` }
+      return { key: dir, mode: 'rail', dir: dir.replace('->', ' → '), n: t(`${d.cars + d.fluid_cars} cars`, `${d.cars + d.fluid_cars} 节车厢`), len: l.length_m, q, flow: d.flow, note: t(`belts would cost ${oe(belt)} OE`, `用传送带要 ${oe(belt)} OE`) }
     })),
     ...sol.belts.map(b => {
       const q = Object.values(b.flow).reduce((s, v) => s + v, 0)
       const th = thresholdBelts(meta, effStack(b.flow), b.length_m)
-      return { key: `b${b.a}${b.b}`, mode: 'belt', dir: `${b.a} → ${b.b}`, n: `${b.n} × Mk.${meta.belt_tier}`, len: b.length_m, q, flow: b.flow, note: th ? `rail pays from ${fmt(th * meta.belt_cap, 0)}/min` : 'rail never pays' }
+      return { key: `b${b.a}${b.b}`, mode: 'belt', dir: `${b.a} → ${b.b}`, n: `${b.n} × Mk.${meta.belt_tier}`, len: b.length_m, q, flow: b.flow, note: th ? t(`rail pays from ${fmt(th * meta.belt_cap, 0)}/min`, `流量 ≥ ${fmt(th * meta.belt_cap, 0)}/min 时铁路划算`) : t('rail never pays', '铁路始终不划算') }
     }),
-    ...sol.pipes.map(b => ({ key: `p${b.a}${b.b}`, mode: 'pipe', dir: `${b.a} → ${b.b}`, n: `${b.n} pipes`, len: b.length_m, q: Object.values(b.flow).reduce((s, v) => s + v, 0), flow: b.flow, note: '' })),
+    ...sol.pipes.map(b => ({ key: `p${b.a}${b.b}`, mode: 'pipe', dir: `${b.a} → ${b.b}`, n: t(`${b.n} pipes`, `${b.n} 段管道`), len: b.length_m, q: Object.values(b.flow).reduce((s, v) => s + v, 0), flow: b.flow, note: '' })),
   ]
-  if (!rows.length) return <p className="hint">No transport between sites: everything is made where it is needed.</p>
+  if (!rows.length) return <p className="hint">{t('No transport between sites: everything is made where it is needed.', '站点之间没有运输:所有东西都在用到的地方就地生产。')}</p>
   return (
     <>
-      <h2>Links</h2>
-      <div className="tablewrap"><table className="small geolinks"><thead><tr><th>Link</th><th>Mode</th><th className="num">/min</th><th className="num">Length</th></tr></thead>
+      <h2>{t('Links', '连接')}</h2>
+      <div className="tablewrap"><table className="small geolinks"><thead><tr><th>{t('Link', '连接')}</th><th>{t('Mode', '方式')}</th><th className="num">/min</th><th className="num">{t('Length', '长度')}</th></tr></thead>
         <tbody>{rows.map(r => (
           <tr key={r.key}>
             <td><div>{r.dir}</div><div className="muted">{flowText(r.flow)}</div></td>
             <td><div className={`mode ${r.mode}`}>{r.n}</div>{r.note && <div className="muted">{r.note}</div>}</td>
             <td className="num">{fmt(r.q, 0)}</td><td className="num">{km(r.len)}</td>
           </tr>))}</tbody></table></div>
-      <p className="hint">Break-even per belt link: the flow above which one rail line of that length would be cheaper on its own (two hubs, track, train, cars), same costs as the solver (report §8.5).</p>
+      <p className="hint">{t('Break-even per belt link: the flow above which one rail line of that length would be cheaper on its own (two hubs, track, train, cars), same costs as the solver (report §8.5).', '每条传送带连接的盈亏平衡点:流量高于它时,同样长度的一条独立铁路线 (两个枢纽、轨道、火车、车厢) 更便宜,成本与求解器一致 (报告 §8.5)。')}</p>
     </>
   )
 }
@@ -348,12 +349,12 @@ function SiteDetail({ id, sol, itemName, recipeName, onBase, isBase }: { id: str
   const list = (t: Record<string, number>) => Object.entries(t).sort((a, b) => b[1] - a[1]).map(([k, v]) => <li key={k}><Icon id={k} size={16} />{itemName(k)} <b>{fmt(v, 1)}</b></li>)
   return (
     <section className="geosite">
-      <h2>Site {id}{isBase ? ' · base' : ''}</h2>
-      <p className="small muted">{s.nodes.length} nodes, mean feed belt {km(s.feed_dist_mean_m)}{sol.hubs.includes(id) ? ', train hub' : ''}. {!isBase && <button className="linkbtn" onClick={onBase}>Make this the base</button>}</p>
-      {Object.keys(mach).length > 0 && <><b className="small">Machines</b><ul className="chips small">{Object.entries(mach).map(([r, n]) => <li key={r}>{recipeName(r)} <b>{fmt(n, 2)}</b></li>)}</ul></>}
-      {Object.keys(ext).length > 0 && <><b className="small">Mined /min</b><ul className="chips small">{list(ext)}</ul></>}
-      {Object.keys(inn).length > 0 && <><b className="small">In /min</b><ul className="chips small">{list(inn)}</ul></>}
-      {Object.keys(out).length > 0 && <><b className="small">Out /min</b><ul className="chips small">{list(out)}</ul></>}
+      <h2>{t('Site', '站点')} {id}{isBase ? t(' · base', ' · 基地') : ''}</h2>
+      <p className="small muted">{t(`${s.nodes.length} nodes, mean feed belt ${km(s.feed_dist_mean_m)}${sol.hubs.includes(id) ? ', train hub' : ''}.`, `${s.nodes.length} 个矿点,平均进料传送带 ${km(s.feed_dist_mean_m)}${sol.hubs.includes(id) ? ',火车枢纽' : ''}。`)} {!isBase && <button className="linkbtn" onClick={onBase}>{t('Make this the base', '设为基地')}</button>}</p>
+      {Object.keys(mach).length > 0 && <><b className="small">{t('Machines', '机器')}</b><ul className="chips small">{Object.entries(mach).map(([r, n]) => <li key={r}>{recipeName(r)} <b>{fmt(n, 2)}</b></li>)}</ul></>}
+      {Object.keys(ext).length > 0 && <><b className="small">{t('Mined /min', '开采 /min')}</b><ul className="chips small">{list(ext)}</ul></>}
+      {Object.keys(inn).length > 0 && <><b className="small">{t('In /min', '输入 /min')}</b><ul className="chips small">{list(inn)}</ul></>}
+      {Object.keys(out).length > 0 && <><b className="small">{t('Out /min', '输出 /min')}</b><ul className="chips small">{list(out)}</ul></>}
     </section>
   )
 }
@@ -372,7 +373,7 @@ function SweepChart({ rows, shown, onPick }: { rows: SweepRow[]; shown: string |
   const line = pts.map((r, i) => `${i ? 'L' : 'M'}${X(r.p)},${Y(r.envelope!)}`).join(' ')
   const band = [...pts.map(r => `${X(r.p)},${Y(r.envelope!)}`), ...pts.slice().reverse().map(r => `${X(r.p)},${Y(Math.min(r.bound ?? r.envelope!, r.envelope!))}`)].join(' ')
   return (
-    <svg className="sweep" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Build cost by maximum number of hubs">
+    <svg className="sweep" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('Build cost by maximum number of hubs', '按枢纽数上限的建造成本')}>
       <polygon points={band} className="band" />
       {[lo + 0.1 * (hi - lo), (lo + hi) / 2, hi - 0.1 * (hi - lo)].map(v => <g key={v}><line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} className="gridl" /><text x={L - 4} y={Y(v) + 4} textAnchor="end">{fmt(v / 1000, 1)}k</text></g>)}
       <path d={line} className="env" />
@@ -381,7 +382,7 @@ function SweepChart({ rows, shown, onPick }: { rows: SweepRow[]; shown: string |
         return <g key={k} className="pt" onClick={() => onPick(r)}>
           <circle cx={X(r.p)} cy={Y(r.envelope!)} r={k === shown ? 6 : 4} className={r.status === 'Optimal' ? 'proven' : 'open'} />
           <circle cx={X(r.p)} cy={Y(r.envelope!)} r={12} fill="transparent" />
-          <title>{r.obj === null ? `p ≤ ${r.p}: ${statusText(r.status)}` : `p ≤ ${r.p}: ${fmt(r.obj, 0)} OE, ${r.hubs.length} hubs, ${statusText(r.status)}${r.copied ? ' (same as p = 0)' : ''}`}</title>
+          <title>{r.obj === null ? `p ≤ ${r.p}: ${statusText(r.status)}` : `p ≤ ${r.p}: ${fmt(r.obj, 0)} OE, ${r.hubs.length} ${t('hubs', '个枢纽')}, ${statusText(r.status)}${r.copied ? t(' (same as p = 0)', ' (同 p = 0)') : ''}`}</title>
         </g>
       })}
       {ps.map(p => <text key={p} x={X(p)} y={H - 6} textAnchor="middle">{p}</text>)}
@@ -400,7 +401,7 @@ function WorldMap({ sol, hubs, base, site, setSite }: { sol: Summary | null; hub
     return { x1: A.x + dx / d * shrink, y1: A.y + dy / d * shrink, x2: B.x - dx / d * shrink, y2: B.y - dy / d * shrink }
   }
   return (
-    <svg className="worldmap" viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} role="img" aria-label="Map of nodes, sites, belts and rail lines"
+    <svg className="worldmap" viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} role="img" aria-label={t('Map of nodes, sites, belts and rail lines', '矿点、站点、传送带和铁路线地图')}
       onClick={e => { if (e.target === e.currentTarget) setSite(null) }}>
       <defs>
         <marker id="arrow-belt" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="170" markerHeight="170" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" className="m-belt" /></marker>
@@ -412,7 +413,7 @@ function WorldMap({ sol, hubs, base, site, setSite }: { sol: Summary | null; hub
       {grid.filter(g => g <= 3000).map(g => <line key={`h${g}`} y1={g} y2={g} x1={-3246} x2={4253} className="gridl" />)}
       {grid.map(g => <text key={`tx${g}`} x={g} y={-3600} className="axis" textAnchor="middle">{g / 1000}</text>)}
       {grid.filter(g => g <= 3000).map(g => <text key={`ty${g}`} x={-3180} y={g + 40} className="axis">{g / 1000}</text>)}
-      <text x={4200} y={3680} className="axis" textAnchor="end">km · north up</text>
+      <text x={4200} y={3680} className="axis" textAnchor="end">{t('km · north up', 'km · 上为北')}</text>
       {NODES.filter(n => n.type !== 'deposit').map(n => (
         <circle key={n.id} cx={n.x} cy={n.y} r={used.has(n.item) ? 34 : 22} fill={RES_COLOR[n.item] ?? 'gray'} className={used.size && !used.has(n.item) ? 'node dim' : 'node'} />
       ))}
@@ -429,7 +430,7 @@ function WorldMap({ sol, hubs, base, site, setSite }: { sol: Summary | null; hub
           <rect x={s.x - 45} y={s.y - 45} width={90} height={90} className={active ? 'sq act' : 'sq'} />
           {n > 0 && <circle cx={s.x} cy={s.y} r={Math.min(60 + 12 * Math.sqrt(n), 420)} className="mach" />}
           <circle cx={s.x} cy={s.y} r={260} fill="transparent" />
-          <title>{`${s.id}${n ? `: ${fmt(n, 1)} machines` : ''}`}</title>
+          <title>{`${s.id}${n ? t(`: ${fmt(n, 1)} machines`, `:${fmt(n, 1)} 台机器`) : ''}`}</title>
         </g>
       })}
       {(() => { const s = SITE.get(base); return s ? <path d={star(s.x, s.y, 190, 80)} className="base" /> : null })()}
@@ -445,13 +446,13 @@ function Legend({ sol, itemName }: { sol: Summary | null; itemName: (id: string)
   const used = sol ? Object.keys(totalsByItem(sol.extraction)) : []
   return (
     <ul className="chips small geolegend">
-      <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="belt" strokeWidth="3" /></svg>belt</li>
-      <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="pipe" strokeWidth="3" /></svg>pipe</li>
-      <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="rail" /></svg>rail</li>
-      <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="hub open" /></svg>open hub</li>
-      <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="hub" /></svg>candidate hub</li>
-      <li><svg width="12" height="12" viewBox="-6 -6 12 12"><path d={star(0, 0, 6, 2.6)} className="base" /></svg>base</li>
-      <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="mach" /></svg>machines</li>
+      <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="belt" strokeWidth="3" /></svg>{t('belt', '传送带')}</li>
+      <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="pipe" strokeWidth="3" /></svg>{t('pipe', '管道')}</li>
+      <li><svg width="18" height="10"><line x1="1" y1="5" x2="17" y2="5" className="rail" /></svg>{t('rail', '铁路')}</li>
+      <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="hub open" /></svg>{t('open hub', '启用枢纽')}</li>
+      <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="hub" /></svg>{t('candidate hub', '候选枢纽')}</li>
+      <li><svg width="12" height="12" viewBox="-6 -6 12 12"><path d={star(0, 0, 6, 2.6)} className="base" /></svg>{t('base', '基地')}</li>
+      <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="mach" /></svg>{t('machines', '机器')}</li>
       {used.map(k => <li key={k}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill={RES_COLOR[k] ?? 'gray'} /></svg>{itemName(k)}</li>)}
     </ul>
   )

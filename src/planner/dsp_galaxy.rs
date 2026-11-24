@@ -12,7 +12,7 @@
 //!    user (no public data), gated by the BWIKI unlock table, normal items scaled by (1+0.04L).
 //!
 //! Choices the report leaves open are marked MINE in the comments and in `docs/research/dsp-seed/_过程文件/progress-impl.md`.
-use super::data::{GameData, Recipe};
+use super::data::{tr_zh, GameData, Recipe};
 use super::lp::allowed_recipes;
 use super::rules::{self, Mode};
 use super::{ItemRate, Plan, PlanSettings, Status};
@@ -420,7 +420,7 @@ impl DarkFog {
             }
             let lv = drop_unlock_level(&d.item);
             if self.level < lv {
-                warn.push(format!("黑雾：{} 要黑雾 {lv} 级才掉（现在设的是 {} 级），不计", d.item, self.level));
+                warn.push(tr_zh(&format!("Dark Fog: {} only drops from Dark Fog level {lv} (set to {}), not counted", d.item, self.level), &format!("黑雾：{} 要黑雾 {lv} 级才掉（现在设的是 {} 级），不计", d.item, self.level)));
                 continue;
             }
             // exclusive df-* items are not scaled by the debris bonus (BWIKI, Saros readme)
@@ -554,7 +554,7 @@ pub fn thresholds(data: &GameData, g: &Galaxy, ts: &ThresholdSettings) -> Thresh
     let mut warnings = ts.dark_fog.rates(ts.level).1;
     let free = unit_plan(data, ts, g, &stocks, None);
     if free.status != Status::Optimal {
-        warnings.push(format!("不限配额的方案：{:?} {}", free.status, free.warnings.join("；")));
+        warnings.push(tr_zh(&format!("Plan without quotas: {:?} {}", free.status, free.warnings.join("; ")), &format!("不限配额的方案：{:?} {}", free.status, free.warnings.join("；"))));
     }
     let raw = super::lp::raw_map(&free);
     let mult = g.settings.resource_multiplier;
@@ -882,12 +882,12 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let mut seen = BTreeSet::new();
     sys.retain(|i| seen.insert(*i));
     if sys.len() > MAX_SYSTEMS {
-        out.warnings.push(format!("选了 {} 个星系，只规划前 {MAX_SYSTEMS} 个", sys.len()));
+        out.warnings.push(tr_zh(&format!("{} star systems selected; only the first {MAX_SYSTEMS} are planned", sys.len()), &format!("选了 {} 个星系，只规划前 {MAX_SYSTEMS} 个", sys.len())));
         sys.truncate(MAX_SYSTEMS);
     }
     if sys.is_empty() {
         out.status = Status::Infeasible;
-        out.warnings.push("没有选星系".into());
+        out.warnings.push(tr_zh("No star system selected", "没有选星系"));
         return out;
     }
     let stars: Vec<&StarInfo> = sys.iter().map(|i| &g.stars[*i]).collect();
@@ -910,7 +910,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let photons_obj = target_mode && gs.objective == "photons";
     if !target_mode && gs.building_cap.is_none() && gs.photon_gw.is_none() {
         out.status = Status::Unbounded;
-        out.warnings.push("求最大白糖需要建筑上限或戴森球功率上限".into());
+        out.warnings.push(tr_zh("Maximising white cubes needs a building cap or a Dyson sphere power cap", "求最大白糖需要建筑上限或戴森球功率上限"));
         return out;
     }
     let bld_w = if target_mode { if photons_obj { 1e-3 } else { 1.0 } } else { -1e-6 };
@@ -925,7 +925,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let z = if target_mode {
         let t = if gs.target.is_finite() { gs.target.max(0.0) } else { 0.0 };
         if !gs.target.is_finite() {
-            out.warnings.push("目标不是数字：按 0 白糖/分钟规划".into());
+            out.warnings.push(tr_zh("The target is not a number: planning for 0 white cubes/min", "目标不是数字：按 0 白糖/分钟规划"));
         }
         p.add_var(0.0, (t, t))
     } else {
@@ -1120,7 +1120,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         Ok(Ok(s)) => s,
         Ok(Err(_)) => {
             out.status = Status::Infeasible;
-            out.warnings.push("求解器还没找到方案就停了".into());
+            out.warnings.push(tr_zh("The solver stopped before finding a plan", "求解器还没找到方案就停了"));
             return out;
         }
         Err(microlp::Error::Infeasible) => {
@@ -1131,12 +1131,12 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         }
         Err(microlp::Error::Unbounded) => {
             out.status = Status::Unbounded;
-            out.warnings.push("无上限：请设建筑上限或戴森球功率上限".into());
+            out.warnings.push(tr_zh("Unbounded: set a building cap or a Dyson sphere power cap", "无上限：请设建筑上限或戴森球功率上限"));
             return out;
         }
         Err(e) => {
             out.status = Status::Infeasible;
-            out.warnings.push(format!("求解器：{e}"));
+            out.warnings.push(tr_zh(&format!("Solver: {e}"), &format!("求解器：{e}")));
             return out;
         }
     };
@@ -1281,12 +1281,12 @@ fn infeasible_hint(gs: &GalaxyPlanSettings, g: &Galaxy, sys: &[usize]) -> String
         .into_iter()
         .filter(|k| !have.contains(*k))
         .collect();
-    let mut s = format!("在 {} 级、这些星系下无解", gs.level);
+    let mut s = tr_zh(&format!("No solution at level {} with these star systems", gs.level), &format!("在 {} 级、这些星系下无解", gs.level));
     if !missing.is_empty() {
-        s += &format!("；这些星系里没有：{}", missing.join("、"));
+        s += &tr_zh(&format!("; these systems lack: {}", missing.join(", ")), &format!("；这些星系里没有：{}", missing.join("、")));
     }
     if gs.stock_quotas {
-        s += "；这一级的配额可能太紧（提高等级、加星系，或看无限阈值表）";
+        s += &tr_zh("; the quotas at this level may be too tight (raise the level, add systems, or see the infinite-threshold table)", "；这一级的配额可能太紧（提高等级、加星系，或看无限阈值表）");
     }
     s
 }
@@ -1497,12 +1497,12 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
     out.stars = sys.len();
     if sys.is_empty() {
         out.status = Status::Infeasible;
-        out.warnings.push("没有选星系".into());
+        out.warnings.push(tr_zh("No star system selected", "没有选星系"));
         return out;
     }
     if g.infinite {
         out.status = Status::Unbounded;
-        out.warnings.push("资源无限：总量没有上限".into());
+        out.warnings.push(tr_zh("Resources are infinite: the total has no limit", "资源无限：总量没有上限"));
         return out;
     }
     let mut ps = ts.plan.clone();
@@ -1582,12 +1582,12 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
         Ok(r) => r,
         Err(e) if e == "unbounded" => {
             out.status = Status::Unbounded;
-            out.warnings.push("无上限：只用无限的来源就能造白糖".into());
+            out.warnings.push(tr_zh("Unbounded: white cubes can be made from infinite sources alone", "无上限：只用无限的来源就能造白糖"));
             return out;
         }
         Err(e) => {
             out.status = Status::Infeasible;
-            out.warnings.push(format!("求解器：{e}"));
+            out.warnings.push(tr_zh(&format!("Solver: {e}"), &format!("求解器：{e}")));
             return out;
         }
     };
@@ -1611,7 +1611,7 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
         out.research_cubes = reach(bd) - reach(d0);
     }
     if n <= 1e-9 {
-        out.warnings.push("造不出白糖：这些星系缺一种必需的有限资源".into());
+        out.warnings.push(tr_zh("Cannot make white cubes: these systems lack a required finite resource", "造不出白糖：这些星系缺一种必需的有限资源"));
     }
     for (k, (it, (ah, aa))) in avail.iter().enumerate() {
         let (h, a) = mv[k];
@@ -1899,7 +1899,7 @@ pub fn galaxy_rate(data: &GameData, g: &Galaxy, rs: &RateSettings) -> RateReport
     out.stars = sys.len();
     if sys.is_empty() {
         out.status = Status::Infeasible;
-        out.warnings.push("没有选星系".into());
+        out.warnings.push(tr_zh("No star system selected", "没有选星系"));
         return out;
     }
     let mut ps = rs.plan.clone();
@@ -1969,12 +1969,12 @@ pub fn galaxy_rate(data: &GameData, g: &Galaxy, rs: &RateSettings) -> RateReport
         Ok(r) => r,
         Err(e) if e == "unbounded" => {
             out.status = Status::Unbounded;
-            out.warnings.push("无上限：只用无限的来源（海洋、不限的光子）就能造白糖".into());
+            out.warnings.push(tr_zh("Unbounded: white cubes can be made from infinite sources alone (ocean, unlimited photons)", "无上限：只用无限的来源（海洋、不限的光子）就能造白糖"));
             return out;
         }
         Err(e) => {
             out.status = Status::Infeasible;
-            out.warnings.push(format!("求解器：{e}"));
+            out.warnings.push(tr_zh(&format!("Solver: {e}"), &format!("求解器：{e}")));
             return out;
         }
     };
@@ -1982,7 +1982,7 @@ pub fn galaxy_rate(data: &GameData, g: &Galaxy, rs: &RateSettings) -> RateReport
     out.cubes_per_min = n;
     out.hub = hub.map(|h| g.stars[h].name.clone());
     if n <= 1e-9 {
-        out.warnings.push("造不出白糖：这些星系缺一种必需的原料".into());
+        out.warnings.push(tr_zh("Cannot make white cubes: these systems lack a required raw material", "造不出白糖：这些星系缺一种必需的原料"));
     }
     let mult = g.settings.resource_multiplier;
     let stock_of_item = |it: &str| -> f64 {
@@ -2105,7 +2105,7 @@ pub fn galaxy_rate(data: &GameData, g: &Galaxy, rs: &RateSettings) -> RateReport
         out.curve.push(RatePoint { level: l, cubes_per_min: z_at(l), dyson_bound: out.dyson_level.is_some_and(|d| l >= d) });
     }
     if rs.miners_per_node > 1.0 + 1e-9 {
-        out.warnings.push(format!("每个矿点按 {} 台大型采矿机重叠开采计算", rs.miners_per_node));
+        out.warnings.push(tr_zh(&format!("Each ore node is counted with {} large mining machines overlapping", rs.miners_per_node), &format!("每个矿点按 {} 台大型采矿机重叠开采计算", rs.miners_per_node)));
     }
     out.solve_ms = t0.elapsed().as_secs_f64() * 1e3;
     out

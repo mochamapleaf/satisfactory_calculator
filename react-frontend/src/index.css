@@ -499,3 +499,5 @@ svg.belt { display: block; font-family: var(--font-ui); }
   .galaxy .mbsettings input[type=number], .galaxy .mbsettings select { width: 100%; }
 }
 .clocksel { display: block; margin-top: 2px; font-size: var(--t-xs); padding: 0 var(--s1); min-height: 0; }
+.seg.langsel button { padding: 2px 10px; }
+html:lang(zh-CN) td, html:lang(zh-CN) th { word-break: keep-all; }

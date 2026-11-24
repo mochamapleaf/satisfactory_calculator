@@ -972,7 +972,7 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
     // Factorio beacons (whole beacons in total; per machine they may be shared)
     let beacons: f64 = plan.recipes.iter().map(|r| r.beacons).sum();
     if beacons > 1e-9 {
-        let name = data.beacons.first().map(|b| b.name.clone()).unwrap_or_else(|| "Beacon".into());
+        let name = data.beacons.first().map(|b| data.pick(&b.name, &b.name_zh).to_string()).unwrap_or_else(|| "Beacon".into());
         counts.insert(name, (beacons - 1e-6).ceil());
     }
     plan.building_counts = counts.into_iter().map(|(building, count)| BuildingCount { building, count }).collect();
@@ -1779,7 +1779,7 @@ fn start_units<'b>(
             );
             // items with no source left in the model whose recipes or resource the planet filter
             // removed, with the planets that would provide them (review 3 M2)
-            let loc_name = |l: &String| data.locations.iter().find(|x| x.id == *l).map(|x| x.name.clone()).unwrap_or(l.clone());
+            let loc_name = |l: &String| data.locations.iter().find(|x| x.id == *l).map(|x| data.pick(&x.name, &x.name_zh).to_string()).unwrap_or(l.clone());
             let blocking = blocking_items(data, s, &inp);
             let off: Vec<String> = blocking
                 .iter()

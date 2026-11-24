@@ -8,6 +8,7 @@
 //! refill, ladder feed, recovery, product, proliferator), every refill point a port, and every
 //! machine its input sorter (from the mixed belt) and output sorter (to which product belt).
 //! Geometry is schematic: positions are machine indices along the belt, not grid cells.
+use super::data::tr;
 use super::mixed_belt::{BeltLayoutSettings, RecipeLayout, PILE};
 use serde::{Deserialize, Serialize};
 
@@ -221,6 +222,7 @@ impl Ctx<'_> {
 /// Stations of a scheme-A line: each takes the longest run of machines that fits.
 fn split_a(ctx: &Ctx, line_len: u32, notes: &mut Vec<String>) -> Vec<Station> {
     let mut out: Vec<Station> = vec![];
+    let mut warned = false;
     let mut first = 1;
     while first <= line_len {
         let idx = out.len() as u32 + 1;
@@ -234,8 +236,12 @@ fn split_a(ctx: &Ctx, line_len: u32, notes: &mut Vec<String>) -> Vec<Station> {
             }
         }
         let s = best.unwrap_or_else(|| {
-            if !notes.iter().any(|n| n.starts_with("one machine")) {
-                notes.push(format!("one machine with its belts needs more than a station's {} slots or throughput", ctx.slots));
+            if !warned {
+                warned = true;
+                notes.push(tr(
+                    &format!("one machine with its belts needs more than a station's {} slots or throughput", ctx.slots),
+                    &format!("一台机器连同它的传送带需要的槽位或吞吐超过一座物流塔的 {} 个槽位", ctx.slots),
+                ));
             }
             ctx.station_a(idx, first, first)
         });
@@ -253,11 +259,15 @@ pub fn plan_stations(lay: &RecipeLayout, ls: &BeltLayoutSettings, capacity: f64,
     let mut notes = vec![];
     // (first machine, size) of each ladder group, for the input pile sorters
     let mut group_ends: Vec<u32> = vec![];
+    let mut ladder_warned = false;
     if let Some(d) = &lay.two {
         plan.lines = d.units;
         let len = d.machines_per_unit.min(STATION_MACHINES_MAX);
         if len < d.machines_per_unit {
-            notes.push(format!("the first {len} of {} machines are laid out; the rest repeat the same stations", d.machines_per_unit));
+            notes.push(tr(
+                &format!("the first {len} of {} machines are laid out; the rest repeat the same stations", d.machines_per_unit),
+                &format!("只画出前 {len} 台（共 {} 台）；其余重复同样的物流塔", d.machines_per_unit),
+            ));
         }
         plan.stations = split_a(&ctx, len, &mut notes);
         group_ends.push(d.machines_per_unit);
@@ -276,7 +286,10 @@ pub fn plan_stations(lay: &RecipeLayout, ls: &BeltLayoutSettings, capacity: f64,
         plan.lines = 1;
         let shown = g.groups.min((STATION_MACHINES_MAX / g.group.max(1)).max(1));
         if shown < g.groups {
-            notes.push(format!("the first {shown} of {} groups are laid out; the rest repeat the same stations", g.groups));
+            notes.push(tr(
+                &format!("the first {shown} of {} groups are laid out; the rest repeat the same stations", g.groups),
+                &format!("只画出前 {shown} 组（共 {} 组）；其余重复同样的物流塔", g.groups),
+            ));
         }
         let groups: Vec<(u32, u32)> =
             (0..shown).map(|k| (1 + k * g.group, if k + 1 == g.groups { g.last_group } else { g.group })).collect();
@@ -289,8 +302,12 @@ pub fn plan_stations(lay: &RecipeLayout, ls: &BeltLayoutSettings, capacity: f64,
                 take += 1;
             }
             let s = ctx.station_b(idx, &groups[k..k + take]);
-            if !ctx.fits(&s) && !notes.iter().any(|n: &String| n.starts_with("one ladder")) {
-                notes.push(format!("one ladder group needs {} slots, more than the {slots} of a station", s.ports.len()));
+            if !ctx.fits(&s) && !ladder_warned {
+                ladder_warned = true;
+                notes.push(tr(
+                    &format!("one ladder group needs {} slots, more than the {slots} of a station", s.ports.len()),
+                    &format!("一组梯形线需要 {} 个槽位，超过一座物流塔的 {slots} 个", s.ports.len()),
+                ));
             }
             plan.stations.push(s);
             k += take;
@@ -334,9 +351,12 @@ pub fn plan_stations(lay: &RecipeLayout, ls: &BeltLayoutSettings, capacity: f64,
     for s in &plan.stations {
         let mut parts = vec![];
         if let (Some(d), 1) = (&lay.two, s.first) {
-            parts.push(format!(
-                "control unit (slot {} {} {}, slot {} {} {} stacks/s)",
-                s.ports[0].slot, lay.inputs[0].name, st(d.shares[0]), s.ports[1].slot, lay.inputs[1].name, st(d.shares[1])
+            let (a, b) = (&lay.inputs[0].name, &lay.inputs[1].name);
+            let (sa, sb) = (st(d.shares[0]), st(d.shares[1]));
+            let (pa, pb) = (s.ports[0].slot, s.ports[1].slot);
+            parts.push(tr(
+                &format!("control unit (slot {pa} {a} {sa}, slot {pb} {b} {sb} stacks/s)"),
+                &format!("控制单元（槽位 {pa} {a} {sa}，槽位 {pb} {b} {sb} 组/秒）"),
             ));
         }
         let mut last = s.first - 1;
@@ -347,52 +367,80 @@ pub fn plan_stations(lay: &RecipeLayout, ls: &BeltLayoutSettings, capacity: f64,
             for start in starts {
                 for p in s.ports.iter().filter(|p| p.role == "feed" && p.serves[0] == start) {
                     let f = g.feeds.iter().find(|f| lay.inputs[f.item].item == p.item).unwrap();
-                    parts.push(format!("feed {} {} ({}) from slot {} + buffer cell", p.name, st(f.rate), f.combo, p.slot));
+                    parts.push(tr(
+                        &format!("feed {} {} ({}) from slot {} + buffer cell", p.name, st(f.rate), f.combo, p.slot),
+                        &format!("补料 {} {}（{}）取自槽位 {} + 缓冲格", p.name, st(f.rate), f.combo, p.slot),
+                    ));
                 }
                 let end = s.ports.iter().find(|p| p.role == "recovery" && p.serves[0] >= start).map(|p| p.serves[0]).unwrap_or(s.last);
-                parts.push(format!("{} machines", end + 1 - start));
+                parts.push(tr(&format!("{} machines", end + 1 - start), &format!("{} 台机器", end + 1 - start)));
                 last = end;
-                let rec: Vec<String> = s.ports.iter().filter(|p| p.role == "recovery" && p.serves[0] == end).map(|p| format!("{} → slot {}", p.name, p.slot)).collect();
-                parts.push(format!("recover {}", rec.join(", ")));
+                let rec: Vec<String> = s.ports.iter().filter(|p| p.role == "recovery" && p.serves[0] == end).map(|p| tr(&format!("{} → slot {}", p.name, p.slot), &format!("{} → 槽位 {}", p.name, p.slot))).collect();
+                parts.push(tr(&format!("recover {}", rec.join(", ")), &format!("回收 {}", rec.join("，"))));
             }
         }
         for r in plan.refills.iter().filter(|r| r.station == s.index) {
             if r.after > last {
-                parts.push(format!("{} machines", r.after - last));
+                parts.push(tr(&format!("{} machines", r.after - last), &format!("{} 台机器", r.after - last)));
                 last = r.after;
             }
-            parts.push(format!("refill {} {} from slot {}", r.name, st(r.amount), slot_list(&r.slots)));
+            parts.push(tr(
+                &format!("refill {} {} from slot {}", r.name, st(r.amount), slot_list(&r.slots)),
+                &format!("补料 {} {} 取自槽位 {}", r.name, st(r.amount), slot_list(&r.slots)),
+            ));
         }
         if s.last > last {
-            parts.push(format!("{} machines", s.last - last));
+            parts.push(tr(&format!("{} machines", s.last - last), &format!("{} 台机器", s.last - last)));
         }
         if lay.two.is_some() && s.last == lay.two.as_ref().unwrap().machines_per_unit {
-            parts.push("back to the control unit".into());
+            parts.push(tr("back to the control unit", "回到控制单元"));
         }
-        plan.sequence.push(format!("Station {}: {}", s.index, parts.join(" → ")));
+        plan.sequence.push(tr(&format!("Station {}: {}", s.index, parts.join(" → ")), &format!("物流塔 {}：{}", s.index, parts.join(" → "))));
     }
     for s in plan.stations.iter().filter(|s| s.items > s.limit + EPS) {
-        notes.push(format!(
-            "station {} supplies {:.0} items/s, {:.1} full belts: above the {} belts of a {} station, within the 4.5 / 4 笑笑 runs when the goods come from nearby (BV1fXkxYDEbW 50:08)",
-            s.index,
-            s.items,
-            s.items / ctx.out_cap,
-            station_belts(kind),
-            if kind == "pls" { "planetary" } else { "interstellar" }
+        notes.push(tr(
+            &format!(
+                "station {} supplies {:.0} items/s, {:.1} full belts: above the {} belts of a {} station, within the 4.5 / 4 笑笑 runs when the goods come from nearby (BV1fXkxYDEbW 50:08)",
+                s.index,
+                s.items,
+                s.items / ctx.out_cap,
+                station_belts(kind),
+                if kind == "pls" { "planetary" } else { "interstellar" }
+            ),
+            &format!(
+                "物流塔 {} 供应 {:.0} 个/秒，约 {:.1} 条满带：超过{}物流塔的 {} 条带；货物来自附近时在笑笑的 4.5 / 4 条带范围内 (BV1fXkxYDEbW 50:08)",
+                s.index,
+                s.items,
+                s.items / ctx.out_cap,
+                if kind == "pls" { "行星" } else { "星际" },
+                station_belts(kind)
+            ),
         ));
     }
     if plan.lines > 1 {
-        notes.push(format!("{} modules like this one: {} stations in all", plan.lines, plan.stations_total));
+        notes.push(tr(
+            &format!("{} modules like this one: {} stations in all", plan.lines, plan.stations_total),
+            &format!("共 {} 个这样的模块：合计 {} 座物流塔", plan.lines, plan.stations_total),
+        ));
     }
     if slots > 9 {
-        notes.push("笑笑 leaves the three back slots of a station unused; set 9 slots to do the same".into());
+        notes.push(tr(
+            "笑笑 leaves the three back slots of a station unused; set 9 slots to do the same",
+            "笑笑把物流塔背面的三个槽位空着；设为 9 个槽位即可照做",
+        ));
     }
     if plan.refills.iter().any(|r| r.slots.len() > 1) || plan.stations.iter().any(|s| s.ports.iter().any(|p| p.role == "refill" && p.serves.len() > 1)) {
-        notes.push("a refill belt shared by several refill points takes a pile sorter per point, with a buffer belt before each (BV1fXkxYDEbW 39:00, BV1iQrKYoEoy 35:33)".into());
+        notes.push(tr(
+            "a refill belt shared by several refill points takes a pile sorter per point, with a buffer belt before each (BV1fXkxYDEbW 39:00, BV1iQrKYoEoy 35:33)",
+            "几个补料点共用一条补料带时，每个补料点要一个集装分拣器（白爪），前面各接一段缓冲带 (BV1fXkxYDEbW 39:00, BV1iQrKYoEoy 35:33)",
+        ));
     }
     let pile = PILE[(ls.pile_level as usize).min(2)].0;
     if plan.machines.iter().any(|m| m.input == "pile" || m.outputs.iter().any(|o| o.1 == "pile")) {
-        notes.push(format!("pile sorters at {pile}: upgrade if a pile sorter cannot keep up"));
+        notes.push(tr(
+            &format!("pile sorters at {pile}: upgrade if a pile sorter cannot keep up"),
+            &format!("集装分拣器（白爪）按 {pile} 计：集装分拣器速度不够时请升级"),
+        ));
     }
     plan.notes = notes;
     Some(plan)

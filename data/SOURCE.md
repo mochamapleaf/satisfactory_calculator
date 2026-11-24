@@ -74,3 +74,9 @@
   equal `resources[].limit` in `game-data.json` (12 items) and that item ids exist in `items`.
 - `data/satisfactory-geo/transport.json`: capacities and estimates, each with `source` and `confidence`
   (see `docs/research/satisfactory-geo/00-最终报告.md` §2); sources are satisfactory.wiki.gg pages opened 2026-11-21.
+
+## Chinese names (2026-11-24)
+- `tools/add_zh_names.py` adds `name_zh` to Satisfactory (`game-data.json`, matched by English name) and Factorio
+  data (by id: items, recipes, buildings, modules, beacons, planets, research) from FactorioLab (MIT) i18n at
+  `a61e43fd`, copied to `data/raw/i18n/`. A few names FactorioLab lacks are hand-entered in the script's MANUAL
+  table (generators, Converter, Quantum Encoder, "X回收" recycling, 星块产能) — our own translations.

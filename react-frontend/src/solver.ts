@@ -1,3 +1,4 @@
+import { lang, t } from './i18n'
 // Typed wrapper around the Rust/WASM planner (src/wasm_api.rs).
 import init, { compute_weights_json, game_data_json, mixed_belt_json, solve_json } from './wasm-pkg/satisfactory_calculator.js'
 
@@ -57,15 +58,23 @@ export function qsplit(id: string): [string, number] {
 }
 export const withQ = (id: string, q: number) => (q > 0 ? `${qsplit(id)[0]}@${q}` : qsplit(id)[0])
 export const QUALITY_NAMES = ['normal', 'uncommon', 'rare', 'epic', 'legendary']
+// official Chinese tier names (Factorio wiki Quality/zh)
+const QUALITY_ZH = ['基础级', '精良级', '稀有级', '史诗级', '传说级']
+/** Quality tier names in the interface language (the game's Chinese names). */
+export function qualityNames(data: GameData): string[] {
+  const n = data.qualities ?? []
+  return lang() === 'zh' ? n.map((x, i) => QUALITY_ZH[i] ?? x) : n
+}
 /** Item name with its quality ("Iron gear wheel ★legendary"). */
 export function itemName(data: GameData, id: string): string {
   const [base, q] = qsplit(id)
   const it = data.items.find(i => i.id === base)
   const n = dn(it, data.game, base)
-  return q ? `${n} ★${(data.qualities?.[q] ?? QUALITY_NAMES[q]).toLowerCase()}` : n
+  return q ? `${n} ★${(qualityNames(data)[q] ?? QUALITY_NAMES[q]).toLowerCase()}` : n
 }
 export const isLiquid = (data: GameData, id: string) => data.items.find(i => i.id === qsplit(id)[0])?.liquid ?? false
 export interface Beacon {
+  name_zh?: string | null
   id: string; name: string; effectivity: number; modules: number; power: number; profile: number[]
   by_quality?: { effectivity: number; power: number }[]
 }
@@ -75,9 +84,9 @@ export interface GameData {
   /** Factorio: quality tier names (normal … legendary); absent = no quality in this data set. */
   qualities?: string[]; dataset?: string
   /** Space Age planets / space platform (absent = no planet filter). */
-  locations?: { id: string; name: string }[]
+  locations?: { id: string; name: string; name_zh?: string | null }[]
   /** Researched productivity families: technology, recipes it boosts, productivity per level. */
-  research?: { id: string; name: string; recipes: string[]; step: number }[]
+  research?: { id: string; name: string; name_zh?: string | null; recipes: string[]; step: number }[]
   beacons?: Beacon[]
   version: string; source: string; items: Item[]; recipes: Recipe[]; buildings: Building[]
   resources: Resource[]; belts: number[]; pipes: number[]
@@ -100,12 +109,12 @@ export function preset(o: Objective, generator: Generator = 'artificial_star'): 
 }
 /** Generators for the DSP Compute objective (keys of model.json generation.cost_per_mw). */
 export type Generator = 'artificial_star' | 'mini_fusion' | 'thermal' | 'solar' | 'wind'
-export const GENERATORS: { id: Generator; name: string }[] = [
-  { id: 'artificial_star', name: '人造恒星' },
-  { id: 'mini_fusion', name: '微型聚变电站' },
-  { id: 'thermal', name: '火力发电厂' },
-  { id: 'solar', name: '太阳能板' },
-  { id: 'wind', name: '风力涡轮机' },
+export const GENERATORS: { id: Generator; name: string; name_en: string }[] = [
+  { id: 'artificial_star', name: '人造恒星', name_en: 'Artificial star' },
+  { id: 'mini_fusion', name: '微型聚变电站', name_en: 'Mini fusion power plant' },
+  { id: 'thermal', name: '火力发电厂', name_en: 'Thermal power plant' },
+  { id: 'solar', name: '太阳能板', name_en: 'Solar panel' },
+  { id: 'wind', name: '风力涡轮机', name_en: 'Wind turbine' },
 ]
 /** Default scarcity weight of a raw resource (Iron Ore = 1), as in lp.rs. */
 export const scarcity = (limit: number | null) => (limit && limit > 0 ? 92100 / limit : 0.001)
@@ -397,14 +406,15 @@ export async function loadSolver(game: Game, dataset = ''): Promise<GameData> {
   return cache.get(key)!
 }
 
-/** Display name: Chinese for DSP when available. */
-export function dn(x: { name: string; name_zh?: string | null } | undefined, game: Game, fallback = ''): string {
+/** Display name in the interface language: Chinese where the data has it (`tools/add_zh_names.py`). */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function dn(x: { name: string; name_zh?: string | null } | undefined, _game: Game, fallback = ''): string {
   if (!x) return fallback
-  return game === 'dsp' && x.name_zh ? x.name_zh : x.name
+  return lang() === 'zh' && x.name_zh ? x.name_zh : x.name
 }
 
 export function solve(s: Settings): Plan {
-  return JSON.parse(solve_json(JSON.stringify(s))) as Plan
+  return JSON.parse(solve_json(JSON.stringify({ ...s, lang: lang() }))) as Plan
 }
 
 // Solves in a Web Worker and streams the best plan so far (whole buildings: the rounded LP plan at
@@ -578,7 +588,9 @@ function race(onUpdate: OnUpdate, keep = false) {
 let raceIds: [number, number] | null = null
 
 /** Start a solve; `onUpdate` gets the streamed updates. Returns the solve id. */
-export function solveStream(s: Settings, onUpdate: OnUpdate): number {
+export function solveStream(settings: Settings, onUpdate: OnUpdate): number {
+  // names in the plan follow the interface language (data.rs `pick`)
+  const s = { ...settings, lang: lang() }
   const id = ++seq
   if (s.integer && (s.engine ?? 'auto') === 'auto') {
     const h = race(onUpdate)
@@ -623,7 +635,7 @@ export const clampTime = (sec: number) => Math.round(Math.min(MAX_TIME_MS / 1000
 /** Smallest belt / pipe tier that carries `rate`, e.g. "Mk.3" or "2× Mk.6". */
 export function carrier(rate: number, liquid: boolean, data: GameData): string {
   const tiers = liquid ? data.pipes : data.belts
-  const kind = liquid ? 'Pipe' : 'Belt'
+  const kind = liquid ? t('Pipe', '管道') : t('Belt', '传送带')
   if (!tiers.length) return '—'
   const i = tiers.findIndex(t => rate <= t + 1e-9)
   if (i >= 0) return `${kind} Mk.${i + 1}`

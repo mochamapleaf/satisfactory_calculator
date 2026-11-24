@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Icon } from './Icon'
-import { fmt, type GameData, type Plan } from './solver'
+import { dn, fmt, itemName, type GameData, type Plan } from './solver'
+import { t } from './i18n'
 
 // Sankey of item flow: sources (mined / supplied) → items → recipes → items → … → outputs.
 // Every item is a node whose size is the flow through it, so "how much of X, and where does it go"
@@ -38,11 +39,11 @@ interface RecipeFlow {
 }
 
 /** One entry per recipe id (modes merged), with self-loops netted. Shared by the chart and the table. */
-function recipeFlows(plan: Plan): RecipeFlow[] {
+function recipeFlows(plan: Plan, rn: (id: string, name: string) => string, bn: (name: string) => string): RecipeFlow[] {
   const by = new Map<string, RecipeFlow>()
   for (const r of plan.recipes) {
     const e = by.get(r.id) ?? {
-      id: r.id, name: r.name, building: r.building, who: `${r.name} (${r.building})`, machines: 0,
+      id: r.id, name: rn(r.id, r.name), building: bn(r.building), who: `${rn(r.id, r.name)} (${bn(r.building)})`, machines: 0,
       ins: new Map(), outs: new Map(), cyc: [], main: r.outputs[0]?.item,
     }
     e.machines += r.machines
@@ -113,10 +114,10 @@ function build(plan: Plan, names: Map<string, string>, flows: RecipeFlow[], scal
     for (const [it, q] of e.ins) link(item(it), rid, it, q)
     for (const [it, q] of e.outs) link(rid, item(it), it, q)
   }
-  for (const l of plan.raw) link(node('raw:' + l.item, 'src', 'mined'), item(l.item), l.item, l.rate)
-  for (const l of plan.supplied) link(node('sup:' + l.item, 'src', 'supplied'), item(l.item), l.item, l.rate)
-  for (const l of plan.targets) link(item(l.item), node('out:' + l.item, 'sink', 'output'), l.item, l.rate)
-  for (const l of plan.surplus) link(item(l.item), node('extra:' + l.item, 'sink', 'byproduct'), l.item, l.rate)
+  for (const l of plan.raw) link(node('raw:' + l.item, 'src', t('mined', '开采')), item(l.item), l.item, l.rate)
+  for (const l of plan.supplied) link(node('sup:' + l.item, 'src', t('supplied', '外部供应')), item(l.item), l.item, l.rate)
+  for (const l of plan.targets) link(item(l.item), node('out:' + l.item, 'sink', t('output', '产出')), l.item, l.rate)
+  for (const l of plan.surplus) link(item(l.item), node('extra:' + l.item, 'sink', t('byproduct', '副产物')), l.item, l.rate)
 
   markBackEdges(nodes, links)
   const out = new Map<string, L[]>()
@@ -246,25 +247,30 @@ function build(plan: Plan, names: Map<string, string>, flows: RecipeFlow[], scal
   return { nodes: real, all: nodes, links, height, width: (maxLayer + 1) * COL + 160 }
 }
 
-export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
+export default function ItemFlow({ data, plan }: { data?: GameData; plan: Plan }) {
   const [focus, setFocus] = useState<string | null>(null)
   const names = useMemo(() => {
     const m = new Map<string, string>()
-    for (const r of plan.recipes) for (const l of [...r.inputs, ...r.outputs]) m.set(l.item, l.name)
-    for (const l of [...plan.raw, ...plan.supplied, ...plan.targets, ...plan.surplus]) m.set(l.item, l.name)
+    const nm = (l: { item: string; name: string }) => (data ? itemName(data, l.item) : l.name)
+    for (const r of plan.recipes) for (const l of [...r.inputs, ...r.outputs]) m.set(l.item, nm(l))
+    for (const l of [...plan.raw, ...plan.supplied, ...plan.targets, ...plan.surplus]) m.set(l.item, nm(l))
     return m
-  }, [plan])
-  const flows = useMemo(() => recipeFlows(plan), [plan])
+  }, [plan, data])
+  const flows = useMemo(() => recipeFlows(
+    plan,
+    (id, name) => (data ? dn(data.recipes.find(r => r.id === id), data.game, name) : name),
+    name => (data ? dn(data.buildings.find(b => b.name === name || b.id === name), data.game, name) : name),
+  ), [plan, data])
   const g = useMemo(() => build(plan, names, flows, 520), [plan, names, flows])
   const balance = useMemo(() => {
     // "loop" in the table means the same thing as in the chart: a dashed return edge carries the item,
     // or a recipe recycles it internally (↻)
     const loops = new Map<string, string>()
-    for (const f of flows) for (const c of f.cyc) loops.set(c.item, `recycled inside ${f.name} (↻ on the recipe)`)
-    for (const l of g.links) if (l.back) loops.set(l.item, 'part of it returns upstream to the chain that makes it (dashed line in the chart)')
+    for (const f of flows) for (const c of f.cyc) loops.set(c.item, t(`recycled inside ${f.name} (↻ on the recipe)`, `在 ${f.name} 内部循环利用 (配方上的 ↻)`))
+    for (const l of g.links) if (l.back) loops.set(l.item, t('part of it returns upstream to the chain that makes it (dashed line in the chart)', '一部分回流到上游产线 (图中虚线)'))
     return itemBalance(plan, names, flows, loops)
   }, [plan, names, flows, g])
-  if (plan.status !== 'optimal') return <p className="muted">Nothing to draw.</p>
+  if (plan.status !== 'optimal') return <p className="muted">{t('Nothing to draw.', '没有可画的内容。')}</p>
 
   const nx = (id: string) => 20 + g.all.get(id)!.layer * COL
   const backs = g.links.filter(l => l.back)
@@ -293,10 +299,10 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
   return (
     <div className="results">
       <p className="hint">
-        Band width is items per minute; a bar is as tall as the flow passing through it. Hover a bar to follow it.
-        {backs.length === 1 && <> One loop edge (an item feeding back into its own chain) is drawn as a thin dashed line below the chart.</>}
-        {backs.length > 1 && <> {backs.length} loop edges (an item feeding back into its own chain) are drawn as thin dashed lines below the chart.</>}
-        {noted && <> ↻ on a recipe marks what it makes and reuses itself; only the net amount is drawn.</>}
+        {t('Band width is items per minute; a bar is as tall as the flow passing through it. Hover a bar to follow it.', '带宽表示每分钟物品数;柱子的高度等于流经的流量。鼠标悬停在柱子上可追踪流向。')}
+        {backs.length === 1 && <> {t('One loop edge (an item feeding back into its own chain) is drawn as a thin dashed line below the chart.', '一条回环边 (物品回流到自己的产线) 以细虚线画在图下方。')}</>}
+        {backs.length > 1 && <> {t(`${backs.length} loop edges (an item feeding back into its own chain) are drawn as thin dashed lines below the chart.`, `${backs.length} 条回环边 (物品回流到自己的产线) 以细虚线画在图下方。`)}</>}
+        {noted && <> {t('↻ on a recipe marks what it makes and reuses itself; only the net amount is drawn.', '配方上的 ↻ 表示它自产自用的部分;图中只画净量。')}</>}
       </p>
       <div className="sankeywrap">
         <svg width={g.width} height={H} className="sankey" onMouseLeave={() => setFocus(null)}>
@@ -305,7 +311,7 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
               strokeWidth={l.w}
               style={{ stroke: `hsl(${hue(l.item)} var(--sk-sat) var(--sk-link-l))`, strokeOpacity: near(l) ? (l.back ? 'calc(var(--sk-link-op) + 0.2)' : 'var(--sk-link-op)') : 0.06 }}
               strokeDasharray={l.back ? '6 4' : undefined}>
-              <title>{`${fmt(l.rate)}/min ${names.get(l.item) ?? l.item}: ${nodeName(l.from)} → ${nodeName(l.to)}${l.back ? ' (loop)' : ''}`}</title>
+              <title>{`${fmt(l.rate)}/min ${names.get(l.item) ?? l.item}: ${nodeName(l.from)} → ${nodeName(l.to)}${l.back ? t(' (loop)', ' (回环)') : ''}`}</title>
             </path>
           ))}
           {backs.map((l, i) => {
@@ -338,14 +344,14 @@ export default function ItemFlow({ plan }: { data?: GameData; plan: Plan }) {
         </svg>
       </div>
 
-      <h3>Where each item goes</h3>
+      <h3>{t('Where each item goes', '各物品的去向')}</h3>
       <div className="tablewrap">
         <table className="balance">
-          <thead><tr><th>Item</th><th className="num">Total /min</th><th>Made by</th><th>Used by</th></tr></thead>
+          <thead><tr><th>{t('Item', '物品')}</th><th className="num">{t('Total /min', '合计 /min')}</th><th>{t('Made by', '产自')}</th><th>{t('Used by', '用于')}</th></tr></thead>
           <tbody>
             {balance.map(b => (
               <tr key={b.item}>
-                <td><Icon id={b.item} />{b.name}{b.loop && <span className="tag" title={b.loop}>loop</span>}</td>
+                <td><Icon id={b.item} />{b.name}{b.loop && <span className="tag" title={b.loop}>{t('loop', '回环')}</span>}</td>
                 <td className="num">{fmt(b.total)}</td>
                 <td className="small">{b.made.map(m => <div key={m.key}>{fmt(m.rate)} · {m.who}</div>)}</td>
                 <td className="small">{b.used.map(m => <div key={m.key}>{fmt(m.rate)} · {m.who} <span className="muted">({fmt((100 * m.rate) / b.total, 0)}%)</span></div>)}</td>
@@ -373,10 +379,10 @@ function itemBalance(plan: Plan, names: Map<string, string>, flows: RecipeFlow[]
     for (const [it, q] of f.outs) add(made, it, f.id, f.who, q)
     for (const [it, q] of f.ins) add(used, it, f.id, f.who, q)
   }
-  for (const l of plan.raw) add(made, l.item, 'mined', 'mined', l.rate)
-  for (const l of plan.supplied) add(made, l.item, 'supplied', 'supplied', l.rate)
-  for (const l of plan.targets) add(used, l.item, 'output', 'output', l.rate)
-  for (const l of plan.surplus) add(used, l.item, 'byproduct', 'byproduct', l.rate)
+  for (const l of plan.raw) add(made, l.item, 'mined', t('mined', '开采'), l.rate)
+  for (const l of plan.supplied) add(made, l.item, 'supplied', t('supplied', '外部供应'), l.rate)
+  for (const l of plan.targets) add(used, l.item, 'output', t('output', '产出'), l.rate)
+  for (const l of plan.surplus) add(used, l.item, 'byproduct', t('byproduct', '副产物'), l.rate)
   const items = [...new Set([...made.keys(), ...used.keys()])]
   return items.map(it => {
     const m = [...(made.get(it)?.values() ?? [])].sort((a, b) => b.rate - a.rate)

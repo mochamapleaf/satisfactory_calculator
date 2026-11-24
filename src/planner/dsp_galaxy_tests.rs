@@ -489,3 +489,17 @@ fn galaxy_rate_is_bounded_by_rates_and_dyson() {
     sub.systems = vec![0, 1, 2];
     assert!(galaxy_rate(dsp(), galaxy(), &sub).cubes_per_min <= r.cubes_per_min * (1.0 + 1e-6));
 }
+
+#[test]
+fn warnings_follow_the_interface_language() {
+    let ts = TotalSettings { systems: vec![usize::MAX], ..Default::default() };
+    let first = |lang: &str| {
+        super::data::set_lang(lang);
+        let w = galaxy_total(dsp(), galaxy(), &ts).warnings;
+        super::data::set_lang("");
+        w.first().cloned().unwrap_or_default()
+    };
+    assert_eq!(first("en"), "No star system selected");
+    assert_eq!(first("zh"), "没有选星系");
+    assert_eq!(first(""), "没有选星系");
+}

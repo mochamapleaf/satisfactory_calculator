@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { t } from './i18n'
 import { qsplit, type Game } from './solver'
 
 // Local item/building icons: one sprite sheet per game and style, built by tools/build_icons.py.
@@ -9,6 +10,9 @@ export const ICON_STYLES: { id: IconStyle; name: string }[] = [
   { id: 'mono', name: 'Minimal' },
   { id: 'off', name: 'Off' },
 ]
+/** Style name in the interface language (call at render time). */
+export const iconStyleName = (id: IconStyle): string =>
+  ({ original: t('Game', '游戏原图'), flat: t('Flat 2D', '扁平 2D'), mono: t('Minimal', '极简'), off: t('Off', '关闭') })[id]
 const STYLE_KEY = 'factory-planner:icon-style'
 
 interface Meta { size: number; cols: number; rows: number; index: Record<string, number> }

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { Icon, useIconsOn } from './Icon'
+import { t } from './i18n'
 import { dn, type GameData, type Item } from './solver'
 
 // Compact icon grid for choosing an item: group tabs (the game's own crafting-menu tabs for DSP and
@@ -7,18 +8,18 @@ import { dn, type GameData, type Item } from './solver'
 // across all groups. Hover shows the name; Enter takes the first match (outlined); Esc closes.
 // Items in `taken` (already in the list) are shown but cannot be picked.
 
-const GROUPS: Record<string, [string, string][]> = {
+const groupsFor = (game: string): [string, string][] => ({
   satisfactory: [
-    ['raw', 'Raw'], ['ingots', 'Ingots'], ['basic', 'Parts'], ['intermediate', 'Assembled'],
-    ['advanced', 'Advanced'], ['exotic', 'Exotic'], ['refined', 'Refined'], ['fluids', 'Fluids'],
-    ['project', 'Project'], ['other', 'Found'],
+    ['raw', t('Raw', '原矿')], ['ingots', t('Ingots', '锭')], ['basic', t('Parts', '零件')], ['intermediate', t('Assembled', '组装件')],
+    ['advanced', t('Advanced', '高级')], ['exotic', t('Exotic', '特殊')], ['refined', t('Refined', '精炼')], ['fluids', t('Fluids', '流体')],
+    ['project', t('Project', '项目')], ['other', t('Found', '拾取物')],
   ],
-  dsp: [['components', '物品'], ['buildings', '建筑']],
+  dsp: [['components', t('Items', '物品')], ['buildings', t('Buildings', '建筑')]],
   factorio: [
-    ['intermediate-products', 'Intermediates'], ['production', 'Production'], ['logistics', 'Logistics'],
-    ['combat', 'Combat'], ['fluids', 'Fluids'],
+    ['intermediate-products', t('Intermediates', '中间产品')], ['production', t('Production', '生产')], ['logistics', t('Logistics', '物流')],
+    ['combat', t('Combat', '战斗')], ['fluids', t('Fluids', '流体')],
   ],
-}
+} as Record<string, [string, string][]>)[game] ?? []
 const MAX_RESULTS = 120
 
 export default function ItemPicker({ data, items, current, taken, scope, onPick, onClose }: {
@@ -29,7 +30,7 @@ export default function ItemPicker({ data, items, current, taken, scope, onPick,
 }) {
   const iconsOn = useIconsOn()
   const groups = useMemo(() => {
-    const known = GROUPS[data.game] ?? []
+    const known = groupsFor(data.game)
     const present = new Set(items.map(i => i.group ?? 'other'))
     const list = known.filter(([g]) => present.has(g))
     for (const g of present) if (!list.some(([k]) => k === g)) list.push([g, g])
@@ -44,11 +45,11 @@ export default function ItemPicker({ data, items, current, taken, scope, onPick,
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
-      const t = e.target as HTMLElement
+      const el = e.target as HTMLElement
       // this list's opener buttons toggle the picker on click; closing here first would shift the layout under
       // the pointer. Openers of other lists do not know about this picker, so a click on them closes it.
-      const opener = t.closest?.('button[aria-expanded]')
-      if (box.current && !box.current.contains(t) && !(opener && scope?.current?.contains(opener))) onClose('away')
+      const opener = el.closest?.('button[aria-expanded]')
+      if (box.current && !box.current.contains(el) && !(opener && scope?.current?.contains(opener))) onClose('away')
     }
     document.addEventListener('mousedown', away)
     return () => document.removeEventListener('mousedown', away)
@@ -86,7 +87,7 @@ export default function ItemPicker({ data, items, current, taken, scope, onPick,
   const cell = (i: Item) => (
     <button key={i.id} type="button"
       className={`pick${i.id === current ? ' on' : ''}${iconsOn ? '' : ' text'}${query && i === first ? ' first' : ''}`}
-      title={isTaken(i) ? `${name(i)} (already in the list)` : name(i)} aria-label={name(i)} disabled={isTaken(i)}
+      title={isTaken(i) ? t(`${name(i)} (already in the list)`, `${name(i)}（已在列表中）`) : name(i)} aria-label={name(i)} disabled={isTaken(i)}
       onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)}
       onClick={() => onPick(i.id)}>
       {iconsOn ? <Icon id={i.id} size={26} /> : name(i)}
@@ -94,9 +95,9 @@ export default function ItemPicker({ data, items, current, taken, scope, onPick,
   )
 
   return (
-    <div className="picker" ref={box} role="dialog" aria-label="Choose an item"
+    <div className="picker" ref={box} role="dialog" aria-label={t('Choose an item', '选择物品')}
       onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose('esc') } }}>
-      <input className="wide" autoFocus placeholder="Search…" aria-label="Search items" value={q} onChange={e => setQ(e.target.value)}
+      <input className="wide" autoFocus placeholder={t('Search…', '搜索…')} aria-label={t('Search items', '搜索物品')} value={q} onChange={e => setQ(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && first) onPick(first.id) }} />
       {!query && (
         <div className="pickgroups" role="tablist" onKeyDown={tabKeys}>
@@ -112,12 +113,12 @@ export default function ItemPicker({ data, items, current, taken, scope, onPick,
         {query
           ? (matches.length ? <>
               <div className="pickrow">{matches.slice(0, MAX_RESULTS).map(cell)}</div>
-              {matches.length > MAX_RESULTS && <p className="muted small">Showing {MAX_RESULTS} of {matches.length}; type more to narrow the search.</p>}
+              {matches.length > MAX_RESULTS && <p className="muted small">{t(`Showing ${MAX_RESULTS} of ${matches.length}; type more to narrow the search.`, `显示 ${matches.length} 项中的 ${MAX_RESULTS} 项；输入更多字词以缩小范围。`)}</p>}
             </>
-            : <p className="muted small">No item matches “{q}”.</p>)
+            : <p className="muted small">{t(`No item matches “${q}”.`, `没有匹配“${q}”的物品。`)}</p>)
           : rows.map((r, n) => <div className="pickrow" key={n}>{r.map(cell)}</div>)}
       </div>
-      <div className="pickname">{hover ? name(hover) : query && first ? `Enter picks ${name(first)}` : ' '}</div>
+      <div className="pickname">{hover ? name(hover) : query && first ? t(`Enter picks ${name(first)}`, `回车选择 ${name(first)}`) : ' '}</div>
     </div>
   )
 }

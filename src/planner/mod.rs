@@ -115,6 +115,8 @@ pub struct PlanSettings {
     /// as recipes, fuel → "Electricity" MW). Solved by raising an Electricity target until it covers the
     /// plan's production + extraction power.
     pub self_power: bool,
+    /// Interface language for names in the plan: "zh" | "en" | "" (game default: Chinese for DSP).
+    pub lang: String,
     pub targets: Vec<ItemRate>,
     /// Items already available (e.g. from another factory), up to `rate`, free.
     pub supplies: Vec<ItemRate>,
@@ -204,6 +206,7 @@ impl Default for PlanSettings {
         Self {
             game: "satisfactory".into(),
             self_power: false,
+            lang: String::new(),
             targets: vec![],
             supplies: vec![],
             objective: Objective::Resources,
@@ -427,6 +430,7 @@ pub fn self_powered_settings(data: &GameData, settings: &PlanSettings) -> PlanSe
 pub const UNSINKABLE: [&str; 2] = ["Desc_NuclearWaste_C", "Desc_PlutoniumWaste_C"];
 
 pub fn plan(data: &GameData, settings: &PlanSettings) -> Plan {
+    data::set_lang(&settings.lang);
     let mut p = lp::solve(data, &self_powered_settings(data, settings));
     finish_power(data, settings, &mut p);
     p

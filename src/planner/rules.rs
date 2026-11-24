@@ -405,13 +405,14 @@ pub fn proliferator_tier_hint(data: &GameData, s: &PlanSettings, recipes: &[supe
     }
     let shown: Vec<&str> = lower.iter().take(4).map(|x| x.as_str()).collect();
     let more = if lower.len() > 4 { format!(" and {} more", lower.len() - 4) } else { String::new() };
-    Some(format!(
-        "{} recipe(s) are sprayed with {} although {} is enabled ({}{more}). This is the steady-state optimum for this objective, not a build-order effect: a lower-tier spray needs far fewer upstream buildings ({} is made from the lower tiers plus extra ingredients), and on these recipes that outweighs its smaller bonus. To spray everything with {}, untick the lower-tier proliferator modes; the plan then costs a little more by the objective (0.6 % on 60 universe matrix/min, Buildings).",
-        lower.len(),
-        tiers.join(" / "),
-        data.item_name(&best.item),
-        shown.join(", "),
-        data.item_name(&best.item),
-        data.item_name(&best.item),
+    let (n, t, best_name, sh) = (lower.len(), tiers.join(" / "), data.item_name(&best.item), shown.join(", "));
+    let more_zh = if lower.len() > 4 { format!(" 等 {} 个", lower.len()) } else { String::new() };
+    Some(super::data::tr(
+        &format!(
+            "{n} recipe(s) are sprayed with {t} although {best_name} is enabled ({sh}{more}). This is the steady-state optimum for this objective, not a build-order effect: a lower-tier spray needs far fewer upstream buildings ({best_name} is made from the lower tiers plus extra ingredients), and on these recipes that outweighs its smaller bonus. To spray everything with {best_name}, untick the lower-tier proliferator modes; the plan then costs a little more by the objective (0.6 % on 60 universe matrix/min, Buildings)."
+        ),
+        &format!(
+            "{n} 个配方喷涂的是 {t}，尽管已启用 {best_name}（{sh}{more_zh}）。这是该目标下的稳态最优，与建造顺序无关：低一级的增产剂需要的上游建筑少得多（{best_name} 要用低级增产剂再加额外原料制造），在这些配方上比它较小的加成更划算。想全部喷涂 {best_name}，请取消勾选低级增产剂模式；方案按目标算会略贵一点（60 个/分钟宇宙矩阵时多 0.6 %，目标为建筑数）。"
+        ),
     ))
 }

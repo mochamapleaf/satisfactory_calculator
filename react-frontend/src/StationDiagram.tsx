@@ -4,10 +4,27 @@
 // back to their slot. Machine colour = input sorter tier, dot above = output sorter tier.
 import { useState } from 'react'
 import { fmt, type RecipeLayout, type StationPlan } from './solver'
+import { t } from './i18n'
 
-const TIER_ZH: Record<string, string> = { yellow: '黄爪', green: '绿爪', blue: '蓝爪', pile: '白爪' }
-const ROLE_ZH: Record<string, string> = {
-  'control unit': '控制单元', refill: '补料', feed: '投料', recovery: '回收', product: '产物', proliferator: '增产剂',
+const tierName = (k: string): string => {
+  switch (k) {
+    case 'yellow': return t('yellow sorter', '黄爪')
+    case 'green': return t('green sorter', '绿爪')
+    case 'blue': return t('blue sorter', '蓝爪')
+    case 'pile': return t('pile sorter', '白爪')
+    default: return k
+  }
+}
+const roleName = (k: string): string => {
+  switch (k) {
+    case 'control unit': return t('control unit', '控制单元')
+    case 'refill': return t('refill', '补料')
+    case 'feed': return t('feed', '投料')
+    case 'recovery': return t('recovery', '回收')
+    case 'product': return t('product', '产物')
+    case 'proliferator': return t('proliferator', '增产剂')
+    default: return k
+  }
 }
 const SERIES = ['var(--accent)', 'var(--raw)', 'var(--sup)', 'var(--liquid)']
 
@@ -48,9 +65,9 @@ export function StationDiagram({ l, sp }: { l: RecipeLayout; sp: StationPlan }) 
     <div className="stationbox">
       {sp.stations.length > 1 && (
         <div className="row small stationtabs" role="tablist">
-          {sp.stations.map((t, i) => (
-            <button key={t.index} role="tab" aria-selected={i === si} className={`tabbtn${i === si ? ' on' : ''}`} onClick={() => setSi(i)}>
-              塔 {t.index} · #{t.first}–{t.last}
+          {sp.stations.map((st, i) => (
+            <button key={st.index} role="tab" aria-selected={i === si} className={`tabbtn${i === si ? ' on' : ''}`} onClick={() => setSi(i)}>
+              {t('Station', '塔')} {st.index} · #{st.first}–{st.last}
             </button>
           ))}
         </div>
@@ -59,9 +76,9 @@ export function StationDiagram({ l, sp }: { l: RecipeLayout; sp: StationPlan }) 
         <svg className="belt station" width={w} height={h} role="img" aria-label={`Station ${s.index} of ${l.name}`}>
           {/* station */}
           <rect x={8} y={top - 12} width={left - 76} height={h - top} rx={6} className="stationrect" />
-          <text x={14} y={top + 2} className="blabel">{sp.kind === 'pls' ? '行星塔' : '星际塔'} {s.index}</text>
-          <text x={14} y={top + 16} className="axlabel">{s.ports.length}/{sp.slots} 口</text>
-          <text x={14} y={top + 30} className="axlabel">供 {fmt(s.items, 0)}/s</text>
+          <text x={14} y={top + 2} className="blabel">{sp.kind === 'pls' ? t('Planetary station', '行星塔') : t('Interstellar station', '星际塔')} {s.index}</text>
+          <text x={14} y={top + 16} className="axlabel">{s.ports.length}/{sp.slots} {t('ports', '口')}</text>
+          <text x={14} y={top + 30} className="axlabel">{t('supply', '供')} {fmt(s.items, 0)}/s</text>
           {/* product lanes: from the served machines back to the slot */}
           {outs.map(p => {
             const y = slotY.get(p.slot)!
@@ -72,17 +89,17 @@ export function StationDiagram({ l, sp }: { l: RecipeLayout; sp: StationPlan }) 
                 <path d={`M${left - 44},${y - 4} L${left - 50},${y} L${left - 44},${y + 4}`} className="lanehead" />
                 <text x={left - 50} y={y - 3} className="slotlabel" textAnchor="end">{p.slot}</text>
                 <text x={xr + 6} y={y + 4} className="axlabel">{p.name} {fmt(p.items, 1)}/s</text>
-                <title>{`口 ${p.slot} 出 ${p.name} ${fmt(p.items, 2)}/s ← #${p.serves[0]}–#${p.serves[p.serves.length - 1]}`}</title>
+                <title>{`${t('Port', '口')} ${p.slot} ${t('out', '出')} ${p.name} ${fmt(p.items, 2)}/s ← #${p.serves[0]}–#${p.serves[p.serves.length - 1]}`}</title>
               </g>
             )
           })}
           {/* mixed belt */}
           <line x1={left - 52} x2={x(positions) + px} y1={yBelt} y2={yBelt} className="lane mixed" />
-          <text x={x(positions) + px + 4} y={yBelt + 4} className="axlabel">混带 →</text>
+          <text x={x(positions) + px + 4} y={yBelt + 4} className="axlabel">{t('mixed belt', '混带')} →</text>
           {isA && s.first === 1 && <g>
             {[0, 1, 2, 3].map(c => <rect key={c} x={left - 44 + c * 9} y={yBelt - 5} width={8} height={10} className={c < 2 ? 'cu-green' : 'cu-blue'} />)}
-            <text x={left - 46} y={yBelt - 9} className="axlabel">控制单元</text>
-            <title>{`控制单元:前两格绿带(限流),后两格蓝带;${l.two ? `${l.inputs[0].name} ${fmt(l.two.shares[0], 2)} / ${l.inputs[1].name} ${fmt(l.two.shares[1], 2)} 叠/秒` : ''}`}</title>
+            <text x={left - 46} y={yBelt - 9} className="axlabel">{t('control unit', '控制单元')}</text>
+            <title>{`${t('Control unit: first two lanes green belt (limiter), last two blue belt', '控制单元:前两格绿带(限流),后两格蓝带')}; ${l.two ? `${l.inputs[0].name} ${fmt(l.two.shares[0], 2)} / ${l.inputs[1].name} ${fmt(l.two.shares[1], 2)} ${t('stacks/s', '叠/秒')}` : ''}`}</title>
           </g>}
           {/* machines */}
           {machines.map(m => {
@@ -99,7 +116,7 @@ export function StationDiagram({ l, sp }: { l: RecipeLayout; sp: StationPlan }) 
                     <circle cx={cx} cy={m.side === 'L' ? y - 3 : y + mh + 3} r={2.6} className={`dot tier-${o[1]}`} />
                   </g>
                 })}
-                <title>{`#${m.n} · 进料 ${TIER_ZH[m.input] ?? m.input}(混带)· 出料 ${m.outputs.map(o => `${TIER_ZH[o[1]] ?? o[1]} → 口 ${o[0]}`).join(', ')}`}</title>
+                <title>{`#${m.n} · ${t('in', '进料')} ${tierName(m.input)} (${t('mixed belt', '混带')}) · ${t('out', '出料')} ${m.outputs.map(o => `${tierName(o[1])} → ${t('port', '口')} ${o[0]}`).join(', ')}`}</title>
               </g>
             )
           })}
@@ -118,8 +135,8 @@ export function StationDiagram({ l, sp }: { l: RecipeLayout; sp: StationPlan }) 
                     <path d={`M${xx - 3},${yBelt + 9} L${xx},${yBelt + 3} L${xx + 3},${yBelt + 9}`} className="lanehead" style={{ stroke: color(p.item) }} />
                   </g>
                 ))}
-                <text x={xr + 6} y={y + 4} className="axlabel">{ROLE_ZH[p.role] ?? p.role} {p.name} {fmt(p.items, 1)}/s</text>
-                <title>{`口 ${p.slot} 供 ${p.name} ${fmt(p.items, 2)}/s(${ROLE_ZH[p.role] ?? p.role}${p.role === 'refill' ? `,第 ${p.serves.join('、')} 台后` : ''})`}</title>
+                <text x={xr + 6} y={y + 4} className="axlabel">{roleName(p.role)} {p.name} {fmt(p.items, 1)}/s</text>
+                <title>{`${t('Port', '口')} ${p.slot} ${t('supplies', '供')} ${p.name} ${fmt(p.items, 2)}/s (${roleName(p.role)}${p.role === 'refill' ? `, ${t('after machine', '第')} ${p.serves.join(t(', ', '、'))}${t('', ' 台后')}` : ''})`}</title>
               </g>
             )
           })}
@@ -127,14 +144,14 @@ export function StationDiagram({ l, sp }: { l: RecipeLayout; sp: StationPlan }) 
       </div>
       <div className="tablewrap">
         <table className="mbtable small">
-          <thead><tr><th className="num">口</th><th>方向</th><th>用途</th><th>物品</th><th className="num">个/秒</th><th>位置</th></tr></thead>
+          <thead><tr><th className="num">{t('Port', '口')}</th><th>{t('Direction', '方向')}</th><th>{t('Use', '用途')}</th><th>{t('Item', '物品')}</th><th className="num">{t('items/s', '个/秒')}</th><th>{t('Position', '位置')}</th></tr></thead>
           <tbody>
             {s.ports.map(p => (
               <tr key={p.slot}>
-                <td className="num">{p.slot}</td><td>{p.dir === 'in' ? '塔 → 带' : '带 → 塔'}</td><td>{ROLE_ZH[p.role] ?? p.role}</td>
+                <td className="num">{p.slot}</td><td>{p.dir === 'in' ? t('station → belt', '塔 → 带') : t('belt → station', '带 → 塔')}</td><td>{roleName(p.role)}</td>
                 <td><span className="swatch" style={{ background: p.dir === 'in' ? color(p.item) : 'var(--muted)' }} />{p.name}</td>
                 <td className="num">{fmt(p.items, 2)}</td>
-                <td className="small">{p.role === 'refill' ? `第 ${p.serves.join('、')} 台后并入混带` : p.role === 'product' ? `收 #${p.serves[0]}–#${p.serves[p.serves.length - 1]} 的产物` : p.role === 'control unit' ? '控制单元(带起点)' : p.role === 'feed' ? `第 ${p.serves[0]} 台前投料` : p.role === 'recovery' ? `第 ${p.serves[0]} 台后回收` : '喷涂机(补料支线上)'}</td>
+                <td className="small">{p.role === 'refill' ? t(`joins the mixed belt after machine ${p.serves.join(', ')}`, `第 ${p.serves.join('、')} 台后并入混带`) : p.role === 'product' ? t(`takes the product of #${p.serves[0]}–#${p.serves[p.serves.length - 1]}`, `收 #${p.serves[0]}–#${p.serves[p.serves.length - 1]} 的产物`) : p.role === 'control unit' ? t('control unit (belt start)', '控制单元(带起点)') : p.role === 'feed' ? t(`fed before machine ${p.serves[0]}`, `第 ${p.serves[0]} 台前投料`) : p.role === 'recovery' ? t(`recovered after machine ${p.serves[0]}`, `第 ${p.serves[0]} 台后回收`) : t('coater (on the refill branch)', '喷涂机(补料支线上)')}</td>
               </tr>
             ))}
           </tbody>
@@ -153,18 +170,18 @@ function StationTable({ sp, station }: { sp: StationPlan; station: number }) {
   return (
     <div className="tablewrap">
       <table className="mbtable small">
-        <thead><tr><th className="num">#</th><th>塔</th><th>位置</th><th>进料爪 (混带)</th><th>出料爪 → 口</th></tr></thead>
+        <thead><tr><th className="num">#</th><th>{t('Station', '塔')}</th><th>{t('Position', '位置')}</th><th>{t('Input sorter (mixed belt)', '进料爪 (混带)')}</th><th>{t('Output sorter → port', '出料爪 → 口')}</th></tr></thead>
         <tbody>
           {rows.map(m => (
             <tr key={m.n}>
-              <td className="num">{m.n}</td><td>{m.station}</td><td>{m.pos}{m.side === 'R' ? ' 右' : sp.machines.some(q => q.side === 'R') ? ' 左' : ''}</td>
-              <td><span className={`tierchip tier-${m.input}`} />{TIER_ZH[m.input] ?? m.input}</td>
-              <td>{m.outputs.map((o, k) => <span key={k}><span className={`tierchip tier-${o[1]}`} />{TIER_ZH[o[1]] ?? o[1]} → 口 {o[0]} </span>)}</td>
+              <td className="num">{m.n}</td><td>{m.station}</td><td>{m.pos}{m.side === 'R' ? t(' right', ' 右') : sp.machines.some(q => q.side === 'R') ? t(' left', ' 左') : ''}</td>
+              <td><span className={`tierchip tier-${m.input}`} />{tierName(m.input)}</td>
+              <td>{m.outputs.map((o, k) => <span key={k}><span className={`tierchip tier-${o[1]}`} />{tierName(o[1])} → {t('port', '口')} {o[0]} </span>)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {here.length > 40 && <button className="tabbtn" onClick={() => setAll(!all)}>{all ? '只看前 40 台' : `全部 ${here.length} 台`}</button>}
+      {here.length > 40 && <button className="tabbtn" onClick={() => setAll(!all)}>{all ? t('First 40 machines only', '只看前 40 台') : t(`All ${here.length} machines`, `全部 ${here.length} 台`)}</button>}
     </div>
   )
 }

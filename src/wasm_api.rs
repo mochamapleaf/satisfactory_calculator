@@ -103,6 +103,7 @@ pub fn solve_start(settings_json: &str) -> String {
             return serde_json::json!({"done": true, "plan": p}).to_string();
         }
     };
+    planner::data::set_lang(&settings.lang);
     ASKED.with(|a| *a.borrow_mut() = Some(settings.clone()));
     let settings = planner::self_powered_settings(data(&settings.game, &settings.dataset), &settings);
     match planner::lp::start(data(&settings.game, &settings.dataset), &settings) {
@@ -263,6 +264,7 @@ pub fn dsp_galaxy_json(seed_json: &str) -> String {
 pub fn dsp_thresholds_json(settings_json: &str) -> String {
     match serde_json::from_str::<planner::dsp_galaxy::ThresholdSettings>(settings_json) {
         Ok(ts) => {
+            planner::data::set_lang(&ts.plan.lang);
             let g = galaxy_for(&ts.seed);
             serde_json::to_string(&planner::dsp_galaxy::thresholds(data("dsp", ""), &g, &ts)).unwrap()
         }
@@ -275,6 +277,7 @@ pub fn dsp_thresholds_json(settings_json: &str) -> String {
 pub fn dsp_galaxy_plan_json(settings_json: &str) -> String {
     match serde_json::from_str::<planner::dsp_galaxy::GalaxyPlanSettings>(settings_json) {
         Ok(gs) => {
+            planner::data::set_lang(&gs.plan.lang);
             let g = galaxy_for(&gs.seed);
             serde_json::to_string(&planner::dsp_galaxy::plan_galaxy(data("dsp", ""), &g, &gs)).unwrap()
         }
@@ -287,6 +290,7 @@ pub fn dsp_galaxy_plan_json(settings_json: &str) -> String {
 pub fn dsp_galaxy_rate_json(settings_json: &str) -> String {
     match serde_json::from_str::<planner::dsp_galaxy::RateSettings>(settings_json) {
         Ok(rs) => {
+            planner::data::set_lang(&rs.plan.lang);
             let g = galaxy_for(&rs.seed);
             serde_json::to_string(&planner::dsp_galaxy::galaxy_rate(data("dsp", ""), &g, &rs)).unwrap()
         }
@@ -299,6 +303,7 @@ pub fn dsp_galaxy_rate_json(settings_json: &str) -> String {
 pub fn dsp_galaxy_total_json(settings_json: &str) -> String {
     match serde_json::from_str::<planner::dsp_galaxy::TotalSettings>(settings_json) {
         Ok(ts) => {
+            planner::data::set_lang(&ts.plan.lang);
             let g = galaxy_for(&ts.seed);
             serde_json::to_string(&planner::dsp_galaxy::galaxy_total(data("dsp", ""), &g, &ts)).unwrap()
         }

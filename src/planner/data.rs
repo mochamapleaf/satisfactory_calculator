@@ -205,6 +205,8 @@ impl Effect {
 pub struct Location {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub name_zh: Option<String>,
 }
 
 /// Researched productivity family: one infinite technology and the recipes it boosts.
@@ -212,6 +214,8 @@ pub struct Location {
 pub struct Research {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub name_zh: Option<String>,
     pub recipes: Vec<String>,
     /// Productivity per level (0.1).
     pub step: f64,
@@ -223,6 +227,8 @@ pub struct Research {
 pub struct Beacon {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub name_zh: Option<String>,
     pub effectivity: f64,
     pub modules: u32,
     /// MW per beacon.
@@ -392,7 +398,14 @@ impl GameData {
         if q == 0 {
             n.to_string()
         } else {
-            format!("{n} ★{}", super::quality::tier_name(self, q))
+            {
+            let lang = LANG.with(|l| l.get());
+            let tier = match (lang, q) {
+                (b'z', 0..=4) => ["基础级", "精良级", "稀有级", "史诗级", "传说级"][q as usize].to_string(),
+                _ => super::quality::tier_name(self, q),
+            };
+            format!("{n} ★{tier}")
+        }
         }
     }
     pub fn resolve_recipe(&self, key: &str) -> Option<&Recipe> {
@@ -403,10 +416,39 @@ impl GameData {
     pub fn item_names(&self) -> HashMap<&str, &str> {
         self.items.iter().map(|i| (i.id.as_str(), self.pick(&i.name, &i.name_zh))).collect()
     }
+    /// Name in the interface language (`set_lang`): Chinese where the data has it for "zh", English for
+    /// "en"; unset ("") keeps the old default (Chinese for DSP only).
     pub fn pick<'a>(&self, en: &'a str, zh: &'a Option<String>) -> &'a str {
-        match (self.game.as_str(), zh) {
-            ("dsp", Some(z)) if !z.is_empty() => z.as_str(),
+        let lang = LANG.with(|l| l.get());
+        match (lang, self.game.as_str(), zh) {
+            (b'e', _, _) => en,
+            (b'z', _, Some(z)) if !z.is_empty() => z.as_str(),
+            (0, "dsp", Some(z)) if !z.is_empty() => z.as_str(),
             _ => en,
         }
     }
+}
+
+thread_local! {
+    static LANG: std::cell::Cell<u8> = const { std::cell::Cell::new(0) };
+}
+
+/// Text in the interface language: Chinese for "zh", English for "en"; unset (native tests, old
+/// callers) keeps English (the mixed-belt texts).
+pub fn tr(en: &str, zh: &str) -> String {
+    if LANG.with(|l| l.get()) == b'z' { zh } else { en }.to_string()
+}
+
+/// Like `tr`, but unset keeps Chinese (the galaxy texts).
+pub fn tr_zh(en: &str, zh: &str) -> String {
+    if LANG.with(|l| l.get()) == b'e' { en } else { zh }.to_string()
+}
+
+/// Interface language for names the solver writes into plans ("zh" | "en" | "" = game default).
+pub fn set_lang(lang: &str) {
+    LANG.with(|l| l.set(match lang {
+        "zh" => b'z',
+        "en" => b'e',
+        _ => 0,
+    }));
 }
