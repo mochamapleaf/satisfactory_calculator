@@ -139,7 +139,7 @@ fn dark_fog_drops_lower_the_magnet_threshold() {
     // below Dark Fog level 24 magnets do not drop
     ts.dark_fog.level = 20;
     let r = thresholds(dsp(), galaxy(), &ts);
-    assert!(r.warnings.iter().any(|w| w.contains("level 24")));
+    assert!(r.warnings.iter().any(|w| w.contains("黑雾 24 级")));
     let mag = r.rows.iter().find(|x| x.item == "unipolar-magnet").unwrap();
     assert!((mag.per_cube - 10.0).abs() < 1e-6);
 }
@@ -387,4 +387,73 @@ fn galaxy_total_needs_no_quota_and_no_magnets() {
     few.systems = vec![0, 1, 2];
     let rf = galaxy_total(dsp(), galaxy(), &few);
     assert!(rf.cubes <= r.cubes * (1.0 + 1e-6));
+}
+
+#[test]
+fn galaxy_rate_is_bounded_by_rates_and_dyson() {
+    // Xinyu 2026-11-23: past the threshold the stock is infinite; rates and the Dyson spheres bound z
+    let mut rs = RateSettings::default();
+    rs.plan.effects = vec!["proliferator-3-speed".into(), "proliferator-3-products".into()];
+    rs.dyson = std::env::var("NO_DYSON").is_err();
+    let r = galaxy_rate(dsp(), galaxy(), &rs);
+    assert_eq!(r.status, Status::Optimal, "{:?}", r.warnings);
+    eprintln!(
+        "L{} z {:.0}/min, dyson {:.0} GW (used {:.0}), swarm {:?} {:.0} sails/min {:.0} GW, infinite from L{:?}, dyson-bound from L{:?}, {:.0} ms",
+        r.level, r.cubes_per_min, r.dyson_gw, r.dyson_used_gw, r.swarm_star, r.sails_per_min, r.swarm_gw, r.infinite_level, r.dyson_level, r.solve_ms
+    );
+    for u in &r.uses {
+        eprintln!("  {:24} {:5} cap {:>12.0} used {:>12.0} per cube {:7.3} {} m {:.4} inf {:?}", u.item, u.source, u.cap, u.used, u.per_cube, if u.binding { "BIND" } else { "" }, u.marginal, u.infinite_from);
+        assert!(u.used <= u.cap * (1.0 + 1e-7) + 1e-6, "{}", u.item);
+    }
+    for p in &r.curve {
+        eprintln!("  curve L{} {:.0} {}", p.level, p.cubes_per_min, p.dyson_bound);
+    }
+    eprintln!("power {:.0} GW ({:.1} MW per cube/min), shells-only ceiling {:.0}/min", r.power_gw, r.power_mw_per_rate, r.ceiling_shells);
+    assert!(r.cubes_per_min > 0.0);
+    assert!(r.uses.iter().any(|u| u.binding));
+    // fire ice comes from veins and giants: both count (review H1)
+    let fi = r.uses.iter().find(|u| u.item == "fire-ice").unwrap();
+    assert_eq!(fi.source, "vein+gas");
+    assert!(r.power_gw > 0.0 && r.ceiling_shells >= r.cubes_per_min * (1.0 - 1e-6));
+    // the curve never falls with the level
+    for w in r.curve.windows(2) {
+        assert!(w[1].cubes_per_min >= w[0].cubes_per_min * (1.0 - 1e-6), "{:?}", r.curve);
+    }
+    // the Dyson spheres cap photons: photons used ≤ Σ max power
+    assert!(r.dyson_used_gw <= r.dyson_gw * (1.0 + 1e-6) + 1e-9);
+    // without the swarm: the level from which the shells are full
+    let mut ns = rs.clone();
+    ns.swarm = false;
+    let rn = galaxy_rate(dsp(), galaxy(), &ns);
+    assert!(rn.cubes_per_min <= r.cubes_per_min * (1.0 + 1e-6));
+    if let Some(d) = rn.dyson_level {
+        let mut hi = ns.clone();
+        hi.level = d.max(rs.level) + 50;
+        let rh = galaxy_rate(dsp(), galaxy(), &hi);
+        // past it the shells are used in full (photons bind; more ore still helps by spending them better)
+        assert!(rh.uses.iter().any(|u| u.item == "critical-photon" && u.binding), "{:?}", rh.uses.iter().filter(|u| u.binding).map(|u| &u.item).collect::<Vec<_>>());
+        assert!(rh.dyson_used_gw >= rh.dyson_gw * (1.0 - 1e-6));
+        let mut hs = rs.clone();
+        hs.level = hi.level;
+        let rhs = galaxy_rate(dsp(), galaxy(), &hs);
+        eprintln!("L{}: shells only {:.0}, with swarm {:.0} ({:.0} sails/min, {:.0} GW)", hi.level, rh.cubes_per_min, rhs.cubes_per_min, rhs.sails_per_min, rhs.swarm_gw);
+        // the swarm is an option: never fewer cubes (with factory power charged it may not pay)
+        assert!(rhs.cubes_per_min >= rh.cubes_per_min * (1.0 - 1e-6));
+        let mut np = hs.clone();
+        np.power = false;
+        let rnp = galaxy_rate(dsp(), galaxy(), &np);
+        eprintln!("  without factory power: {:.0}/min, {:.0} sails/min", rnp.cubes_per_min, rnp.sails_per_min);
+        assert!(rnp.cubes_per_min >= rhs.cubes_per_min * (1.0 - 1e-6));
+    }
+    // shell power: birth star one layer ≈ 38.7 GW, ten layers ≈ 254 GW (research note)
+    let birth = &galaxy().stars[0];
+    let p = dyson_max_gw(birth);
+    assert!(p > 150.0 && p < 400.0, "{} {} {}", birth.luminosity, birth.dyson_radius, p);
+    // more miners per node never gives fewer cubes; a subset of stars never more
+    let mut m2 = rs.clone();
+    m2.miners_per_node = 2.0;
+    assert!(galaxy_rate(dsp(), galaxy(), &m2).cubes_per_min >= r.cubes_per_min * (1.0 - 1e-6));
+    let mut sub = rs.clone();
+    sub.systems = vec![0, 1, 2];
+    assert!(galaxy_rate(dsp(), galaxy(), &sub).cubes_per_min <= r.cubes_per_min * (1.0 + 1e-6));
 }

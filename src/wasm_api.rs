@@ -265,6 +265,18 @@ pub fn dsp_galaxy_plan_json(settings_json: &str) -> String {
     }
 }
 
+/// Highest cube rate: `RateSettings` JSON → `RateReport` JSON.
+#[wasm_bindgen]
+pub fn dsp_galaxy_rate_json(settings_json: &str) -> String {
+    match serde_json::from_str::<planner::dsp_galaxy::RateSettings>(settings_json) {
+        Ok(rs) => {
+            let g = galaxy_for(&rs.seed);
+            serde_json::to_string(&planner::dsp_galaxy::galaxy_rate(data("dsp", ""), &g, &rs)).unwrap()
+        }
+        Err(e) => bad(e),
+    }
+}
+
 /// Galaxy total: `TotalSettings` JSON → `TotalReport` JSON (most cubes the finite stock makes).
 #[wasm_bindgen]
 pub fn dsp_galaxy_total_json(settings_json: &str) -> String {

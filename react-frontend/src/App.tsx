@@ -16,7 +16,7 @@ const MapView = lazy(() => import('./MapView'))
 const GalaxyTab = lazy(() => import('./Galaxy'))
 
 type Tab = 'table' | 'flow' | 'graph' | 'values' | 'mixed' | 'galaxy' | 'map'
-const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values'], ['mixed', 'Mixed belts'], ['galaxy', 'Galaxy'], ['map', 'Map']]
+const TABS: [Tab, string][] = [['table', 'Plan'], ['flow', 'Item flow'], ['graph', 'Machine graph'], ['values', 'Item values'], ['mixed', '混带'], ['galaxy', '星区'], ['map', 'Map']]
 
 export default function App() {
   const [data, setData] = useState<GameData | null>(null)
@@ -160,7 +160,9 @@ export default function App() {
   if (error) return <div className="loading">The solver did not load: {error}. Reload the page to try again.</div>
   if (!data) return <div className="loading">Loading solver…</div>
   // tabs that exist for this game; a tab chosen in another game (Galaxy, Map, Mixed belts) falls back to the plan
-  const visibleTabs = TABS.filter(([id]) => (id !== 'mixed' && id !== 'galaxy' || data.game === 'dsp') && (id !== 'map' || data.game === 'satisfactory'))
+  // DSP in Chinese (Xinyu 2026-11-23: 「你是不是应该全中文？」)
+  const TAB_ZH: Record<string, string> = { table: '规划', flow: '物流', graph: '机器图', values: '物品价值' }
+  const visibleTabs = TABS.map(([id, t]): [Tab, string] => [id, data.game === 'dsp' ? (TAB_ZH[id] ?? t) : t]).filter(([id]) => (id !== 'mixed' && id !== 'galaxy' || data.game === 'dsp') && (id !== 'map' || data.game === 'satisfactory'))
   const tab: Tab = visibleTabs.some(([id]) => id === tabSel) ? tabSel : 'table'
 
   return (

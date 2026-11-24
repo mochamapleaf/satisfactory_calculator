@@ -23,6 +23,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 pub const CUBE: &str = "universe-matrix";
 pub const WARPER: &str = "space-warper";
 pub const PHOTON: &str = "critical-photon";
+pub const SAIL: &str = "solar-sail";
+/// Swarm sail: 36 kW × luminosity (dsp-wiki Dyson_Sphere, player-measured).
+pub const SAIL_KW: f64 = 36.0;
 /// Vein utilisation: stock consumed per unit mined is 0.94^level (BWIKI 矿物利用, Saros readme).
 pub const Q: f64 = 0.94;
 /// Research station sprayed with Mk.III: hashes ×1.25, cubes per level ×0.8 (report §3, 存疑).
@@ -417,7 +420,7 @@ impl DarkFog {
             }
             let lv = drop_unlock_level(&d.item);
             if self.level < lv {
-                warn.push(format!("Dark Fog: {} drops from Dark Fog level {lv} (set {}): ignored", d.item, self.level));
+                warn.push(format!("黑雾：{} 要黑雾 {lv} 级才掉（现在设的是 {} 级），不计", d.item, self.level));
                 continue;
             }
             // exclusive df-* items are not scaled by the debris bonus (BWIKI, Saros readme)
@@ -551,7 +554,7 @@ pub fn thresholds(data: &GameData, g: &Galaxy, ts: &ThresholdSettings) -> Thresh
     let mut warnings = ts.dark_fog.rates(ts.level).1;
     let free = unit_plan(data, ts, g, &stocks, None);
     if free.status != Status::Optimal {
-        warnings.push(format!("unconstrained plan: {:?} {}", free.status, free.warnings.join("; ")));
+        warnings.push(format!("不限配额的方案：{:?} {}", free.status, free.warnings.join("；")));
     }
     let raw = super::lp::raw_map(&free);
     let mult = g.settings.resource_multiplier;
@@ -879,12 +882,12 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let mut seen = BTreeSet::new();
     sys.retain(|i| seen.insert(*i));
     if sys.len() > MAX_SYSTEMS {
-        out.warnings.push(format!("{} systems chosen; only the first {MAX_SYSTEMS} are planned", sys.len()));
+        out.warnings.push(format!("选了 {} 个星系，只规划前 {MAX_SYSTEMS} 个", sys.len()));
         sys.truncate(MAX_SYSTEMS);
     }
     if sys.is_empty() {
         out.status = Status::Infeasible;
-        out.warnings.push("no star systems chosen".into());
+        out.warnings.push("没有选星系".into());
         return out;
     }
     let stars: Vec<&StarInfo> = sys.iter().map(|i| &g.stars[*i]).collect();
@@ -907,7 +910,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let photons_obj = target_mode && gs.objective == "photons";
     if !target_mode && gs.building_cap.is_none() && gs.photon_gw.is_none() {
         out.status = Status::Unbounded;
-        out.warnings.push("maximum z needs a building cap or a Dyson (photon) power cap".into());
+        out.warnings.push("求最大白糖需要建筑上限或戴森球功率上限".into());
         return out;
     }
     let bld_w = if target_mode { if photons_obj { 1e-3 } else { 1.0 } } else { -1e-6 };
@@ -922,7 +925,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let z = if target_mode {
         let t = if gs.target.is_finite() { gs.target.max(0.0) } else { 0.0 };
         if !gs.target.is_finite() {
-            out.warnings.push("target is not a number: planned 0 cubes/min".into());
+            out.warnings.push("目标不是数字：按 0 白糖/分钟规划".into());
         }
         p.add_var(0.0, (t, t))
     } else {
@@ -1117,7 +1120,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         Ok(Ok(s)) => s,
         Ok(Err(_)) => {
             out.status = Status::Infeasible;
-            out.warnings.push("solver stopped before finding a plan".into());
+            out.warnings.push("求解器还没找到方案就停了".into());
             return out;
         }
         Err(microlp::Error::Infeasible) => {
@@ -1128,12 +1131,12 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         }
         Err(microlp::Error::Unbounded) => {
             out.status = Status::Unbounded;
-            out.warnings.push("unbounded: add a building or photon cap".into());
+            out.warnings.push("无上限：请设建筑上限或戴森球功率上限".into());
             return out;
         }
         Err(e) => {
             out.status = Status::Infeasible;
-            out.warnings.push(format!("solver: {e}"));
+            out.warnings.push(format!("求解器：{e}"));
             return out;
         }
     };
@@ -1278,12 +1281,12 @@ fn infeasible_hint(gs: &GalaxyPlanSettings, g: &Galaxy, sys: &[usize]) -> String
         .into_iter()
         .filter(|k| !have.contains(*k))
         .collect();
-    let mut s = format!("infeasible at L{} with these systems", gs.level);
+    let mut s = format!("在 {} 级、这些星系下无解", gs.level);
     if !missing.is_empty() {
-        s += &format!("; not available in them: {}", missing.join(", "));
+        s += &format!("；这些星系里没有：{}", missing.join("、"));
     }
     if gs.stock_quotas {
-        s += "; quotas may be too tight at this level (raise L, add systems, or check the threshold table)";
+        s += "；这一级的配额可能太紧（提高等级、加星系，或看无限阈值表）";
     }
     s
 }
@@ -1381,8 +1384,10 @@ fn total_lp(
     unlimited: &BTreeSet<String>,
     wpi: f64,
     bump: Option<(&str, f64)>,
+    extra: &[Vec<(String, f64)>],
 ) -> Result<TotalSol, String> {
     let mut items: BTreeSet<String> = units.iter().flat_map(|u| u.net.iter().map(|(i, _)| i.clone())).collect();
+    items.extend(extra.iter().flat_map(|c| c.iter().map(|(i, _)| i.clone())));
     items.insert(CUBE.into());
     items.insert(WARPER.into());
     let items: Vec<String> = items.into_iter().collect();
@@ -1397,6 +1402,17 @@ fn total_lp(
         .map(|u| {
             let v = p.add_var(-1e-9, (0.0, f64::INFINITY));
             for (i, q) in &u.net {
+                bal[idx[i.as_str()]].push((v, *q));
+            }
+            v
+        })
+        .collect();
+    // extra columns (the Dyson swarm: sails in, photons out), no cost
+    let ev: Vec<Variable> = extra
+        .iter()
+        .map(|c| {
+            let v = p.add_var(0.0, (0.0, f64::INFINITY));
+            for (i, q) in c {
                 bal[idx[i.as_str()]].push((v, *q));
             }
             v
@@ -1444,7 +1460,8 @@ fn total_lp(
         Err(microlp::Error::Unbounded) => return Err("unbounded".into()),
         Err(e) => return Err(e.to_string()),
     };
-    let xv = xs.iter().map(|v| sol[*v]).collect();
+    // machine counts, then the extra columns' values
+    let xv = xs.iter().chain(&ev).map(|v| sol[*v]).collect();
     let mv = mined.iter().map(|m| m.map(|(h, a)| (sol[h], sol[a])).unwrap_or((0.0, 0.0))).collect();
     Ok((sol[n], xv, mv))
 }
@@ -1460,12 +1477,12 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
     out.stars = sys.len();
     if sys.is_empty() {
         out.status = Status::Infeasible;
-        out.warnings.push("no star systems chosen".into());
+        out.warnings.push("没有选星系".into());
         return out;
     }
     if g.infinite {
         out.status = Status::Unbounded;
-        out.warnings.push("infinite resources: the total is unlimited".into());
+        out.warnings.push("资源无限：总量没有上限".into());
         return out;
     }
     let mut ps = ts.plan.clone();
@@ -1528,7 +1545,7 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
     let mut err = None;
     for h in hubs {
         let avail = avail_for(h);
-        match total_lp(&units, &avail, &unlimited, wpi, None) {
+        match total_lp(&units, &avail, &unlimited, wpi, None, &[]) {
             Ok(r) => {
                 if best.as_ref().is_none_or(|b| r.0 > b.2 .0) {
                     best = Some((h, avail, r));
@@ -1545,12 +1562,12 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
         Ok(r) => r,
         Err(e) if e == "unbounded" => {
             out.status = Status::Unbounded;
-            out.warnings.push("unbounded: cubes can be made from unlimited sources alone".into());
+            out.warnings.push("无上限：只用无限的来源就能造白糖".into());
             return out;
         }
         Err(e) => {
             out.status = Status::Infeasible;
-            out.warnings.push(format!("solver: {e}"));
+            out.warnings.push(format!("求解器：{e}"));
             return out;
         }
     };
@@ -1559,7 +1576,7 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
     out.cubes = n / consume;
     out.cubes_no_util = n;
     if n <= 1e-9 {
-        out.warnings.push("no cubes: a needed finite resource is missing from these systems".into());
+        out.warnings.push("造不出白糖：这些星系缺一种必需的有限资源".into());
     }
     for (k, (it, (ah, aa))) in avail.iter().enumerate() {
         let (h, a) = mv[k];
@@ -1571,7 +1588,7 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
     // marginal cubes per unit: re-solve with that stock 1 % larger
     // (cubes and stock both scale by 1/consume, so the ratio is the level-0 one)
     for u in out.finite.iter_mut().filter(|u| u.binding) {
-        if let Ok((n2, _, _)) = total_lp(&units, &avail, &unlimited, wpi, Some((&u.item, 1.01))) {
+        if let Ok((n2, _, _)) = total_lp(&units, &avail, &unlimited, wpi, Some((&u.item, 1.01)), &[]) {
             u.marginal = ((n2 - n) / (0.01 * u.available * consume)).max(0.0);
         }
         // fully used but more gives nothing (a degenerate vertex): not a limit
@@ -1606,4 +1623,475 @@ pub fn galaxy_total(data: &GameData, g: &Galaxy, ts: &TotalSettings) -> TotalRep
     out.unlimited = unlimited.into_iter().collect();
     out.solve_ms = t0.elapsed().as_secs_f64() * 1e3;
     out
+}
+
+// ---------------------------------------------------------------------------------------------
+// Highest cube rate (Xinyu 2026-11-23: 「你算出来了星系资源，你就知道最多戴森球能量有多少。限制的就只有
+// 星球的资源产出速率。参考笑笑的视频，在矿物利用跑到一定程度就无限使用了，所以速率决定最高白糖速率」).
+// Past the infinite threshold the stock never runs out (笑笑 BV1QF24YDE7H 03:22–04:08), so the cube
+// rate is bounded only by extraction rates at the vein-utilisation level and by the Dyson spheres.
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RateSettings {
+    pub seed: SeedSettings,
+    pub plan: PlanSettings,
+    /// Vein-utilisation level being researched (L−1 done): mining speed 1 + 0.1(L−1) (BWIKI 矿物利用).
+    pub level: u32,
+    /// Star indices whose resources count (empty = every star).
+    pub systems: Vec<usize>,
+    /// Advanced mining machines per vein node. MINE default 1: overlapping fields are allowed in game
+    /// (each machine mines the shared node in full, dsp-wiki Mining_Machine), but how many fit is a
+    /// layout question.
+    pub miners_per_node: f64,
+    /// Advanced mining machine speed setting, 1.0–3.0 (100 %–300 %, more power).
+    pub miner_speed: f64,
+    pub oil: OilRate,
+    /// Cap critical photons by the stars' full Dyson spheres (off = photons unlimited).
+    pub dyson: bool,
+    /// Share of each star's full sphere that is built, 0..1.
+    pub dyson_share: f64,
+    /// Dyson swarm on the brightest star: sails launched continuously, each lasting `sail_life_s` and
+    /// giving 36 kW × luminosity (dsp-wiki Dyson_Sphere). Sails are unlimited (Xinyu 2026-11-23:
+    /// 「机器和太阳帆的总数其实是不受限制的」), so the swarm is bounded by what the sails are made of.
+    pub swarm: bool,
+    /// Sail lifetime, s: 5400 base, 9000 with every upgrade (dsp-wiki; infinite tech → 9000).
+    pub sail_life_s: f64,
+    /// Cubes per research level factor for the infinite threshold (1, or 0.8 sprayed).
+    pub rho: f64,
+    /// Production buildings draw their power from the Dyson spheres too: power_base MW per machine
+    /// = MW/20 photons per minute (1200 MJ per photon). MINE: miners, pumps and logistics are not counted.
+    pub power: bool,
+    pub warpers: bool,
+    pub vessel_capacity: f64,
+    pub warpers_per_trip: f64,
+}
+
+impl Default for RateSettings {
+    fn default() -> Self {
+        Self {
+            seed: SeedSettings::default(),
+            plan: ThresholdSettings::default().plan,
+            level: 81,
+            systems: vec![],
+            miners_per_node: 1.0,
+            miner_speed: 1.0,
+            oil: OilRate::Initial,
+            dyson: true,
+            dyson_share: 1.0,
+            swarm: true,
+            sail_life_s: 9000.0,
+            rho: 1.0,
+            power: true,
+            warpers: false,
+            vessel_capacity: 400.0,
+            warpers_per_trip: 2.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RateUse {
+    pub item: String,
+    /// "vein" | "oil" | "gas" | "dyson"
+    pub source: String,
+    /// Most per minute the chosen stars give at this level.
+    pub cap: f64,
+    pub used: f64,
+    pub per_cube: f64,
+    /// Fully used and more of it gives more cubes.
+    pub binding: bool,
+    /// Extra cubes/min per extra 1/min of it.
+    pub marginal: f64,
+    /// Finite stock: first level from which this use per cube never runs out (None: never; gas and
+    /// photons: 1).
+    pub infinite_from: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DysonStar {
+    pub index: usize,
+    pub name: String,
+    pub luminosity: f64,
+    pub max_gw: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RatePoint {
+    pub level: u32,
+    pub cubes_per_min: f64,
+    pub dyson_bound: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RateReport {
+    pub status: Status,
+    pub cubes_per_min: f64,
+    pub level: u32,
+    pub speed: f64,
+    pub stars: usize,
+    pub hub: Option<String>,
+    pub dyson_gw: f64,
+    /// Ray-receiver power the plan draws, GW.
+    pub dyson_used_gw: f64,
+    pub dyson: Vec<DysonStar>,
+    /// Swarm star and photons per sail launched (0: no swarm).
+    pub swarm_star: Option<String>,
+    pub photons_per_sail: f64,
+    /// Sails launched per minute and the swarm's power, GW.
+    pub sails_per_min: f64,
+    pub swarm_gw: f64,
+    pub uses: Vec<RateUse>,
+    /// Unlimited sources (oceans).
+    pub unlimited: Vec<String>,
+    /// Level from which every finite vein this mix uses never runs out (None: some never).
+    pub infinite_level: Option<u32>,
+    /// Level from which every star's shells are used in full (None: not by level 10 000, or Dyson off).
+    pub dyson_level: Option<u32>,
+    pub curve: Vec<RatePoint>,
+    pub recipes: Vec<TotalRecipe>,
+    pub raw_per_cube: Vec<ItemRate>,
+    pub warpers_per_min: f64,
+    pub machines: f64,
+    /// Production power, GW (drawn from the spheres when `power`).
+    pub power_gw: f64,
+    pub power_mw_per_rate: f64,
+    /// Shells only, vein utilisation 10 000 (rates no longer bind): the most cubes/min the shells feed.
+    pub ceiling_shells: f64,
+    pub solve_ms: f64,
+    pub warnings: Vec<String>,
+}
+
+/// Rates at speed 1 per star (veins, oil) and the per-star photon caps.
+struct RateInput {
+    caps: BTreeMap<String, (String, Vec<(usize, f64)>)>,
+    unlimited: BTreeSet<String>,
+    photons: Option<Vec<(usize, f64)>>,
+}
+
+fn rate_input(data: &GameData, g: &Galaxy, rs: &RateSettings, sys: &[usize]) -> RateInput {
+    let miner = data.resource("iron-ore").map(|r| r.extractor_rate).unwrap_or(60.0)
+        * rs.miners_per_node.max(0.0)
+        * rs.miner_speed.clamp(1.0, 3.0);
+    let mut caps: BTreeMap<String, (String, Vec<(usize, f64)>)> = BTreeMap::new();
+    let mut unlimited = BTreeSet::new();
+    let mut add = |item: &str, src: &str, s: usize, r: f64| {
+        let e = caps.entry(item.into()).or_insert_with(|| (src.into(), vec![]));
+        if e.0 != src {
+            e.0 = "vein+gas".into();
+        }
+        if r > 0.0 {
+            e.1.push((s, r));
+        }
+    };
+    for &s in sys {
+        for pl in &g.stars[s].planets {
+            if let Some(o) = &pl.ocean {
+                unlimited.insert(o.clone());
+            }
+            for v in &pl.veins {
+                if v.item == "crude-oil" {
+                    let r = match rs.oil {
+                        OilRate::Initial => pl.oil_rate * 60.0,
+                        OilRate::Floor => v.nodes as f64 * 0.1 * 60.0,
+                    };
+                    add("crude-oil", "oil", s, r);
+                } else {
+                    add(&v.item, "vein", s, v.nodes as f64 * miner);
+                }
+            }
+            for gr in &pl.gases {
+                if gr.base > 0.0 {
+                    add(&gr.item, "gas", s, 0.0);
+                }
+            }
+        }
+    }
+    let photons = rs.dyson.then(|| {
+        sys.iter()
+            .map(|&s| (s, dyson_max_gw(&g.stars[s]) * rs.dyson_share.clamp(0.0, 1.0) * 1e3 * 60.0 / PHOTON_MJ))
+            .collect()
+    });
+    RateInput { caps, unlimited, photons }
+}
+
+/// Caps at `level` as the (hub, elsewhere) map `total_lp` takes. Gas is rebuilt per level: the
+/// collector's fixed 30 MW own use makes it not linear in speed.
+fn rate_caps(g: &Galaxy, inp: &RateInput, level: u32, hub: Option<usize>, sys: &[usize]) -> BTreeMap<String, (f64, f64)> {
+    let speed = speed_at(level);
+    let mut m: BTreeMap<String, (f64, f64)> = BTreeMap::new();
+    let mut put = |it: &str, s: usize, r: f64| {
+        let e = m.entry(it.to_string()).or_default();
+        if hub.is_none_or(|h| h == s) {
+            e.0 += r
+        } else {
+            e.1 += r
+        }
+    };
+    // gas entries hold no rates (built per level below); an item from veins and giants keeps both
+    for (it, (_, v)) in &inp.caps {
+        for (s, r) in v {
+            put(it, *s, r * speed);
+        }
+    }
+    for &s in sys {
+        for pl in &g.stars[s].planets {
+            if !pl.gases.is_empty() {
+                for (i, r) in collector_net(&pl.gases, speed) {
+                    if r > 0.0 {
+                        put(&i, s, r * 60.0 * COLLECTORS_PER_GIANT);
+                    }
+                }
+            }
+        }
+    }
+    if let Some(ph) = &inp.photons {
+        for (s, r) in ph {
+            put(PHOTON, *s, *r);
+        }
+    }
+    m
+}
+
+pub fn galaxy_rate(data: &GameData, g: &Galaxy, rs: &RateSettings) -> RateReport {
+    let t0 = web_time::Instant::now();
+    let level = rs.level.clamp(1, 10_000);
+    let mut out = RateReport { level, speed: speed_at(level), ..Default::default() };
+    let mut sys: Vec<usize> = if rs.systems.is_empty() { (0..g.stars.len()).collect() } else { rs.systems.clone() };
+    sys.retain(|i| *i < g.stars.len());
+    sys.sort();
+    sys.dedup();
+    out.stars = sys.len();
+    if sys.is_empty() {
+        out.status = Status::Infeasible;
+        out.warnings.push("没有选星系".into());
+        return out;
+    }
+    let mut ps = rs.plan.clone();
+    ps.game = "dsp".into();
+    let swarm_on = rs.dyson && rs.swarm && rs.sail_life_s > 0.0;
+    let mut units = unit_cols(data, &ps, if swarm_on { &[CUBE, WARPER, SAIL] } else { &[CUBE, WARPER] });
+    units.retain(|u| u.net.iter().all(|(i, q)| *q > 0.0 || !(i.starts_with("df-") || i == "log" || i == "plant-fuel")));
+    if rs.power && rs.dyson {
+        for u in units.iter_mut() {
+            let ph = u.mode.power_base.max(0.0) * 60.0 / PHOTON_MJ;
+            if ph > 0.0 {
+                match u.net.iter_mut().find(|(i, _)| i == PHOTON) {
+                    Some(e) => e.1 -= ph,
+                    None => u.net.push((PHOTON.to_string(), -ph)),
+                }
+            }
+        }
+    }
+    let inp = rate_input(data, g, rs, &sys);
+    // swarm column: 1 sail/min keeps life/60 sails alive → photons/min = alive·36 kW·L·60 / 1200 MJ
+    let brightest = sys.iter().copied().max_by(|a, b| g.stars[*a].luminosity.partial_cmp(&g.stars[*b].luminosity).unwrap());
+    let swarm: Vec<Vec<(String, f64)>> = match (swarm_on, brightest) {
+        (true, Some(b)) => {
+            let ph = rs.sail_life_s / 60.0 * SAIL_KW * g.stars[b].luminosity * 1e-3 * 60.0 / PHOTON_MJ;
+            out.swarm_star = Some(g.stars[b].name.clone());
+            out.photons_per_sail = ph;
+            vec![vec![(SAIL.to_string(), -1.0), (PHOTON.to_string(), ph)]]
+        }
+        _ => vec![],
+    };
+    let share = rs.dyson_share.clamp(0.0, 1.0);
+    out.dyson = sys
+        .iter()
+        .map(|&s| {
+            let st = &g.stars[s];
+            DysonStar { index: s, name: st.name.clone(), luminosity: st.luminosity, max_gw: dyson_max_gw(st) * share }
+        })
+        .filter(|d| d.max_gw > 0.0)
+        .collect();
+    out.dyson.sort_by(|a, b| b.max_gw.partial_cmp(&a.max_gw).unwrap());
+    out.dyson_gw = if rs.dyson { out.dyson.iter().map(|d| d.max_gw).sum() } else { 0.0 };
+    let mut unlimited = inp.unlimited.clone();
+    if !rs.dyson {
+        unlimited.insert(PHOTON.into());
+    }
+    out.unlimited = unlimited.iter().cloned().collect();
+    let wpi = if rs.warpers { rs.warpers_per_trip.max(0.0) / rs.vessel_capacity.max(1.0) } else { 0.0 };
+    let hubs: Vec<Option<usize>> = if wpi > 0.0 { sys.iter().map(|s| Some(*s)).collect() } else { vec![None] };
+    type Best = (Option<usize>, BTreeMap<String, (f64, f64)>, TotalSol);
+    let solve_at = |lv: u32| -> Result<Best, String> {
+        let mut best: Option<Best> = None;
+        let mut err = None;
+        for h in &hubs {
+            let caps = rate_caps(g, &inp, lv, *h, &sys);
+            match total_lp(&units, &caps, &unlimited, wpi, None, &swarm) {
+                Ok(r) => {
+                    if best.as_ref().is_none_or(|b| r.0 > b.2 .0) {
+                        best = Some((*h, caps, r));
+                    }
+                }
+                Err(e) => err = Some(e),
+            }
+        }
+        best.ok_or_else(|| err.unwrap_or_default())
+    };
+    let (hub, caps, (n, xv, mv)) = match solve_at(level) {
+        Ok(r) => r,
+        Err(e) if e == "unbounded" => {
+            out.status = Status::Unbounded;
+            out.warnings.push("无上限：只用无限的来源（海洋、不限的光子）就能造白糖".into());
+            return out;
+        }
+        Err(e) => {
+            out.status = Status::Infeasible;
+            out.warnings.push(format!("求解器：{e}"));
+            return out;
+        }
+    };
+    out.status = Status::Optimal;
+    out.cubes_per_min = n;
+    out.hub = hub.map(|h| g.stars[h].name.clone());
+    if n <= 1e-9 {
+        out.warnings.push("造不出白糖：这些星系缺一种必需的原料".into());
+    }
+    let mult = g.settings.resource_multiplier;
+    let stock_of_item = |it: &str| -> f64 {
+        sys.iter().flat_map(|&s| g.stars[s].planets.iter()).flat_map(|p| p.veins.iter()).filter(|v| v.item == it).map(stock_of).sum()
+    };
+    let speed = speed_at(level);
+    let gas_cap = |it: &str| -> f64 {
+        sys.iter()
+            .flat_map(|&s| g.stars[s].planets.iter())
+            .filter(|p| !p.gases.is_empty())
+            .flat_map(|p| collector_net(&p.gases, speed))
+            .filter(|(i, _)| i == it)
+            .map(|(_, r)| r.max(0.0) * 60.0 * COLLECTORS_PER_GIANT)
+            .sum()
+    };
+    for (k, (it, (ch, ca))) in caps.iter().enumerate() {
+        let (h, a) = mv[k];
+        out.warpers_per_min += a * wpi;
+        let cap = ch + ca;
+        let used = h + a;
+        let source = if it == PHOTON { "dyson".to_string() } else { inp.caps.get(it).map(|c| c.0.clone()).unwrap_or_else(|| "gas".into()) };
+        let per_cube = if n > 1e-9 { used / n } else { 0.0 };
+        let infinite_from = match source.as_str() {
+            "vein" | "oil" if !g.infinite => threshold_level(per_cube, stock_of_item(it), rs.rho, points_per_unit(it, mult)),
+            // giants first (they never run out), veins for the rest
+            "vein+gas" if !g.infinite && n > 1e-9 => {
+                threshold_level((used - gas_cap(it)).max(0.0) / n, stock_of_item(it), rs.rho, points_per_unit(it, mult))
+            }
+            _ => Some(1),
+        };
+        let binding = n > 1e-9 && cap > 0.0 && used >= cap * (1.0 - 1e-6);
+        out.uses.push(RateUse { item: it.clone(), source, cap, used, per_cube, binding, marginal: 0.0, infinite_from });
+    }
+    for u in out.uses.iter_mut().filter(|u| u.binding) {
+        if let Ok((n2, _, _)) = total_lp(&units, &caps, &unlimited, wpi, Some((&u.item, 1.01)), &swarm) {
+            u.marginal = ((n2 - n) / (0.01 * u.cap)).max(0.0);
+        }
+        // fully used but more gives nothing (a degenerate vertex): not a limit
+        u.binding = u.marginal > 1e-9;
+    }
+    out.uses.sort_by(|a, b| b.binding.cmp(&a.binding).then(b.marginal.partial_cmp(&a.marginal).unwrap()).then(a.item.cmp(&b.item)));
+    out.infinite_level = out.uses.iter().filter(|u| u.used > 1e-9 * n.max(1.0)).try_fold(1u32, |m, u| u.infinite_from.map(|l| m.max(l)));
+    if let Some(ph) = out.uses.iter().find(|u| u.item == PHOTON) {
+        out.dyson_used_gw = ph.used * PHOTON_MJ / 60.0 / 1e3;
+    }
+    if n > 1e-9 {
+        let mut raw: BTreeMap<String, f64> = BTreeMap::new();
+        if let Some(&s) = xv.get(units.len()) {
+            out.sails_per_min = s;
+            out.swarm_gw = s * out.photons_per_sail * PHOTON_MJ / 60.0 / 1e3;
+        }
+        for (k, u) in units.iter().enumerate() {
+            let x = xv[k];
+            if x <= 1e-9 * n {
+                continue;
+            }
+            out.machines += x;
+            out.power_gw += x * u.mode.power_base.max(0.0) / 1e3;
+            out.recipes.push(TotalRecipe { recipe: u.recipe.id.clone(), mode: u.mode.label.clone(), building: u.mode.building.clone(), machines_per_rate: x / n });
+            for (i, q) in &u.net {
+                if *q < 0.0 && unlimited.contains(i) {
+                    *raw.entry(i.clone()).or_default() += -q * x / n;
+                }
+            }
+        }
+        for u in out.uses.iter().filter(|u| u.used > 0.0) {
+            raw.insert(u.item.clone(), u.per_cube);
+        }
+        out.raw_per_cube = raw.into_iter().map(|(item, rate)| ItemRate { item, rate }).collect();
+        out.recipes.sort_by(|a, b| b.machines_per_rate.partial_cmp(&a.machines_per_rate).unwrap());
+    }
+    // the level from which the shells are used in full (rates grow with the level, shells do not);
+    // past it z still rises a little as the mix shifts to fewer photons per cube
+    let z_at = |lv: u32| if lv == level { n } else { solve_at(lv).map(|r| r.2 .0).unwrap_or(0.0) };
+    if rs.dyson && out.dyson_gw > 0.0 {
+        let z_cap = z_at(10_000);
+        // Dyson-bound: the photon cap is used in full (z stops growing with the level)
+        // shells full = more shell power gives more cubes (a used-in-full test alone flips between
+        // equally good vertices, review)
+        let bound = |lv: u32| -> bool {
+            match solve_at(lv) {
+                Ok((h, c, (z, _, _))) if z > 0.0 => match total_lp(&units, &c, &unlimited, wpi, Some((PHOTON, 1.01)), &swarm) {
+                    Ok((z2, _, _)) => {
+                        let _ = h;
+                        z2 > z * (1.0 + 1e-7)
+                    }
+                    Err(_) => false,
+                },
+                _ => false,
+            }
+        };
+        if z_cap > 0.0 && bound(10_000) {
+            let (mut lo, mut hi) = (1u32, 10_000u32);
+            if bound(1) {
+                hi = 1;
+            }
+            while hi - lo > 1 {
+                let mid = (lo + hi) / 2;
+                if bound(mid) {
+                    hi = mid
+                } else {
+                    lo = mid
+                }
+            }
+            out.dyson_level = Some(hi);
+        }
+    }
+    if rs.dyson && out.dyson_gw > 0.0 {
+        let caps = rate_caps(g, &inp, 10_000, None, &sys);
+        if let Ok((z, _, _)) = total_lp(&units, &caps, &unlimited, wpi, None, &[]) {
+            out.ceiling_shells = z;
+        }
+    }
+    out.power_mw_per_rate = if n > 1e-9 { out.power_gw * 1e3 / n } else { 0.0 };
+    let mut lv: BTreeSet<u32> = [6, 20, 40, 81, 120, 200, 400, level].into();
+    if let Some(d) = out.dyson_level {
+        lv.insert(d);
+    }
+    for l in lv {
+        out.curve.push(RatePoint { level: l, cubes_per_min: z_at(l), dyson_bound: out.dyson_level.is_some_and(|d| l >= d) });
+    }
+    if rs.miners_per_node > 1.0 + 1e-9 {
+        out.warnings.push(format!("每个矿点按 {} 台大型采矿机重叠开采计算", rs.miners_per_node));
+    }
+    out.solve_ms = t0.elapsed().as_secs_f64() * 1e3;
+    out
+}
+
+/// Full Dyson shell power of one star, GW: 10 layers at R, R−1000, … (layers ≥ 1000 m apart, dsp-wiki
+/// Dyson_Sphere), R = `dyson_radius` (the editor's largest orbit, m). Per layer of radius r, fitted
+/// in game by wiki.biligame.com/dsp 戴森球发电量 (r 8000–245 520 m, ±1 %): 52·r²/10⁴ cell points × 15 kW,
+/// 1.22·r frame structure points + 60 nodes × 30 points, × 96 kW each, all × luminosity (the displayed
+/// 光度 = generator `luminosity`). Checks: birth star (0.982, 21 700 m) one layer 38.7 GW (bili ≈ 30);
+/// O star (2.462, 74 400 m) one layer 1085 GW (bili ≈ 1000). The swarm is separate (`RateSettings::swarm`).
+pub fn dyson_max_gw(st: &StarInfo) -> f64 {
+    let r0 = st.dyson_radius as f64;
+    let mut kw = 0.0;
+    for k in 0..10 {
+        let r = r0 - 1000.0 * k as f64;
+        // MINE: a layer needs room above the star; layers under 1000 m are not counted
+        if r < 1000.0 {
+            break;
+        }
+        kw += 52.0 * r * r / 1e4 * 15.0 + (1.22 * r + 60.0 * 30.0) * 96.0;
+    }
+    kw * st.luminosity.max(0.0) * 1e-6
 }
