@@ -947,3 +947,43 @@ fn generators_make_electricity_and_power_the_plan() {
     assert!(p0.recipes.iter().all(|r| !d.recipe(&r.id).is_some_and(|x| x.generator)));
 }
 
+
+#[test]
+fn per_recipe_clock_overrides_the_plan_clock() {
+    // memo step 8: 按配方单独设置超频
+    let d = data();
+    let base = settings(&[("Desc_IronPlate_C", 120.0)]);
+    let p0 = plan(&d, &base);
+    let plates = |p: &Plan| p.recipes.iter().find(|r| r.id == "Recipe_IronPlate_C").map(|r| (r.machines, r.shards)).unwrap();
+    let (n0, s0) = plates(&p0);
+    assert!(s0 == 0.0 && close(n0, 6.0), "{n0} {s0}");
+    // plates may run at 250 % while the plan stays at 100 %
+    let mut hi = base.clone();
+    hi.recipe_clocks.insert("Recipe_IronPlate_C".into(), 250.0);
+    hi.objective = Objective::Buildings;
+    let p1 = plan(&d, &hi);
+    let (n1, s1) = plates(&p1);
+    assert!(n1 < n0 && s1 > 0.0, "{n1} {s1}");
+    assert!(p1.recipes.iter().filter(|r| r.id != "Recipe_IronPlate_C").all(|r| r.shards == 0.0));
+    // held at 50 %: twice the machines, each at most half speed
+    let mut lo = base.clone();
+    lo.recipe_clocks.insert("Recipe_IronPlate_C".into(), 50.0);
+    let p2 = plan(&d, &lo);
+    let r2 = p2.recipes.iter().find(|r| r.id == "Recipe_IronPlate_C").unwrap();
+    assert!(close(r2.machines, 12.0), "{}", r2.machines);
+    assert!(r2.groups.iter().all(|g| g.clock_percent <= 50.0 + 1e-6), "{:?}", r2.groups);
+    assert_balanced(&p2);
+    // plan at 250 %, plates held at 100 %: no shards on plates, others may use them
+    let mut pl = base.clone();
+    pl.max_clock_percent = 250.0;
+    pl.objective = Objective::Buildings;
+    pl.recipe_clocks.insert("Recipe_IronPlate_C".into(), 100.0);
+    let p3 = plan(&d, &pl);
+    let (n3, s3) = plates(&p3);
+    assert!(s3 == 0.0 && n3 >= 6.0 - 1e-9, "{n3} {s3}");
+    // a shard budget caps the override's shards
+    let mut b1 = hi.clone();
+    b1.shard_budget = Some(3);
+    let p4 = plan(&d, &b1);
+    assert!(p4.shards <= 3.0 + 1e-9, "{}", p4.shards);
+}

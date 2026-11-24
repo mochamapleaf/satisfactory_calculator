@@ -41,6 +41,9 @@ pub struct Mode {
     pub outputs: Option<Vec<(String, f64)>>,
     /// Factorio beacons charged to each building of this mode (count / sharing; 0 = none).
     pub beacons: f64,
+    /// Satisfactory: this recipe's own highest clock (0.01–2.5), overriding `max_clock_percent`
+    /// (memo step 8: 按配方单独设置超频).
+    pub max_clock: Option<f64>,
 }
 
 /// Objective cost per building of mode `m` for the modules it holds (`PlanSettings::module_costs`,
@@ -277,6 +280,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     sprayed: true,
                     outputs: None,
                     beacons: 0.0,
+                    max_clock: None,
                 });
                 continue;
             }
@@ -311,6 +315,7 @@ fn tiered_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode> {
                     sprayed: false,
                     outputs: None,
                     beacons: bo.per_machine,
+                    max_clock: None,
                 });
             }
         }
@@ -362,6 +367,7 @@ fn satisfactory_modes(data: &GameData, r: &Recipe, s: &PlanSettings) -> Vec<Mode
                 sprayed: false,
                 outputs: None,
                 beacons: 0.0,
+                max_clock: s.recipe_clocks.get(&r.id).filter(|c| c.is_finite()).map(|c| (c / 100.0).clamp(0.01, 2.5)),
             }
         })
         .collect()

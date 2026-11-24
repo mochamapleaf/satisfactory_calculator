@@ -498,3 +498,4 @@ svg.belt { display: block; font-family: var(--font-ui); }
   .galaxy .mbsettings label { flex: 1 1 40%; }
   .galaxy .mbsettings input[type=number], .galaxy .mbsettings select { width: 100%; }
 }
+.clocksel { display: block; margin-top: 2px; font-size: var(--t-xs); padding: 0 var(--s1); min-height: 0; }

@@ -323,6 +323,7 @@ fn loadout_modes(
                 sprayed: false,
                 outputs: Some(outs),
                 beacons: bo.per_machine,
+                max_clock: None,
             });
         }
     }

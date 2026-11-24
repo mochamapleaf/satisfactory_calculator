@@ -39,6 +39,15 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
       else delete somersloops[rid]
       return { ...x, somersloops }
     })
+  // per-recipe highest clock (memo step 8); '' = the plan's max clock
+  const setClock = (rid: string, v: string) =>
+    setSettings(x => {
+      const recipe_clocks = { ...x.recipe_clocks }
+      if (v === '') delete recipe_clocks[rid]
+      else recipe_clocks[rid] = +v
+      return { ...x, recipe_clocks }
+    })
+  const CLOCKS = [25, 50, 75, 100, 150, 200, 250]
   // quality plans: the normal-tier row excludes only that tier ("id@0"); the bare id would drop every tier
   const exclude = (rid: string) => {
     const key = plan.quality && qsplit(rid)[1] === 0 ? `${rid}@0` : rid
@@ -158,7 +167,15 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
                 </td>
                 <td className="small">{plan.quality && r.group_machines
                   ? `${fmt((100 * r.machines) / r.group_machines, 1)}% busy`
-                  : r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}</td>
+                  : r.groups.map((g, i) => <div key={i}>{groupText(g)}</div>)}
+                  {data.game === 'satisfactory'
+                    ? <select className="clocksel" title="Highest clock for this recipe (overrides the plan's max clock)" aria-label={`Max clock for ${r.name}`}
+                        value={s.recipe_clocks[r.id] ?? ''} onChange={e => setClock(r.id, e.target.value)}>
+                        <option value="">max {fmt(s.max_clock_percent, 0)}% (plan)</option>
+                        {[...new Set([...CLOCKS.filter(c => c !== s.max_clock_percent), ...(s.recipe_clocks[r.id] !== undefined ? [s.recipe_clocks[r.id]] : [])])].sort((a, b) => a - b)
+                          .map(c => <option key={c} value={c}>max {c}%</option>)}
+                      </select>
+                    : null}</td>
                 <td>
                   {data.game === 'satisfactory' && slots(r.id) > 0
                     ? <select value={r.id in s.somersloops ? r.somersloops : 'auto'} onChange={e => setSloops(r.id, e.target.value === 'auto' ? -1 : +e.target.value)}>

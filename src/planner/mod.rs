@@ -132,6 +132,9 @@ pub struct PlanSettings {
     /// shard per started 50 %. Machines may always run slower (underclock) for free.
     #[serde(alias = "clock_percent")]
     pub max_clock_percent: f64,
+    /// Satisfactory: highest clock per recipe id, percent (1–250), overriding `max_clock_percent`
+    /// for that recipe (memo step 8: 按配方单独设置超频). Below 100 the recipe is held underclocked.
+    pub recipe_clocks: HashMap<String, f64>,
     /// Somersloops per recipe id (clamped to the building's slots); fixes that recipe.
     pub somersloops: HashMap<String, u32>,
     /// Let the solver place Somersloops on recipes not fixed in `somersloops`.
@@ -211,6 +214,7 @@ impl Default for PlanSettings {
             ignore_limits: false,
             allow_ore_conversion: false,
             max_clock_percent: 100.0,
+            recipe_clocks: HashMap::new(),
             somersloops: HashMap::new(),
             auto_somersloops: false,
             somersloop_budget: None,

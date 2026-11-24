@@ -5,11 +5,12 @@
 //!   x_r  work done, in machines at 100 % clock (continuous)
 //!   n_r  buildings placed                      (integer in MILP mode)
 //!   s_r  power shards                          (integer in MILP mode)
-//!   p_r  MW drawn                              (only when power has a weight)
+//!   p_r  MW drawn                              (when power has a weight, or self-powered)
 //!
 //!   min  Σ_i w_i·raw_i + Σ_r w_b·n_r + w_P·(Σ p_r + extraction MW) + w_s·Σ s_r + w_e·Σ e_i
 //!   s.t. Σ_r A_ri·x_r + raw_i + u_i − e_i = target_i      (item balance)
-//!        x_r ≤ n_r + 0.5·s_r,  x_r ≤ c_max·n_r,  s_r ≤ k_max·n_r   (clock / shards)
+//!        x_r ≤ n_r + 0.5·s_r,  x_r ≤ c_r·n_r,  s_r ≤ k_r·n_r   (clock / shards; c_r = the recipe's
+//!        own max clock or the plan's, `clock_of`; k_r = ⌈(c_r − 1)/0.5⌉)
 //!        p_r ≥ P_r·(a_k·x_r + b_k·n_r)  for each segment k   (power, see below)
 //!        0 ≤ raw_i ≤ limit_i,  0 ≤ u_i ≤ supply_i,  Σ s_r ≤ shard budget
 //!
@@ -268,6 +269,16 @@ fn group_machines(inp: &Inputs, pt: &Point) -> HashMap<String, f64> {
     out
 }
 
+/// Highest clock of a mode: its recipe's own (`PlanSettings::recipe_clocks`) or the plan's; 1 when
+/// the building does not clock.
+fn clock_of(f: &Mode, c_max: f64) -> f64 {
+    if f.overclock {
+        f.max_clock.unwrap_or(c_max)
+    } else {
+        1.0
+    }
+}
+
 fn shards_per_machine(c_max: f64) -> u32 {
     if c_max <= 1.0 + 1e-9 {
         0
@@ -307,7 +318,6 @@ fn build_scaled(
 ) -> Model {
     let w = &inp.weights;
     let c_max = s.max_clock();
-    let k_max = shards_per_machine(c_max);
     // self-powered (memo step 8): the plan's own draw is a demand on the Electricity row
     let selfp = s.self_power && inp.items.iter().any(|i| i == super::ELECTRICITY);
     let mut p = Problem::new(OptimizationDirection::Minimize);
@@ -344,7 +354,8 @@ fn build_scaled(
             * scale.get(&u.key).copied().unwrap_or(1.0)
             + rules::module_cost(data, s, f)
             + if lin { w.power * f.beacon_power } else { 0.0 };
-        let (c_max, k_max) = if f.overclock { (c_max, k_max) } else { (1.0, 0) };
+        let c_max = clock_of(f, c_max);
+        let k_max = shards_per_machine(c_max);
         let cap = n_cap.get(&u.key).copied().unwrap_or(f64::INFINITY);
         // shared: this column's continuous share of its group's machines, at no cost of its own
         let n = if shared { var(&mut p, 0.0, (0.0, cap), false) } else { var(&mut p, wb, (0.0, cap), integer) };
@@ -410,7 +421,7 @@ fn build_scaled(
             con(&mut p, row.as_slice(), ComparisonOp::Le, budget);
         }
     }
-    if let (Some(budget), true) = (s.shard_budget, k_max > 0) {
+    if let Some(budget) = s.shard_budget {
         let row: Vec<(Variable, f64)> = rv.iter().filter_map(|v| v.s.map(|s| (s, 1.0))).collect();
         if !row.is_empty() {
             con(&mut p, row.as_slice(), ComparisonOp::Le, budget as f64);
@@ -548,7 +559,8 @@ fn rounded(inp: &Inputs, pt: &Point, c_max: f64, shards: bool) -> Point {
             *out.groups.entry(group_key(u)).or_insert(0.0) += n;
             continue;
         }
-        let cm = if f.overclock && shards { c_max } else { 1.0 };
+        let full = clock_of(f, c_max);
+        let cm = if shards { full } else { full.min(1.0) };
         let n = if x <= 1e-9 { 0.0 } else { (x / (cm * f.speed) - 1e-9).ceil() };
         let c = if n > 0.0 { x / (n * f.speed) } else { 0.0 };
         let sh = if c > 1.0 { ((c - 1.0) / 0.5 - 1e-9).ceil() * n } else { 0.0 };
@@ -838,7 +850,7 @@ fn finish(data: &GameData, s: &PlanSettings, inp: &Inputs, pt: &Point, integer: 
     }
     for u in &inp.units {
         let (r, f) = (&*u.recipe, &u.mode);
-        let c_max = if f.overclock { c_max } else { 1.0 };
+        let c_max = clock_of(f, c_max);
         let Some(&(x, n, sh)) = pt.rec.get(&u.key) else { continue };
         let x = clean(x);
         if x <= 0.0 {

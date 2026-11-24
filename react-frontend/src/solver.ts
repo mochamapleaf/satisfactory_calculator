@@ -113,7 +113,9 @@ export interface ItemRate { item: string; rate: number }
 export interface Settings {
   game: Game
   /** Satisfactory: build generators for the plan's own power (generators as recipes, memo step 8). */
-  self_power?: boolean
+  self_power: boolean
+  /** Satisfactory: highest clock per recipe id, percent (overrides max_clock_percent). */
+  recipe_clocks: Record<string, number>
   targets: ItemRate[]
   supplies: ItemRate[]
   objective: Objective
@@ -349,6 +351,8 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   allow_ore_conversion: false,
   max_clock_percent: 100,
   somersloops: {},
+  recipe_clocks: {},
+  self_power: false,
   // DSP Dark Fog machines are endgame drops: off unless the player enables them
   disabled_buildings: game === 'dsp' ? ['df-negentropy-smelter', 'df-recomposing-assembler', 'df-self-evolution-lab'] : [],
   effects: [],

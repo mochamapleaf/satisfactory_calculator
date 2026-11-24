@@ -391,7 +391,7 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         </p>
         {sf && data.items.some(i => i.id === 'Electricity') && <>
           <label className="row small">
-            <input type="checkbox" checked={!!s.self_power} onChange={e => set({ self_power: e.target.checked })} />
+            <input type="checkbox" checked={s.self_power} onChange={e => set({ self_power: e.target.checked })} />
             <span>Self-powered: build generators for the plan's own power</span>
           </label>
           <p className="hint">Generators are recipes: fuel (+ water) in, Electricity (MW) out. Add Electricity as a target to plan a power plant on its own.</p>
@@ -457,7 +457,13 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
             onChange={e => set({ max_clock_percent: Math.min(250, Math.max(1, +e.target.value)) })} />
           <span className="muted">%</span>
         </div>
-        {s.max_clock_percent > 100 && (
+        {Object.keys(s.recipe_clocks).length > 0 && (
+          <div className="row small">
+            <span className="grow">Per-recipe max clock: {Object.keys(s.recipe_clocks).length} set (in the recipe table)</span>
+            <button type="button" className="tabbtn" onClick={() => set({ recipe_clocks: {} })}>Clear</button>
+          </div>
+        )}
+        {(s.max_clock_percent > 100 || Object.values(s.recipe_clocks).some(c => c > 100)) && (
           <div className="row small">
             <span className="grow">Power shards available</span>
             <input type="number" min={0} placeholder="∞" value={s.shard_budget ?? ''}
