@@ -10,6 +10,7 @@ import ItemFlow from './ItemFlow'
 import MixedBelt from './MixedBelt'
 import { ICON_STYLES, iconStyleName, IconProvider, loadIconStyle, saveIconStyle, type IconStyle } from './Icon'
 import { lang, setLang, t, type Lang } from './i18n'
+import { PRESETS } from './presets'
 
 // the map view (Satisfactory only) and its geo data load on first use
 const MapView = lazy(() => import('./MapView'))
@@ -191,6 +192,25 @@ export default function App() {
           <button className={lng === 'zh' ? 'on' : ''} aria-pressed={lng === 'zh'} onClick={() => switchLang('zh')}>中文</button>
           <button className={lng === 'en' ? 'on' : ''} aria-pressed={lng === 'en'} onClick={() => switchLang('en')}>EN</button>
         </div>
+        <label className="iconsel">{t('Presets', '预设')}
+          <select value="" aria-label={t('Load a preset plan', '载入预设规划')} onChange={e => {
+            const p = PRESETS.find(x => x.id === e.target.value)
+            if (!p) return
+            const next = p.settings()
+            // a preset replaces that game's saved plan (review): ask first
+            const gname = GAMES.find(g => g.id === next.game)?.name ?? next.game
+            if (!window.confirm(t(`Load "${p.name()}"? It replaces your current ${gname} plan.
+
+${p.desc()}`, `载入「${p.name()}」？会替换你当前的${gameName(next.game, gname)}规划。
+
+${p.desc()}`))) return
+            setSettings(next)
+            setTab(p.tab ?? 'table')
+          }}>
+            <option value="">{t('Load…', '载入…')}</option>
+            {PRESETS.map(p => <option key={p.id} value={p.id} title={p.desc()}>{p.name()}</option>)}
+          </select>
+        </label>
         <label className="iconsel">{t('Icons', '图标')}
           <select value={iconStyle} onChange={e => setIconStyle(e.target.value as IconStyle)}>
             {ICON_STYLES.map(o => <option key={o.id} value={o.id}>{iconStyleName(o.id)}</option>)}

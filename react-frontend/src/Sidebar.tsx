@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, QualityPip, RemoveMark } from './Icon'
 import ItemPicker from './ItemPicker'
 import TimeInput from './TimeInput'
+import { elevatorTargets } from './presets'
 import { lang, t } from './i18n'
 import { DATASETS, defaultSettings, withDataset, dn, fmt, GENERATORS, itemName as qItemName, qualityNames, preset, qsplit, scarcity, withQ, type CostWeights, type Generator, type GameData, type ItemRate, type Objective, type Settings, type Engine } from './solver'
 
@@ -368,6 +369,8 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         <ItemRates data={data} list={s.targets} onChange={targets => set({ targets })} producibleOnly quality={hasQuality} />
       </section>
 
+      {sf && <SpaceElevator set={set} />}
+
       {hasQuality && <QualitySettings data={data} s={s} set={set} />}
 
       <section>
@@ -613,5 +616,39 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
         <p className="hint">{t('The page address holds the whole plan. Copy it to share or bookmark this plan.', '页面地址包含整个方案。复制即可分享或收藏。')}</p>
       </section>
     </aside>
+  )
+}
+
+/** Satisfactory: Space Elevator phase as targets per minute, delivered in a given time (memo step 16:
+ *  「最后的4种太空电梯材料按时间的规划」). */
+function SpaceElevator({ set }: { set: (p: Partial<Settings>) => void }) {
+  const [phase, setPhase] = useState(5)
+  // typed freely, read on "Set as targets" (review: snapping to 1 made 0.5 untypeable)
+  const [hours, setHours] = useState('8')
+  const [mult, setMult] = useState(1)
+  const h = Number(hours) > 0 ? Number(hours) : 8
+  return (
+    <details className="sidesection">
+      <summary>{t('Space Elevator by time', '太空电梯按时间规划')}</summary>
+      <div className="row small">
+        <span className="grow">{t('Phase', '阶段')}</span>
+        <select value={phase} onChange={e => setPhase(+e.target.value)} aria-label={t('Phase', '阶段')}>
+          {[1, 2, 3, 4, 5].map(p => <option key={p} value={p}>{t(`Phase ${p}`, `第 ${p} 阶段`)}</option>)}
+        </select>
+      </div>
+      {phase === 5 && <p className="hint">{t('Phase 5 = the four final parts: Nuclear Pasta, Biochemical Sculptor, Ballistic Warp Drive, AI Expansion Server.', '第 5 阶段 = 最后四种：核意面、生化塑造器、弹道跃迁引擎、AI拓展伺服器。')}</p>}
+      <div className="row small">
+        <span className="grow">{t('Deliver in (hours)', '交付用时（小时）')}</span>
+        <input type="number" min={0.1} step={0.5} value={hours} aria-label={t('Hours', '小时')} onChange={e => setHours(e.target.value)} />
+      </div>
+      <div className="row small">
+        <span className="grow">{t('Cost multiplier (game setting)', '成本倍率（开档设置）')}</span>
+        <select value={mult} onChange={e => setMult(+e.target.value)} aria-label={t('Cost multiplier', '成本倍率')}>
+          {[0.25, 0.5, 0.75, 1, 2, 5, 10, 25, 50, 100].map(m => <option key={m} value={m}>{m}×</option>)}
+        </select>
+      </div>
+      <button type="button" onClick={() => set({ targets: elevatorTargets(phase, h, mult) })}>{t('Set as targets', '设为目标')}</button>
+      <p className="hint">{t('Delivery amounts from the Satisfactory wiki (Project Assembly, 1.0); the rate is the amount ÷ the time, so the factory delivers the phase in that time once it runs.', '交付数量取自幸福工厂 wiki（太空电梯，1.0）；速率 = 数量 ÷ 用时，工厂建好运行后在这段时间内交齐。')}</p>
+    </details>
   )
 }
