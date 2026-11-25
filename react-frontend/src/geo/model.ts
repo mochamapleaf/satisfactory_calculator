@@ -88,12 +88,27 @@ export class Data {
   supply(s: string, tier: number, beltCap: number, pipeCap: number): Map<string, number> {
     const out = new Map<string, number>()
     for (const nid of this.site.get(s)!.nodes) {
-      const n = this.nodes.get(nid)!
+      const n = this.nodes.get(nid)
+      if (!n) continue // switched off (`editNodes`)
       const r = nodeRate(n, tier, beltCap, pipeCap)
       if (r > 0) out.set(n.item, (out.get(n.item) ?? 0) + r)
     }
     return out
   }
+}
+
+/** World variants (report G10): every node at one purity ('game' keeps the map's), then per-node edits
+ *  (a purity, or 'off' to remove the node). Geysers and the deposit keep theirs unless edited. */
+export type Purity = GeoNode['purity']
+export function editNodes(nodes: GeoNode[], all: 'game' | Purity = 'game', edits: Record<string, Purity | 'off'> = {}): GeoNode[] {
+  const out: GeoNode[] = []
+  for (const n of nodes) {
+    const e = edits[n.id]
+    if (e === 'off') continue
+    const p: Purity = e ?? (all !== 'game' && (n.type === 'node' || n.type === 'well') ? all : n.purity)
+    out.push(p === n.purity ? n : { ...n, purity: p })
+  }
+  return out
 }
 
 /** Net items/min of one machine at 100 % (game-data.json rates are already per minute). */

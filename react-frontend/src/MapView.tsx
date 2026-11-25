@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dn, fmt, tierRecipes, type GameData, type Plan } from './solver'
 import { t } from './i18n'
 import { Icon } from './Icon'
-import { haulCosts, stackOf, thresholdBelts, type GeoNode, type SitesDoc, type Summary } from './geo/model.ts'
+import { haulCosts, stackOf, thresholdBelts, type GeoNode, type Purity, type SitesDoc, type Summary } from './geo/model.ts'
 import type { SweepEvent, SweepMeta, SweepOptions, SweepRow } from './geo/sweep.ts'
 import './geo/map.css'
 import sitesJson from '../../data/satisfactory-geo/sites.json'
@@ -28,9 +28,13 @@ const RES_COLOR: Record<string, string> = {
   Desc_NitrogenGas_C: 'oklch(0.72 0.1 200)', Desc_GeothermalEnergy_C: 'oklch(0.7 0.15 60)',
 }
 
-interface GeoPrefs { base: string; tier: number; workKm: number; pmax: number; timeLimit: number; recipes: 'plan' | 'base' }
+interface GeoPrefs {
+  base: string; tier: number; workKm: number; pmax: number; timeLimit: number; recipes: 'plan' | 'base'
+  /** world variant (report G10): all nodes at one purity, and per-node edits */
+  purity: 'game' | Purity; nodeEdits: Record<string, Purity | 'off'>
+}
 // kept for the session, so switching tabs does not lose the inputs or the last sweep
-let prefs: GeoPrefs = { base: SITES.hubs.find(h => h.reason === 'base')!.site, tier: 8, workKm: 0, pmax: 4, timeLimit: 30, recipes: 'plan' }
+let prefs: GeoPrefs = { base: SITES.hubs.find(h => h.reason === 'base')!.site, tier: 8, workKm: 0, pmax: 4, timeLimit: 30, recipes: 'plan', purity: 'game', nodeEdits: {} }
 interface RunState {
   key: string; rows: SweepRow[]; sols: Map<string, Summary | null>; meta: SweepMeta | null
   solving: { label: string; step: { fmult: number; p: number } | null; since: number; limit: number; bound: number | null; best: number | null } | null
@@ -66,6 +70,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
     targets, base: p.base, tier: p.tier, workKm: p.workKm, pmax: p.pmax, timeLimit: p.timeLimit, recipeIds: p.recipes === 'plan' ? recipeIds : null,
     supplied: p.recipes === 'plan' && Object.keys(suppliedIn).length ? suppliedIn : null,
     tierRecipes: atTier,
+    purity: p.purity, nodeEdits: p.nodeEdits,
   }
   const key = JSON.stringify(opts)
   const itemName = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)
@@ -213,6 +218,14 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           <select aria-label={t('Tier', '层级')} value={p.tier} onChange={e => setP({ ...p, tier: +e.target.value })}>
             {[0, 2, 4, 5, 6, 7, 8, 9].map(tt => <option key={tt} value={tt}>T{tt}{tt < 6 ? t(' (no rail)', ' (无铁路)') : ''}</option>)}
           </select></label>
+        <label>{t('World', '世界')}
+          <select aria-label={t('Node purity', '矿点纯度')} value={p.purity} onChange={e => setP({ ...p, purity: e.target.value as GeoPrefs['purity'] })}>
+            <option value="game">{t('as in the game', '游戏原样')}</option>
+            <option value="pure">{t('all pure', '全部纯净')}</option>
+            <option value="normal">{t('all normal', '全部普通')}</option>
+            <option value="impure">{t('all impure', '全部不纯')}</option>
+          </select></label>
+        {Object.keys(p.nodeEdits).length > 0 && <button className="tabbtn" onClick={() => setP({ ...p, nodeEdits: {} })}>{t(`Reset ${Object.keys(p.nodeEdits).length} node edits`, `重置 ${Object.keys(p.nodeEdits).length} 个矿点修改`)}</button>}
         <label>{t('Hubs up to', '枢纽上限')}
           <select aria-label={t('Hubs up to', '枢纽上限')} value={p.pmax} onChange={e => setP({ ...p, pmax: +e.target.value })}>
             {[2, 3, 4, 6, 8, 12].map(n => <option key={n} value={n}>{n}</option>)}
@@ -261,6 +274,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
                 </tr>))}</tbody></table>}
           </>}
           {sol && site && <SiteDetail id={site} sol={sol} itemName={itemName} recipeName={recipeName} onBase={() => setP({ ...p, base: site })} isBase={site === (meta?.base ?? p.base)} />}
+          {site && <NodeEditor id={site} p={p} setP={setP} itemName={itemName} />}
           {sol && meta && <Links sol={sol} meta={meta} itemName={itemName} />}
           <TierPlan data={data} opts={opts} />
           {run?.done && meta && <p className="hint">{t(`Model: ${fmt(meta.n_vars, 0)} variables (${meta.n_int} integer), ${fmt(meta.n_rows, 0)} rows, ${meta.recipes.length} recipes; ${meta.hubs.length} candidate hubs; Mk.${meta.belt_tier} belts (${meta.belt_cap}/min, ${fmt(meta.belt_oe_km, 0)} OE/km), double track ${fmt(meta.track_oe_km, 0)} OE/km. Sweep ${fmt(run.ms / 1000, 0)} s.`, `模型:${fmt(meta.n_vars, 0)} 个变量 (${meta.n_int} 个整数),${fmt(meta.n_rows, 0)} 行,${meta.recipes.length} 个配方;${meta.hubs.length} 个候选枢纽;Mk.${meta.belt_tier} 传送带 (${meta.belt_cap}/min,${fmt(meta.belt_oe_km, 0)} OE/km),双轨 ${fmt(meta.track_oe_km, 0)} OE/km。扫描耗时 ${fmt(run.ms / 1000, 0)} 秒。`)}</p>}
@@ -553,6 +567,36 @@ function TierPlan({ data, opts }: { data: GameData; opts: SweepOptions }) {
         </tr>)}</tbody>
       </table></div>}
       {busy && <p className="solving" role="status">{t(`Solving period ${periods.length + 1} of ${n}…`, `正在求第 ${periods.length + 1}/${n} 期…`)}</p>}
+    </details>
+  )
+}
+
+/** Per-node purity edits for one site (report G10): randomised worlds or a save of your own. */
+function NodeEditor({ id, p, setP, itemName }: { id: string; p: GeoPrefs; setP: (p: GeoPrefs) => void; itemName: (id: string) => string }) {
+  const s = SITE.get(id)
+  if (!s) return null
+  const byId = new Map(NODES.map(n => [n.id, n]))
+  const nodes = s.nodes.map(nid => byId.get(nid)).filter((n): n is GeoNode => !!n && (n.type === 'node' || n.type === 'well'))
+  if (!nodes.length) return null
+  const label: Record<string, string> = { impure: t('impure', '不纯'), normal: t('normal', '普通'), pure: t('pure', '纯净'), off: t('none', '无') }
+  const set = (nid: string, v: string, game: Purity) => {
+    const edits = { ...p.nodeEdits }
+    if (v === 'auto' || v === game && p.purity === 'game') delete edits[nid]
+    else edits[nid] = v as Purity | 'off'
+    setP({ ...p, nodeEdits: edits })
+  }
+  return (
+    <details className="geosite small">
+      <summary>{t(`Nodes of ${id} (${nodes.length}): edit purity`, `${id} 的矿点（${nodes.length}）：修改纯度`)}</summary>
+      <table className="small"><tbody>{nodes.map(n => (
+        <tr key={n.id}>
+          <td><Icon id={n.item} size={16} />{itemName(n.item)}{n.type === 'well' ? t(' (well)', '（资源井）') : ''}</td>
+          <td><select value={p.nodeEdits[n.id] ?? 'auto'} aria-label={t('Purity', '纯度')} onChange={e => set(n.id, e.target.value, n.purity)}>
+            <option value="auto">{p.purity === 'game' ? label[n.purity] : label[p.purity]}{t(' (world)', '（世界设置）')}</option>
+            {(['impure', 'normal', 'pure', 'off'] as const).map(v => <option key={v} value={v}>{label[v]}</option>)}
+          </select></td>
+        </tr>
+      ))}</tbody></table>
     </details>
   )
 }

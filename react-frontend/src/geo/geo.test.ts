@@ -275,3 +275,22 @@ test('multi-period (G9): what an earlier period built is free; growing the same 
   const grow = sweepRun({ targets: { Desc_IronPlate_C: 120 }, tier: 6, fmults: [], existing: small.best })
   assert.ok(grow.bestObj! < fresh.bestObj!, `${grow.bestObj} vs ${fresh.bestObj}`)
 })
+
+test('world variants (G10): all pure = pure rate × nodes; a node switched off supplies nothing', async () => {
+  const { editNodes } = await import('./model.ts')
+  const nodes = GEO.nodes
+  const total = (ns: GeoNode[], item: string, tier: number) => {
+    const d = new Data(game, GEO.sitesDoc, ns, GEO.transport, D.hubs)
+    let q = 0
+    for (const s of d.sid) q += d.supply(s, tier, 780, 600).get(item) ?? 0
+    return q
+  }
+  const iron = nodes.filter(n => n.item === 'Desc_OreIron_C' && n.type === 'node')
+  const pure = editNodes(nodes, 'pure')
+  const want = iron.length * nodeRate({ type: 'node', item: 'Desc_OreIron_C', purity: 'pure' }, 8, 780, 600)
+  assert.ok(Math.abs(total(pure, 'Desc_OreIron_C', 8) - want) < 1e-6, `${total(pure, 'Desc_OreIron_C', 8)} vs ${want}`)
+  assert.ok(total(pure, 'Desc_OreIron_C', 8) >= total(nodes, 'Desc_OreIron_C', 8))
+  const off = editNodes(nodes, 'game', { [iron[0].id]: 'off' })
+  const one = nodeRate(iron[0], 8, 780, 600)
+  assert.ok(Math.abs(total(nodes, 'Desc_OreIron_C', 8) - total(off, 'Desc_OreIron_C', 8) - one) < 1e-6)
+})

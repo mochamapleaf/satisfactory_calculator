@@ -4,8 +4,8 @@
 // it is copied, not solved. Then F 0.5× and 2× at p ≤ pmax give the sensitivity of p* (the number of hubs of the best
 // plan). Each solve has a time limit; rows say whether they are proven optimal.
 import {
-  CheckError, Data, aggregateGross, build, check, hubsFor, materials, oreEquivalents, rawShortfalls, recipeClosure, summarize, unmakeable,
-  type GameLite, type GameRecipe, type GeoNode, type HaulMeta, type LpSolve, type SitesDoc, type Summary,
+  CheckError, Data, aggregateGross, build, check, editNodes, hubsFor, materials, oreEquivalents, rawShortfalls, recipeClosure, summarize, unmakeable,
+  type GameLite, type GameRecipe, type GeoNode, type HaulMeta, type LpSolve, type Purity, type SitesDoc, type Summary,
 } from './model.ts'
 
 export interface SweepOptions {
@@ -21,6 +21,9 @@ export interface SweepOptions {
   supplied?: Record<string, number> | null
   /** display names for messages (item id -> name) */
   names?: Record<string, string>
+  /** world variant (report G10): all resource nodes at one purity, and per-node edits (purity or 'off') */
+  purity?: 'game' | Purity
+  nodeEdits?: Record<string, Purity | 'off'>
   /** multi-period (report G9): what earlier periods built, by variable name; free up to that amount */
   existing?: Record<string, number> | null
 }
@@ -61,7 +64,8 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
   // tech tier (report G9): only recipes unlocked by then
   const atTier = o.tierRecipes ? new Set(o.tierRecipes) : null
   const gameAt = atTier ? { ...game, recipes: game.recipes.filter(r => atTier.has(r.id)) } : game
-  const d = new Data(gameAt, geo.sitesDoc, geo.nodes, geo.transport, hubs)
+  const nodes = editNodes(geo.nodes, o.purity ?? 'game', o.nodeEdits ?? {})
+  const d = new Data(gameAt, geo.sitesDoc, nodes, geo.transport, hubs)
   let recipes: GameRecipe[] | null = null
   if (o.recipeIds) {
     const byId = new Map(gameAt.recipes.map(r => [r.id, r]))
@@ -80,7 +84,7 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
   if (lost.length) throw new Error(`Nothing on the map makes ${lost.map(nm).join(', ')} with ${o.recipeIds ? "this plan's recipes" : 'the base recipes'}. ${o.recipeIds ? 'Choose “base recipes”, or change the plan.' : ''}${atTier ? ` At tier ${o.tier} only the recipes unlocked by then count: a higher tier may make it.` : ''}`.trim())
   // ore equivalents of belt / rail materials price construction with every recipe (they are prices,
   // not what this tier can make: aluminium casing is tier 7)
-  const oe = oreEquivalents(atTier ? new Data(game, geo.sitesDoc, geo.nodes, geo.transport, hubs) : d, materials(), solve)
+  const oe = oreEquivalents(atTier ? new Data(game, geo.sitesDoc, nodes, geo.transport, hubs) : d, materials(), solve)
   const common = { base: o.base, tier: o.tier, workKm: o.workKm, oe, recipes, supplied, existing: o.existing ?? null }
   let env: number | null = o.envStart ?? null
   const skip = new Set(o.skip ?? [])
