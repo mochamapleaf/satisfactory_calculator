@@ -18,7 +18,7 @@
 //! - The HUB ship: a milestone can be submitted only after the previous one's ship returned.
 //! - Not modelled: power plants and power, hand-crafting, walking / exploration, belts and poles as
 //!   materials (their time is the per-building wiring time), node purity and distance.
-use super::data::{GameData, Milestone};
+use super::data::{GameData, MamNode, Milestone};
 use super::{plan, ItemRate, Objective, PlanSettings, Status};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -42,13 +42,19 @@ pub struct SpeedrunSettings {
     /// Build generators for each step's power once a generator is unlocked (before that: hand-fed burners,
     /// not counted).
     pub power: bool,
+    /// v2: build the next step while this one's factories produce (with what is shipped by then).
+    pub overlap: bool,
+    /// v2: what finished factories keep making piles up and pays later costs first.
+    pub stockpile: bool,
+    /// v2: a MAM node's cost is paid by the first step that uses one of its recipes.
+    pub mam_cost: bool,
     /// UI language for names ("zh" | "en").
     pub lang: String,
 }
 
 impl Default for SpeedrunSettings {
     fn default() -> Self {
-        Self { up_to_tier: 9, place_s: 25.0, wire_s: 20.0, elevator: true, hours: 0.0, needed_only: true, power: true, lang: String::new() }
+        Self { up_to_tier: 9, place_s: 25.0, wire_s: 20.0, elevator: true, hours: 0.0, needed_only: true, power: true, overlap: true, stockpile: true, mam_cost: true, lang: String::new() }
     }
 }
 
@@ -66,6 +72,10 @@ pub struct Stage {
     pub name: String,
     pub tier: u32,
     pub cost: Vec<ItemRate>,
+    /// Part of the cost paid from the stockpile of earlier factories.
+    pub from_stock: Vec<ItemRate>,
+    /// MAM research done in this step (its cost is in the step's production).
+    pub research: Vec<String>,
     /// New production buildings and extractors built for this stage.
     pub buildings: f64,
     pub miners: f64,
@@ -146,6 +156,9 @@ struct Trial {
     build: BTreeMap<String, f64>,
     supplies_used: BTreeMap<String, f64>,
     made: Vec<ItemRate>,
+    /// MAM nodes this step researches.
+    research: Vec<String>,
+    research_names: Vec<String>,
 }
 
 pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
@@ -266,10 +279,47 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
         }
     }
 
-    let mut factory: BTreeMap<String, f64> = BTreeMap::new(); // what built factories make, per minute
-    let mut clock = 0.0;
+    // ---- the timeline (v2): the player builds one step after another; each step's factories produce
+    // while the player already builds the next one (overlap), using only the recipes of milestones
+    // shipped by then (else the player waits for the ship). What finished factories keep making piles up
+    // and pays later costs first (stockpiling). MAM nodes are paid by the first step that uses them.
+    let mam_of: BTreeMap<&str, &MamNode> = prog.mam_nodes.iter().flat_map(|n| n.recipes.iter().map(move |r| (r.as_str(), n))).collect();
+    let mut researched: BTreeSet<String> = BTreeSet::new();
+    let mut factory: BTreeMap<String, f64> = BTreeMap::new(); // free output of finished factories, per minute
+    let mut stock: BTreeMap<String, f64> = BTreeMap::new();
+    let mut stock_t = 0.0; // stock is counted up to this time
+    // factories still producing for their step: (ready time, their output rates)
+    let mut running: Vec<(f64, Vec<ItemRate>)> = vec![];
+    // milestones submitted: (submit time, recipes they unlock)
+    let mut shipped: Vec<(f64, Vec<String>)> = vec![];
+    let start_unlocked = unlocked.clone();
+    let mut player = 0.0; // when the player is free to build the next step
+    let mut last_submit = 0.0;
     let mut ship_back = 0.0; // when the HUB ship of the last milestone returns
     let mut total_buildings = 0.0;
+    // stock and finished factories up to time t
+    let advance = |t: f64, factory: &mut BTreeMap<String, f64>, stock: &mut BTreeMap<String, f64>, stock_t: &mut f64, running: &mut Vec<(f64, Vec<ItemRate>)>| {
+        running.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        loop {
+            let next = running.first().map(|r| r.0).filter(|r| *r <= t);
+            let upto = next.unwrap_or(t);
+            if ss.stockpile && upto > *stock_t {
+                for (i, r) in factory.iter() {
+                    *stock.entry(i.clone()).or_default() += r * (upto - *stock_t);
+                }
+            }
+            *stock_t = (*stock_t).max(upto);
+            match next {
+                Some(_) => {
+                    let (_, made) = running.remove(0);
+                    for m in made {
+                        *factory.entry(m.item).or_default() += m.rate;
+                    }
+                }
+                None => break,
+            }
+        }
+    };
     for d in &defs {
         let (kind, id, name, tier, cost): (&str, String, String, u32, Vec<(String, f64)>) = match d {
             StageDef::Milestone(m) => ("milestone", m.id.clone(), m.name.clone(), m.tier, m.cost.clone()),
@@ -281,160 +331,66 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
                 PHASES[*p].iter().map(|(i, q)| (i.to_string(), *q)).collect(),
             ),
         };
-        let mut allowed = unlocked.clone();
-        if mam(&unlocked) {
-            allowed.extend(prog.mam_recipes.iter().cloned());
-        }
-        allowed.extend(always.iter().cloned());
-        let disabled: Vec<String> = data.recipes.iter().filter(|r| !allowed.contains(&r.id)).map(|r| r.id.clone()).collect();
-        // parts the unlocked recipes make; others (Portable Miner: Equipment Workshop) count as hand-crafted
-        let made_by_machine: BTreeSet<&str> =
-            data.recipes.iter().filter(|r| allowed.contains(&r.id)).flat_map(|r| r.outputs.iter().map(|(i, _)| i.as_str())).collect();
-        // generators whose building is unlocked (their build recipe), for the step's own power
-        let gens: Vec<String> = data
-            .recipes
-            .iter()
-            .filter(|r| r.generator && prog.building_costs.get(&r.building).is_some_and(|bc| unlocked.contains(&bc.recipe)))
-            .map(|r| r.id.clone())
-            .collect();
-        let power_on = ss.power && !gens.is_empty();
-        let disabled: Vec<String> = disabled.into_iter().filter(|r| !(power_on && gens.contains(r))).collect();
-        let base = PlanSettings {
-            game: "satisfactory".into(),
-            objective: Objective::Buildings,
-            cost: Objective::Buildings.preset(),
-            integer: false,
-            disabled_recipes: disabled,
-            allow_all_alternates: false,
-            // MAM alternates (Polyester Fabric for the Gas Filter: Fabric needs hand-gathered Mycelia)
-            enabled_alternates: allowed.iter().filter(|r| data.recipe(r).is_some_and(|x| x.alt)).cloned().collect(),
-            self_power: power_on,
-            lang: ss.lang.clone(),
-            ..Default::default()
-        };
-        // one trial: make `cost` (plus the new buildings' own parts) in τ minutes
-        let trial = |tau: f64| -> Option<Trial> {
-            let mut extra: BTreeMap<String, f64> = BTreeMap::new();
-            let mut last: Option<Trial> = None;
-            for _ in 0..2 {
-                let mut want: BTreeMap<String, f64> = cost.iter().cloned().collect();
-                for (i, q) in &extra {
-                    *want.entry(i.clone()).or_default() += q;
+        // try at once (overlap) with what is shipped by then; else wait for the last milestone
+        let unlocked_at = |t: f64| -> BTreeSet<String> {
+            let mut u = start_unlocked.clone();
+            for (st, rs) in &shipped {
+                if *st <= t + 1e-9 {
+                    u.extend(rs.iter().cloned());
                 }
-                let mut s = base.clone();
-                s.targets = want.iter().map(|(i, q)| ItemRate { item: i.clone(), rate: q / tau }).collect();
-                s.supplies = factory.iter().filter(|(_, r)| **r > 1e-9).map(|(i, r)| ItemRate { item: i.clone(), rate: *r }).collect();
-                let mut p = plan(data, &s);
-                if p.status != Status::Optimal && s.self_power {
-                    // no generator whose fuel these recipes can make (the biomass burner burns gathered
-                    // leaves / wood): power by hand-fed burners, not counted
-                    s.self_power = false;
-                    p = plan(data, &s);
-                }
-                if p.status != Status::Optimal {
-                    return None;
-                }
-                let mut build: BTreeMap<String, f64> = BTreeMap::new();
-                let mut buildings = 0.0;
-                for r in &p.recipes {
-                    let b = data.recipe(&r.id).map(|x| x.building.clone()).unwrap_or_else(|| r.building.clone());
-                    let n = r.machines.max(0.0).ceil();
-                    *build.entry(b).or_default() += n;
-                    buildings += n;
-                }
-                let mut miners = 0.0;
-                for l in &p.raw {
-                    let (rate, b) = extractor(&l.item, &unlocked);
-                    let n = (l.rate / rate - 1e-9).ceil().max(0.0);
-                    *build.entry(b.to_string()).or_default() += n;
-                    miners += n;
-                }
-                // parts for these buildings, made by the stage's factory too (MINE)
-                extra.clear();
-                for (b, n) in &build {
-                    if let Some(bc) = prog.building_costs.get(b) {
-                        // parts no unlocked recipe makes (the Miner's Portable Miner) are hand-crafted: left out
-                        for (i, q) in bc.cost.iter().filter(|(i, _)| made_by_machine.contains(i.as_str())) {
-                            *extra.entry(i.clone()).or_default() += q * n;
-                        }
-                    }
-                }
-                let build_min = (buildings + miners) * sec;
-                let power_mw = p.recipes.iter().flat_map(|r| r.outputs.iter()).filter(|o| o.item == super::ELECTRICITY).map(|o| o.rate).sum();
-                last = Some(Trial {
-                    recipes: p.recipes.iter().map(|r| StageBuild { building: r.name.clone(), count: r.machines }).collect(),
-                    raw: p.raw.iter().map(|l| ItemRate { item: l.item.clone(), rate: l.rate }).collect(),
-                    power_mw,
-                    tau,
-                    total: build_min + tau,
-                    build_min,
-                    buildings,
-                    miners,
-                    build,
-                    supplies_used: p.supplied.iter().map(|l| (l.item.clone(), l.rate)).collect(),
-                    made: s.targets.iter().filter(|t| t.item != super::ELECTRICITY).cloned().collect(),
-                });
             }
-            last
+            u
         };
-        // τ by golden-section search on log τ (the total is close to unimodal: build ∝ 1/τ, plus τ)
-        let (mut lo, mut hi) = (0.5f64.ln(), 2000f64.ln());
-        let g = 0.618_033_988_75;
-        let eval = |x: f64| trial(x.exp());
-        let mut best: Option<Trial> = None;
-        let keep = |t: Option<Trial>, best: &mut Option<Trial>| -> f64 {
-            match t {
-                Some(t) => {
-                    let v = t.total;
-                    if best.as_ref().is_none_or(|b| v < b.total) {
-                        *best = Some(t);
-                    }
-                    v
-                }
-                None => f64::INFINITY,
-            }
-        };
-        let (mut a, mut b) = (hi - g * (hi - lo), lo + g * (hi - lo));
-        let (mut fa, mut fb) = (keep(eval(a), &mut best), keep(eval(b), &mut best));
-        for _ in 0..14 {
-            if fa < fb {
-                hi = b;
-                b = a;
-                fb = fa;
-                a = hi - g * (hi - lo);
-                fa = keep(eval(a), &mut best);
-            } else {
-                lo = a;
-                a = b;
-                fa = fb;
-                b = lo + g * (hi - lo);
-                fb = keep(eval(b), &mut best);
+        let tries: Vec<f64> = if ss.overlap && player < last_submit { vec![player, last_submit] } else { vec![player.max(last_submit)] };
+        let mut found = None;
+        for &t in &tries {
+            advance(t, &mut factory, &mut stock, &mut stock_t, &mut running);
+            let u = unlocked_at(t);
+            // stock pays first
+            let mut take: BTreeMap<String, f64> = BTreeMap::new();
+            let left: Vec<(String, f64)> = cost
+                .iter()
+                .map(|(i, q)| {
+                    let have = stock.get(i).copied().unwrap_or(0.0).min(*q);
+                    take.insert(i.clone(), have);
+                    (i.clone(), q - have)
+                })
+                .collect();
+            if let Some(tr) = solve_stage(data, prog, ss, sec, &always, &u, &researched, &mam_of, &factory, &left) {
+                found = Some((t, u, take, tr));
+                break;
             }
         }
-        let Some(t) = best else {
+        let Some((start, _u, take, t)) = found else {
             out.warnings.push(super::data::tr(
                 &format!("{name}: cannot be made with the recipes unlocked so far; skipped"),
                 &format!("{name}：用目前解锁的配方做不出来，跳过"),
             ));
             continue;
         };
-        let start = clock;
-        let ready = start + t.total;
-        let submit = if kind == "milestone" { ready.max(ship_back) } else { ready };
+        for (i, q) in &take {
+            if let Some(s) = stock.get_mut(i) {
+                *s = (*s - q).max(0.0);
+            }
+        }
+        let build_end = start + t.build_min;
+        let ready = build_end + t.tau;
+        // milestones go in order, one HUB ship at a time; phases need only their parts
+        let submit = if kind == "milestone" { ready.max(ship_back).max(last_submit) } else { ready };
         let wait = submit - ready;
         total_buildings += t.buildings + t.miners;
-        // factories stay: their outputs are free for later stages, minus what this stage took from them
+        // this step's factories take their supplies from now on and add their output once ready
         for (i, q) in &t.supplies_used {
             if let Some(f) = factory.get_mut(i) {
                 *f = (*f - q).max(0.0);
             }
         }
-        for m in &t.made {
-            *factory.entry(m.item.clone()).or_default() += m.rate;
-        }
+        running.push((ready, t.made.clone()));
+        researched.extend(t.research.iter().cloned());
         let mut unlocks = vec![];
         if let StageDef::Milestone(m) = d {
             ship_back = submit + m.time / 60.0;
+            shipped.push((submit, m.recipes.clone()));
             for r in &m.recipes {
                 if unlocked.insert(r.clone()) {
                     if let Some(x) = data.recipe(r) {
@@ -442,14 +398,19 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
                     }
                 }
             }
+            last_submit = submit;
+        } else {
+            last_submit = last_submit.max(submit);
         }
-        clock = submit;
+        player = if ss.overlap { build_end } else { submit };
         out.stages.push(Stage {
             kind: kind.into(),
             id,
             name,
             tier,
             cost: cost.iter().map(|(i, q)| ItemRate { item: i.clone(), rate: *q }).collect(),
+            from_stock: take.iter().filter(|(_, q)| **q > 1e-6).map(|(i, q)| ItemRate { item: i.clone(), rate: *q }).collect(),
+            research: t.research_names.clone(),
             buildings: t.buildings,
             miners: t.miners,
             build: t
@@ -478,6 +439,7 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
             note: String::new(),
         });
     }
+    let clock = out.stages.iter().map(|s| s.end_min).fold(0.0, f64::max);
     out.status = if out.stages.is_empty() { Status::Infeasible } else { Status::Optimal };
     out.total_min = clock;
     out.total_buildings = total_buildings;
@@ -488,4 +450,183 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
     }
     out.solve_ms = t0.elapsed().as_secs_f64() * 1e3;
     out
+}
+
+/// One step: the factories that make `cost` (after stock) fastest, given the recipes unlocked and the
+/// output of the factories already running (free supplies). None when it cannot be made.
+#[allow(clippy::too_many_arguments)]
+fn solve_stage(
+    data: &GameData,
+    prog: &super::data::Progression,
+    ss: &SpeedrunSettings,
+    sec: f64,
+    always: &BTreeSet<String>,
+    unlocked: &BTreeSet<String>,
+    researched: &BTreeSet<String>,
+    mam_of: &BTreeMap<&str, &MamNode>,
+    factory: &BTreeMap<String, f64>,
+    cost: &[(String, f64)],
+) -> Option<Trial> {
+    if cost.iter().all(|(_, q)| *q <= 1e-9) {
+        // the stockpile pays it all
+        return Some(Trial {
+            recipes: vec![], raw: vec![], power_mw: 0.0, tau: 0.0, total: 0.0, build_min: 0.0, buildings: 0.0, miners: 0.0,
+            build: BTreeMap::new(), supplies_used: BTreeMap::new(), made: vec![], research: vec![], research_names: vec![],
+        });
+    }
+    let mut allowed = unlocked.clone();
+    // MAM recipes once the MAM exists (with `mam_cost`, an unresearched node is paid by the trial below)
+    if unlocked.contains("Recipe_Mam_C") {
+        allowed.extend(prog.mam_recipes.iter().cloned());
+    }
+    allowed.extend(always.iter().cloned());
+    let disabled: Vec<String> = data.recipes.iter().filter(|r| !allowed.contains(&r.id)).map(|r| r.id.clone()).collect();
+    // parts the unlocked recipes make; others (Portable Miner: Equipment Workshop) count as hand-crafted
+    let made_by_machine: BTreeSet<&str> =
+        data.recipes.iter().filter(|r| allowed.contains(&r.id)).flat_map(|r| r.outputs.iter().map(|(i, _)| i.as_str())).collect();
+    // generators whose building is unlocked (their build recipe), for the step's own power
+    let gens: Vec<String> = data
+        .recipes
+        .iter()
+        .filter(|r| r.generator && prog.building_costs.get(&r.building).is_some_and(|bc| unlocked.contains(&bc.recipe)))
+        .map(|r| r.id.clone())
+        .collect();
+    let power_on = ss.power && !gens.is_empty();
+    let disabled: Vec<String> = disabled.into_iter().filter(|r| !(power_on && gens.contains(r))).collect();
+    let base = PlanSettings {
+        game: "satisfactory".into(),
+        objective: Objective::Buildings,
+        cost: Objective::Buildings.preset(),
+        integer: false,
+        disabled_recipes: disabled,
+        allow_all_alternates: false,
+        // MAM alternates (Polyester Fabric for the Gas Filter: Fabric needs hand-gathered Mycelia)
+        enabled_alternates: allowed.iter().filter(|r| data.recipe(r).is_some_and(|x| x.alt)).cloned().collect(),
+        self_power: power_on,
+        lang: ss.lang.clone(),
+        ..Default::default()
+    };
+    // one trial: make `cost` (plus the new buildings' own parts) in τ minutes
+    let trial = |tau: f64| -> Option<Trial> {
+        let mut extra: BTreeMap<String, f64> = BTreeMap::new();
+        let mut last: Option<Trial> = None;
+        let mut research: BTreeSet<String> = BTreeSet::new();
+        for _ in 0..3 {
+            let mut want: BTreeMap<String, f64> = cost.iter().cloned().collect();
+            for (i, q) in &extra {
+                *want.entry(i.clone()).or_default() += q;
+            }
+            let mut s = base.clone();
+            s.targets = want.iter().map(|(i, q)| ItemRate { item: i.clone(), rate: q / tau }).collect();
+            s.supplies = factory.iter().filter(|(_, r)| **r > 1e-9).map(|(i, r)| ItemRate { item: i.clone(), rate: *r }).collect();
+            let mut p = plan(data, &s);
+            if p.status != Status::Optimal && s.self_power {
+                // no generator whose fuel these recipes can make (the biomass burner burns gathered
+                // leaves / wood): power by hand-fed burners, not counted
+                s.self_power = false;
+                p = plan(data, &s);
+            }
+            if p.status != Status::Optimal {
+                return None;
+            }
+            let mut build: BTreeMap<String, f64> = BTreeMap::new();
+            let mut buildings = 0.0;
+            for r in &p.recipes {
+                let b = data.recipe(&r.id).map(|x| x.building.clone()).unwrap_or_else(|| r.building.clone());
+                let n = r.machines.max(0.0).ceil();
+                *build.entry(b).or_default() += n;
+                buildings += n;
+            }
+            let mut miners = 0.0;
+            for l in &p.raw {
+                let (rate, b) = extractor(&l.item, &unlocked);
+                let n = (l.rate / rate - 1e-9).ceil().max(0.0);
+                *build.entry(b.to_string()).or_default() += n;
+                miners += n;
+            }
+            // parts for these buildings, made by the stage's factory too (MINE)
+            extra.clear();
+            // MAM nodes of the MAM recipes used, not researched yet, and their tree's entry node (MINE: the
+            // dump has no MAM prerequisites; every tree starts at its `_0` node)
+            if ss.mam_cost {
+                for r in &p.recipes {
+                    if let Some(n) = mam_of.get(r.id.as_str()).filter(|n| !researched.contains(&n.id)) {
+                        research.insert(n.id.clone());
+                        if let Some(tree) = n.id.strip_prefix("Research_").and_then(|x| x.split('_').next()) {
+                            let root = format!("Research_{tree}_0_C");
+                            if !researched.contains(&root) && prog.mam_nodes.iter().any(|m| m.id == root) {
+                                research.insert(root);
+                            }
+                        }
+                    }
+                }
+                for n in prog.mam_nodes.iter().filter(|n| research.contains(&n.id)) {
+                    for (i, q) in n.cost.iter().filter(|(i, _)| made_by_machine.contains(i.as_str())) {
+                        *extra.entry(i.clone()).or_default() += q;
+                    }
+                }
+            }
+            for (b, n) in &build {
+                if let Some(bc) = prog.building_costs.get(b) {
+                    // parts no unlocked recipe makes (the Miner's Portable Miner) are hand-crafted: left out
+                    for (i, q) in bc.cost.iter().filter(|(i, _)| made_by_machine.contains(i.as_str())) {
+                        *extra.entry(i.clone()).or_default() += q * n;
+                    }
+                }
+            }
+            let build_min = (buildings + miners) * sec;
+            let power_mw = p.recipes.iter().flat_map(|r| r.outputs.iter()).filter(|o| o.item == super::ELECTRICITY).map(|o| o.rate).sum();
+            last = Some(Trial {
+                recipes: p.recipes.iter().map(|r| StageBuild { building: r.name.clone(), count: r.machines }).collect(),
+                raw: p.raw.iter().map(|l| ItemRate { item: l.item.clone(), rate: l.rate }).collect(),
+                power_mw,
+                tau,
+                total: build_min + tau,
+                build_min,
+                buildings,
+                miners,
+                build,
+                supplies_used: p.supplied.iter().map(|l| (l.item.clone(), l.rate)).collect(),
+                made: s.targets.iter().filter(|t| t.item != super::ELECTRICITY).cloned().collect(),
+                research: research.iter().cloned().collect(),
+                research_names: prog.mam_nodes.iter().filter(|n| research.contains(&n.id)).map(|n| n.name.clone()).collect(),
+            });
+        }
+        last
+    };
+    // τ by golden-section search on log τ (the total is close to unimodal: build ∝ 1/τ, plus τ)
+    let (mut lo, mut hi) = (0.5f64.ln(), 2000f64.ln());
+    let g = 0.618_033_988_75;
+    let eval = |x: f64| trial(x.exp());
+    let mut best: Option<Trial> = None;
+    let keep = |t: Option<Trial>, best: &mut Option<Trial>| -> f64 {
+        match t {
+            Some(t) => {
+                let v = t.total;
+                if best.as_ref().is_none_or(|b| v < b.total) {
+                    *best = Some(t);
+                }
+                v
+            }
+            None => f64::INFINITY,
+        }
+    };
+    let (mut a, mut b) = (hi - g * (hi - lo), lo + g * (hi - lo));
+    let (mut fa, mut fb) = (keep(eval(a), &mut best), keep(eval(b), &mut best));
+    for _ in 0..14 {
+        if fa < fb {
+            hi = b;
+            b = a;
+            fb = fa;
+            a = hi - g * (hi - lo);
+            fa = keep(eval(a), &mut best);
+        } else {
+            lo = a;
+            a = b;
+            fa = fb;
+            b = lo + g * (hi - lo);
+            fb = keep(eval(b), &mut best);
+        }
+    }
+    best
 }

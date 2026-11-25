@@ -211,6 +211,12 @@ def main(src, dst):
             "recipes": sorted(x["unlock"]["recipes"]),
         })
     milestones.sort(key=lambda m: (m["tier"], m["name"]))
+    # MAM research nodes (speedrun v2: their cost is paid by the first step that uses one of their recipes)
+    mam_nodes = sorted(({
+        "id": x["className"], "name": x["name"], "time": x["time"],
+        "cost": [[c["item"], c["amount"]] for c in x["cost"] if c["item"] in known],
+        "recipes": sorted(x["unlock"]["recipes"]),
+    } for x in d["schematics"].values() if x["type"] == "EST_MAM"), key=lambda n: n["id"])
     building_costs = {}
     for r in d["recipes"].values():
         if not r["forBuilding"] or not r["products"]:
@@ -230,7 +236,7 @@ def main(src, dst):
         "recipes": recipes,
         "buildings": buildings,
         "resources": resources,
-        "progression": {"tutorial_recipes": tutorial, "mam_recipes": mam, "milestones": milestones, "building_costs": building_costs},
+        "progression": {"tutorial_recipes": tutorial, "mam_recipes": mam, "mam_nodes": mam_nodes, "milestones": milestones, "building_costs": building_costs},
         "belts": [60, 120, 270, 480, 780, 1200],
         "pipes": [300, 600],
     }

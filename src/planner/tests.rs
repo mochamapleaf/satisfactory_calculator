@@ -1011,10 +1011,21 @@ fn speedrun_climbs_the_tech_tree() {
     assert!(all.total_min >= r.total_min);
     // power: generators appear once they unlock
     assert!(r.stages.iter().any(|s| s.power_mw > 0.0));
-    // time only goes forward
+    // time only goes forward: the player starts steps in order (v2 overlap: before the last one ships),
+    // milestones ship in order, and a step ends after it starts
     for w in r.stages.windows(2) {
-        assert!(w[1].start_min >= w[0].end_min - 1e-9 && w[1].end_min >= w[1].start_min);
+        assert!(w[1].start_min >= w[0].start_min - 1e-9 && w[1].end_min >= w[1].start_min);
     }
+    let ends: Vec<f64> = r.stages.iter().filter(|s| s.kind == "milestone").map(|s| s.end_min).collect();
+    assert!(ends.windows(2).all(|w| w[1] >= w[0] - 1e-9));
+    // v2 parts each only help: v1 (all off) is never faster
+    let v1 = speedrun(&d, &SpeedrunSettings { overlap: false, stockpile: false, mam_cost: false, ..Default::default() });
+    let no_mam = speedrun(&d, &SpeedrunSettings { mam_cost: false, ..Default::default() });
+    eprintln!("v1 {:.1} h, v2 {:.1} h, v2 without MAM cost {:.1} h; research {:?}", v1.total_min / 60.0, r.total_min / 60.0, no_mam.total_min / 60.0,
+        r.stages.iter().flat_map(|s| s.research.iter()).collect::<Vec<_>>());
+    assert!(no_mam.total_min <= v1.total_min * 1.02, "{} vs {}", no_mam.total_min, v1.total_min);
+    assert!(r.stages.iter().any(|s| !s.research.is_empty()));
+    assert!(r.stages.iter().any(|s| !s.from_stock.is_empty()));
     // slower building means a slower climb
     let slow = speedrun(&d, &SpeedrunSettings { place_s: 60.0, ..Default::default() });
     assert!(slow.total_min > r.total_min);

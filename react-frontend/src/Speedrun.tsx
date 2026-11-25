@@ -6,15 +6,15 @@ import { lang, t } from './i18n'
 import { fmt, itemName, type GameData, type ItemRate } from './solver'
 
 interface Stage {
-  kind: 'milestone' | 'phase'; id: string; name: string; tier: number; cost: ItemRate[]
+  kind: 'milestone' | 'phase'; id: string; name: string; tier: number; cost: ItemRate[]; from_stock: ItemRate[]; research: string[]
   buildings: number; miners: number; build: { building: string; count: number }[]
   build_min: number; produce_min: number; wait_min: number; start_min: number; end_min: number
   total_buildings: number; unlocks: string[]; note: string
   recipes: { building: string; count: number }[]; raw: ItemRate[]; power_mw: number
 }
 interface Report { status: string; stages: Stage[]; total_min: number; total_buildings: number; done_in_hours: number | null; reached: string | null; skipped: string[]; solve_ms: number; warnings: string[]; error?: string }
-interface Opts { up_to_tier: number; place_s: number; wire_s: number; elevator: boolean; hours: number; needed_only: boolean; power: boolean }
-const DEFAULTS: Opts = { up_to_tier: 9, place_s: 25, wire_s: 20, elevator: true, hours: 8, needed_only: true, power: true }
+interface Opts { up_to_tier: number; place_s: number; wire_s: number; elevator: boolean; hours: number; needed_only: boolean; power: boolean; overlap: boolean; stockpile: boolean; mam_cost: boolean }
+const DEFAULTS: Opts = { up_to_tier: 9, place_s: 25, wire_s: 20, elevator: true, hours: 8, needed_only: true, power: true, overlap: true, stockpile: true, mam_cost: true }
 const KEY = 'speedrun.v1'
 
 let worker: Worker | null = null
@@ -65,8 +65,8 @@ export default function Speedrun({ data }: { data: GameData }) {
   return (
     <div className="mixedbelt speedrun">
       <p className="hint">
-        {t('Speedrun plan: climb the tech tree milestone by milestone (cheapest one that can be made first in each tier, Space Elevator phases where they gate the next tiers). For each step the plan adds factories sized so that building them plus producing the cost takes the least time; factories built earlier keep running and feed later steps. Building time = buildings × (place + wiring seconds).',
-          '速通规划：按里程碑一步步爬科技树（每一阶先做能做出来的最便宜的里程碑，太空电梯阶段放在它解锁下一阶之前）。每一步新建工厂，工厂规模取「建造时间 + 生产时间」最短；之前建好的工厂继续运转，产出给后面用。建造时间 = 建筑数 × （摆放 + 拉线秒数）。')}
+        {t('Speedrun plan: climb the tech tree milestone by milestone (cheapest one that can be made first in each tier, Space Elevator phases where they gate the next tiers). For each step the plan adds factories sized so that building them plus producing the cost takes the least time; factories built earlier keep running, feed later steps and stockpile. While a step produces, the player already builds the next one with the recipes shipped so far. Building time = buildings × (place + wiring seconds).',
+          '速通规划：按里程碑一步步爬科技树（每一阶先做能做出来的最便宜的里程碑，太空电梯阶段放在它解锁下一阶之前）。每一步新建工厂，工厂规模取「建造时间 + 生产时间」最短；之前建好的工厂继续运转、给后面供货并囤货。一步在生产时，玩家已经用已解锁的配方开始建下一步。建造时间 = 建筑数 × （摆放 + 拉线秒数）。')}
       </p>
       <div className="mbsettings">
         <label>{t('Up to tier', '爬到第几阶')}<input type="number" min={1} max={9} value={o.up_to_tier} onChange={e => set({ up_to_tier: Math.min(9, Math.max(1, Math.round(+e.target.value || 9))) })} /></label>
@@ -75,6 +75,9 @@ export default function Speedrun({ data }: { data: GameData }) {
         <label className="check"><input type="checkbox" checked={o.elevator} onChange={e => set({ elevator: e.target.checked })} /> {t('Space Elevator phases', '太空电梯阶段')}</label>
         <label className="check"><input type="checkbox" checked={o.needed_only} onChange={e => set({ needed_only: e.target.checked })} /> {t('Only milestones the Space Elevator needs', '只做太空电梯需要的里程碑')}</label>
         <label className="check"><input type="checkbox" checked={o.power} onChange={e => set({ power: e.target.checked })} /> {t('Build power plants once unlocked', '解锁后自建发电厂')}</label>
+        <label className="check"><input type="checkbox" checked={o.overlap} onChange={e => set({ overlap: e.target.checked })} /> {t('Build the next step while this one produces', '生产时同时建下一步')}</label>
+        <label className="check"><input type="checkbox" checked={o.stockpile} onChange={e => set({ stockpile: e.target.checked })} /> {t('Stockpile what running factories keep making', '运转中的工厂持续囤货')}</label>
+        <label className="check"><input type="checkbox" checked={o.mam_cost} onChange={e => set({ mam_cost: e.target.checked })} /> {t('Pay MAM research when first used', '首次用到时付 MAM 研究费用')}</label>
         <label>{t('Show what fits in (hours)', '看几小时内能爬到哪')}<input type="number" min={0} max={1000} step={1} value={o.hours} onChange={e => set({ hours: Math.max(0, +e.target.value || 0) })} /></label>
         <button onClick={go} disabled={busy}>{busy ? t('Planning…', '规划中…') : t('Plan the climb', '规划爬科技')}</button>
       </div>
@@ -92,7 +95,7 @@ export default function Speedrun({ data }: { data: GameData }) {
           <table className="mbtable">
             <thead><tr>
               <th>{t('Step', '步骤')}</th><th className="num">{t('Tier', '阶')}</th><th className="num">{t('New buildings', '新建筑')}</th>
-              <th className="num">{t('Build', '建造')}</th><th className="num">{t('Produce', '生产')}</th><th className="num">{t('Done at', '完成时间')}</th><th className="num">{t('Total buildings', '累计建筑')}</th>
+              <th className="num">{t('Starts', '开始')}</th><th className="num">{t('Build', '建造')}</th><th className="num">{t('Produce', '生产')}</th><th className="num">{t('Done at', '完成时间')}</th><th className="num">{t('Total buildings', '累计建筑')}</th>
             </tr></thead>
             <tbody>
               {r.stages.map(s => [
@@ -100,13 +103,16 @@ export default function Speedrun({ data }: { data: GameData }) {
                   <td><span className="caret">{open === s.id ? '▾' : '▸'}</span>{s.kind === 'phase' ? <b>{s.name}</b> : s.name}</td>
                   <td className="num">{s.kind === 'phase' ? '—' : s.tier}</td>
                   <td className="num">{num(s.buildings)}{s.miners > 0 ? ` + ${num(s.miners)}` : ''}</td>
+                  <td className="num">{hm(s.start_min)}</td>
                   <td className="num">{hm(s.build_min)}</td>
                   <td className="num">{hm(s.produce_min)}</td>
                   <td className="num">{hm(s.end_min)}</td>
                   <td className="num">{num(s.total_buildings)}</td>
                 </tr>,
-                open === s.id && <tr key={`${s.id}-d`}><td colSpan={7} className="small">
+                open === s.id && <tr key={`${s.id}-d`}><td colSpan={8} className="small">
                   <div><b>{t('Cost', '花费')}</b>{t(': ', '：')}{s.cost.map(c => <span key={c.item} className="chipitem"><Icon id={c.item} size={16} />{num(c.rate)} {itemName(data, c.item)} </span>)}</div>
+                  {s.from_stock.length > 0 && <div><b>{t('From the stockpile', '用库存')}</b>{t(': ', '：')}{s.from_stock.map(c => `${num(c.rate)} ${itemName(data, c.item)}`).join(' · ')}</div>}
+                  {s.research.length > 0 && <div><b>{t('MAM research', 'MAM 研究')}</b>{t(': ', '：')}{s.research.join('、')}</div>}
                   <div><b>{t('Build', '新建')}</b>{t(': ', '：')}{s.build.map(b => `${b.building} ×${num(b.count)}`).join(' · ') || t('nothing new (earlier factories make it)', '不用新建（之前的工厂就能做）')}</div>
                   {s.recipes.length > 0 && <div><b>{t('New factories run', '新工厂运行')}</b>{t(': ', '：')}{s.recipes.map(x => `${x.building} ×${fmt(x.count, 1)}`).join(' · ')}</div>}
                   {s.raw.length > 0 && <div><b>{t('New raw input', '新增原矿')}</b>{t(': ', '：')}{s.raw.map(x => `${itemName(data, x.item)} ${fmt(x.rate, 1)}${t('/min', '/分钟')}`).join(' · ')}</div>}
@@ -119,8 +125,8 @@ export default function Speedrun({ data }: { data: GameData }) {
           </table>
         </div>
         <p className="small muted">
-          {t('Not modelled yet: hand-crafting and hand-fed biomass power at the start, walking and exploring, node purity, distance and node counts, MAM research cost (MAM recipes count as available once the MAM is built), alternate recipes from hard drives, stockpiling ahead, building several steps at once. Miners count as Mk.1 / Mk.2 / Mk.3 on normal nodes as they unlock; the parts of the buildings of each step are made by the factories of that step; once a generator is unlocked each step builds its own power. Real speedruns are much faster (e.g. an 11–12 h co-op run): read this as a planning baseline, not a record. ',
-            '暂未建模：开局手搓和手喂生物质发电、跑图探索、矿点纯度/距离/数量、MAM 研究花费（MAM 配方在建好 MAM 后视为可用）、硬盘替代配方、提前囤货、几步同时进行。采矿机按解锁情况算一/二/三级、普通矿点；每一步新建筑的材料由这一步的工厂生产；解锁发电机后每一步自建发电。真实速通快得多（例如 11–12 小时的多人速通），这里的数字当作规划基线，不是纪录。')}
+          {t('Not modelled yet: hand-crafting and hand-fed biomass power at the start, walking and exploring, node purity, distance and node counts, MAM research time and prerequisites beyond the first node of each tree, alternate recipes from hard drives, belts and poles as materials. Miners count as Mk.1 / Mk.2 / Mk.3 on normal nodes as they unlock; the parts of the buildings of each step are made by the factories of that step; once a generator is unlocked each step builds its own power. Real speedruns are much faster (e.g. an 11–12 h co-op run): read this as a planning baseline, not a record. ',
+            '暂未建模：开局手搓和手喂生物质发电、跑图探索、矿点纯度/距离/数量、MAM 研究时间和每棵树第一个节点以外的前置、硬盘替代配方、传送带和电线杆本身的材料。采矿机按解锁情况算一/二/三级、普通矿点；每一步新建筑的材料由这一步的工厂生产；解锁发电机后每一步自建发电。真实速通快得多（例如 11–12 小时的多人速通），这里的数字当作规划基线，不是纪录。')}
           {fmt(r.solve_ms / 1000, 1)} s.
         </p>
       </div>}

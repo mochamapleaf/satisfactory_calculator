@@ -305,6 +305,8 @@ pub struct Progression {
     pub tutorial_recipes: Vec<String>,
     #[serde(default)]
     pub mam_recipes: Vec<String>,
+    #[serde(default)]
+    pub mam_nodes: Vec<MamNode>,
     pub milestones: Vec<Milestone>,
     /// Building descriptor id → recipe, name and cost to place one.
     pub building_costs: std::collections::BTreeMap<String, BuildingCost>,
@@ -316,6 +318,15 @@ pub struct Milestone {
     pub name: String,
     pub tier: u32,
     /// HUB freighter return time, s (the next milestone can be submitted after it).
+    pub time: f64,
+    pub cost: Vec<(String, f64)>,
+    pub recipes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MamNode {
+    pub id: String,
+    pub name: String,
     pub time: f64,
     pub cost: Vec<(String, f64)>,
     pub recipes: Vec<String>,
