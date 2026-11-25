@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",
+    "@etothepii/satisfactory-file-parser": "4.1.2",
     "@xyflow/react": "^12.12.1",
     "highs": "1.15.4",
     "react": "^19.1.1",

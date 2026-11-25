@@ -64,3 +64,7 @@ p.solving { margin: var(--s2) 0; }
 .geolinks { table-layout: fixed; }
 .geolinks th:nth-child(1) { width: 46%; } .geolinks th:nth-child(2) { width: 28%; }
 .geolinks td { overflow-wrap: anywhere; white-space: normal; }
+
+/* nodes an imported save already mines (memo step 18) */
+.worldmap .minedring { fill: none; stroke: var(--fg, currentColor); stroke-width: 14; stroke-dasharray: 22 14; opacity: .8; pointer-events: none; }
+.geosite .filebtn { display: inline-flex; gap: .5em; align-items: center; margin: .3em 0; }

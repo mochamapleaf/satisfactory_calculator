@@ -294,3 +294,59 @@ test('world variants (G10): all pure = pure rate × nodes; a node switched off s
   const one = nodeRate(iron[0], 8, 780, 600)
   assert.ok(Math.abs(total(nodes, 'Desc_OreIron_C', 8) - total(off, 'Desc_OreIron_C', 8) - one) < 1e-6)
 })
+
+// ---- save import (report G10, memo step 18)
+import { MILESTONE_TIER, summarizeSave, type ParsedSave } from './saveImport.ts'
+
+test('save import: milestone tiers match game-data.json', () => {
+  const ms = game.progression.milestones as { id: string; tier: number }[]
+  assert.equal(Object.keys(MILESTONE_TIER).length, ms.length)
+  for (const m of ms) assert.equal(MILESTONE_TIER[m.id.replace(/_C$/, '')], m.tier, m.id)
+})
+
+test('save import: nodes by id or position, water, tier, HUB, purity', () => {
+  const plain = nodes.filter(n => n.type === 'node')
+  const [a, b, c] = plain
+  const well = nodes.find(n => n.type === 'well')!, geyser = nodes.find(n => n.type === 'geyser')!
+  const d = plain.find(n => n.purity !== 'pure')!, e = plain.find(n => n.purity === 'pure' && n.id !== d.id)!
+  const ref = (p: string) => ({ value: { levelName: 'Persistent_Level', pathName: `Persistent_Level:PersistentLevel.${p}` } })
+  const at = (n: GeoNode, dx = 0) => ({ translation: { x: n.x * 100 + dx, y: n.y * 100 } })
+  const save: ParsedSave = {
+    header: { sessionName: 'test', saveVersion: 46, buildVersion: 1, playDurationSeconds: 7200 },
+    levels: [{ objects: [
+      // 1.0 save: the extractor names the node by the map's id
+      { typePath: '/Game/X/Build_MinerMk2.Build_MinerMk2_C', instanceName: 'L:P.Build_MinerMk2_C_1', properties: { mExtractableResource: ref(a.id) } },
+      // U8 save: another name; the extractor stands on its node (3 m off here)
+      { typePath: '/Game/X/Build_MinerMk1.Build_MinerMk1_C', instanceName: 'L:P.Build_MinerMk1_C_2', properties: { mExtractableResource: ref('BP_ResourceNode_old7') }, transform: at(b, 300) },
+      // a well extractor and a geothermal generator by position: matched only to their own node kinds
+      { typePath: '/Game/X/Build_FrackingExtractor.Build_FrackingExtractor_C', instanceName: 'L:P.FE', properties: { mExtractableResource: ref('old_sat') }, transform: at(well) },
+      { typePath: '/Game/X/Build_GeneratorGeoThermal.Build_GeneratorGeoThermal_C', instanceName: 'L:P.GG', properties: { mExtractableResource: ref('old_geyser') }, transform: at(geyser) },
+      // a miner whose node is not on the map (> 10 m from any)
+      { typePath: '/Game/X/Build_MinerMk1.Build_MinerMk1_C', instanceName: 'L:P.Build_MinerMk1_C_4', properties: { mExtractableResource: ref('Nowhere_9') }, transform: { translation: { x: 9e6, y: 9e6 } } },
+      { typePath: '/Game/X/Build_WaterPump.Build_WaterPump_C', instanceName: 'L:P.Build_WaterPump_C_3', properties: { mExtractableResource: ref('FGWaterVolume_1') } },
+      // a modded world that stores purity on the node: as text, as a number; the same as the map is no edit
+      { typePath: '/Game/FactoryGame/Resource/BP_ResourceNode.BP_ResourceNode_C', instanceName: `L:P.${d.id}`, properties: { mPurity: { value: 'EResourcePurity::RP_Pure' } } },
+      { typePath: '/Game/FactoryGame/Resource/BP_ResourceNode.BP_ResourceNode_C', instanceName: `L:P.${e.id}`, properties: { mPurity: { value: 0 } } },
+      { typePath: '/Game/FactoryGame/Resource/BP_ResourceNode.BP_ResourceNode_C', instanceName: `L:P.${c.id}`, properties: { mPurity: { value: `RP_${c.purity === 'impure' ? 'Inpure' : c.purity[0].toUpperCase() + c.purity.slice(1)}` } } },
+      { typePath: '/Game/X/BP_SchematicManager.BP_SchematicManager_C', instanceName: 'L:P.SM', properties: { mPurchasedSchematics: { values: [
+        { pathName: '/Game/FactoryGame/Schematics/Progression/Schematic_3-2.Schematic_3-2_C' }, { pathName: '/Game/FactoryGame/Schematics/Progression/Schematic_1-1.Schematic_1-1_C' },
+        { pathName: '/Game/FactoryGame/Schematics/Tutorial/Schematic_Tutorial1.Schematic_Tutorial1_C' },
+      ] } } },
+      { typePath: '/Game/X/Build_TradingPost.Build_TradingPost_C', instanceName: 'L:P.HUB', transform: { translation: { x: 158700, y: 243200 } } },
+    ] }],
+  }
+  const s = summarizeSave(save, nodes)
+  assert.equal(s.playHours, 2)
+  assert.deepEqual(s.extractors.map(x => [x.node, x.building]),
+    [[a.id, 'MinerMk2'], [b.id, 'MinerMk1'], [well.id, 'FrackingExtractor'], [geyser.id, 'GeneratorGeoThermal']])
+  assert.equal(s.waterPumps, 1)
+  assert.equal(s.unmatched, 1)
+  assert.equal(s.tier, 2) // Schematic_3-2 is a tier-2 milestone
+  assert.equal(s.milestones, 2)
+  assert.deepEqual(s.hub, { x: 1587, y: 2432 })
+  assert.deepEqual(s.purity, { [d.id]: 'pure', [e.id]: 'impure' })
+  // no milestones: tier 0 and milestones 0 (the UI then leaves the tier alone)
+  const none = summarizeSave({ levels: {} }, nodes)
+  assert.equal(none.milestones, 0)
+  assert.equal(none.hub, null)
+})

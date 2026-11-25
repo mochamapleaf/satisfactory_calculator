@@ -8,6 +8,7 @@ import { t } from './i18n'
 import { Icon } from './Icon'
 import { haulCosts, stackOf, thresholdBelts, type GeoNode, type Purity, type SitesDoc, type Summary } from './geo/model.ts'
 import type { SweepEvent, SweepMeta, SweepOptions, SweepRow } from './geo/sweep.ts'
+import { NOT_MINING, type SaveSummary } from './geo/saveImport.ts'
 import './geo/map.css'
 import sitesJson from '../../data/satisfactory-geo/sites.json'
 import nodesJson from '../../data/satisfactory-geo/nodes.json'
@@ -32,9 +33,15 @@ interface GeoPrefs {
   base: string; tier: number; workKm: number; pmax: number; timeLimit: number; recipes: 'plan' | 'base'
   /** world variant (report G10): all nodes at one purity, and per-node edits */
   purity: 'game' | Purity; nodeEdits: Record<string, Purity | 'off'>
+  /** the imported save (memo step 18), kept for the session */
+  save: (SaveSummary & {
+    file: string; hubSite: string
+    /** node edits the save made (purity, exclusions) and the values they replaced, to undo them */
+    applied: Record<string, Purity | 'off'>; prev: Record<string, Purity | 'off' | null>; prevTier: number; prevBase: string
+  }) | null
 }
 // kept for the session, so switching tabs does not lose the inputs or the last sweep
-let prefs: GeoPrefs = { base: SITES.hubs.find(h => h.reason === 'base')!.site, tier: 8, workKm: 0, pmax: 4, timeLimit: 30, recipes: 'plan', purity: 'game', nodeEdits: {} }
+let prefs: GeoPrefs = { base: SITES.hubs.find(h => h.reason === 'base')!.site, tier: 8, workKm: 0, pmax: 4, timeLimit: 30, recipes: 'plan', purity: 'game', nodeEdits: {}, save: null }
 interface RunState {
   key: string; rows: SweepRow[]; sols: Map<string, Summary | null>; meta: SweepMeta | null
   solving: { label: string; step: { fmult: number; p: number } | null; since: number; limit: number; bound: number | null; best: number | null } | null
@@ -205,6 +212,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
 
   const noTargets = !Object.keys(targets).length
   const supplied = Object.keys(suppliedIn).length > 0 && p.recipes === 'plan'
+  const mined = useMemo(() => new Set(p.save?.extractors.filter(e => !NOT_MINING.has(e.building)).map(e => e.node) ?? []), [p.save])
 
   return (
     <div className="geo">
@@ -216,7 +224,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           </select></label>
         <label>{t('Tier', '层级')}
           <select aria-label={t('Tier', '层级')} value={p.tier} onChange={e => setP({ ...p, tier: +e.target.value })}>
-            {[0, 2, 4, 5, 6, 7, 8, 9].map(tt => <option key={tt} value={tt}>T{tt}{tt < 6 ? t(' (no rail)', ' (无铁路)') : ''}</option>)}
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(tt => <option key={tt} value={tt}>T{tt}{tt < 6 ? t(' (no rail)', ' (无铁路)') : ''}</option>)}
           </select></label>
         <label>{t('World', '世界')}
           <select aria-label={t('Node purity', '矿点纯度')} value={p.purity} onChange={e => setP({ ...p, purity: e.target.value as GeoPrefs['purity'] })}>
@@ -246,6 +254,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
         {run?.solving ? <button onClick={() => stop()}>{t('Stop', '停止')}</button>
           : <button className="primary" disabled={noTargets} onClick={start}>{current && run?.rows.length ? t('Solve again', '重新求解') : t('Plan sites', '规划选址')}</button>}
       </div>
+      <SaveImport p={p} setP={setP} itemName={itemName} />
       {noTargets && <p className="muted">{t('Add a target to the plan first.', '请先给方案添加一个目标。')}</p>}
       {supplied && <p className="note small">{t(`Supplied inputs (${Object.keys(suppliedIn).map(itemName).join(', ')}) are taken at the base site, free, up to the rate the plan uses. Choose “base recipes” to make everything from ore.`, `外部供应的输入 (${Object.keys(suppliedIn).map(itemName).join('、')}) 在基地站点免费取用,上限为方案用量。选“基础配方”则全部从原矿做起。`)}</p>}
       {run && !current && run.rows.length > 0 && <p className="note small">{t('The result below is for other inputs (plan or map settings changed). Use “Plan sites” to solve again.', '下面的结果对应其他输入 (方案或地图设置已更改)。点“规划选址”重新求解。')}</p>}
@@ -256,7 +265,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
 
       <div className="geogrid">
         <div className="geomap">
-          <WorldMap sol={sol} hubs={meta?.hubs ?? SITES.hubs.map(h => h.site)} base={meta?.base ?? p.base} site={site} setSite={setSite} />
+          <WorldMap sol={sol} hubs={meta?.hubs ?? SITES.hubs.map(h => h.site)} base={meta?.base ?? p.base} site={site} setSite={setSite} mined={mined} />
           <Legend sol={sol} itemName={itemName} />
         </div>
         <div className="geoside">
@@ -409,7 +418,7 @@ function SweepChart({ rows, shown, onPick }: { rows: SweepRow[]; shown: string |
   )
 }
 
-function WorldMap({ sol, hubs, base, site, setSite }: { sol: Summary | null; hubs: string[]; base: string; site: string | null; setSite: (s: string | null) => void }) {
+function WorldMap({ sol, hubs, base, site, setSite, mined }: { sol: Summary | null; hubs: string[]; base: string; site: string | null; setSite: (s: string | null) => void; mined: Set<string> }) {
   const used = new Set(sol ? Object.values(sol.extraction).flatMap(e => Object.keys(e)) : [])
   const machines = (id: string) => (sol?.machines[id] ? Object.values(sol.machines[id]).reduce((s, n) => s + n, 0) : 0)
   const grid: number[] = []
@@ -436,6 +445,7 @@ function WorldMap({ sol, hubs, base, site, setSite }: { sol: Summary | null; hub
       {NODES.filter(n => n.type !== 'deposit').map(n => (
         <circle key={n.id} cx={n.x} cy={n.y} r={used.has(n.item) ? 34 : 22} fill={RES_COLOR[n.item] ?? 'gray'} className={used.size && !used.has(n.item) ? 'node dim' : 'node'} />
       ))}
+      {NODES.filter(n => mined.has(n.id)).map(n => <circle key={`m${n.id}`} cx={n.x} cy={n.y} r={58} className="minedring"><title>{t('in use in the save', '存档里在用')}</title></circle>)}
       {sol?.belts.map(b => <line key={`b${b.a}${b.b}`} {...seg(b.a, b.b)} className="belt" strokeWidth={Math.min(1.5 + 0.9 * b.n, 9)} markerEnd="url(#arrow-belt)" />)}
       {sol?.pipes.map(b => <line key={`p${b.a}${b.b}`} {...seg(b.a, b.b)} className="pipe" strokeWidth={Math.min(1.5 + 0.9 * b.n, 9)} markerEnd="url(#arrow-pipe)" />)}
       {sol?.lines.map(l => Object.entries(l.dirs).filter(([, d]) => d.cars + d.fluid_cars > 0).map(([dir]) => {
@@ -598,6 +608,135 @@ function NodeEditor({ id, p, setP, itemName }: { id: string; p: GeoPrefs; setP: 
           </select></td>
         </tr>
       ))}</tbody></table>
+    </details>
+  )
+}
+
+/** Import a .sav (report G10, memo step 18): tier, base at the HUB, node purity a modded world stores, and the
+ *  nodes already mined (shown on the map; one click leaves them out of the plan). Parsed in geo/saveWorker.ts, which
+ *  loads the parser only when a file is chosen. */
+const EXTRACTOR_NAME: Record<string, [string, string]> = {
+  MinerMk1: ['Miner Mk.1', '采矿机 Mk.1'], MinerMk2: ['Miner Mk.2', '采矿机 Mk.2'], MinerMk3: ['Miner Mk.3', '采矿机 Mk.3'], OilPump: ['Oil Extractor', '抽油机'],
+  FrackingExtractor: ['Resource Well Extractor', '资源井提取器'], FrackingSmasher: ['Resource Well Pressurizer', '资源井加压器'], GeneratorGeoThermal: ['Geothermal Generator', '地热发电机'],
+}
+// MINE: the parse takes about 85× the file in memory (review, measured: 10.9 MB → 0.9 GB heap)
+const SAVE_WARN_MB = 25, SAVE_MAX_MB = 120, SAVE_TIMEOUT_S = 180
+
+/** The node edits a save owns, undone when the save is forgotten or replaced (hand-made edits it replaced come back). */
+function dropSave(p: GeoPrefs): GeoPrefs {
+  const s = p.save
+  if (!s) return p
+  const edits = { ...p.nodeEdits }
+  for (const [id, v] of Object.entries(s.applied)) {
+    if (edits[id] !== v) continue // changed by hand since: keep
+    const old = s.prev[id]
+    if (old) edits[id] = old; else delete edits[id]
+  }
+  return { ...p, nodeEdits: edits, save: null, tier: s.prevTier, base: s.prevBase }
+}
+
+/** Import a .sav (report G10, memo step 18): tier, base at the HUB, node purity a modded world stores, and the
+ *  nodes already mined (shown on the map; one click leaves them out of the plan). Parsed in geo/saveWorker.ts, which
+ *  loads the parser only when a file is chosen. */
+function SaveImport({ p, setP, itemName }: { p: GeoPrefs; setP: React.Dispatch<React.SetStateAction<GeoPrefs>>; itemName: (id: string) => string }) {
+  const [busy, setBusy] = useState<number | null>(null) // parse progress 0..1 while reading
+  const [error, setError] = useState<string | null>(null)
+  const [sizeMb, setSizeMb] = useState(0)
+  const worker = useRef<Worker | null>(null)
+  const timer = useRef<number | null>(null)
+  const end = () => {
+    worker.current?.terminate(); worker.current = null
+    if (timer.current !== null) { clearTimeout(timer.current); timer.current = null }
+    setBusy(null)
+  }
+  // leaving the tab ends a parse (its result would be lost anyway)
+  useEffect(() => () => { worker.current?.terminate(); if (timer.current !== null) clearTimeout(timer.current) }, [])
+  const s = p.save
+  const load = (f: File) => {
+    setError(null)
+    const mb = f.size / 1e6
+    if (mb > SAVE_MAX_MB) {
+      setError(t(`The file is ${fmt(mb, 0)} MB; reading it here would need about ${fmt(mb * 0.085, 0)} GB of memory. The limit is ${SAVE_MAX_MB} MB.`, `文件 ${fmt(mb, 0)} MB，在这里读取约需 ${fmt(mb * 0.085, 0)} GB 内存，上限是 ${SAVE_MAX_MB} MB。`))
+      return
+    }
+    setBusy(0); setSizeMb(mb)
+    f.arrayBuffer().then(buf => {
+      const w = new Worker(new URL('./geo/saveWorker.ts', import.meta.url), { type: 'module' })
+      worker.current = w
+      timer.current = window.setTimeout(() => { end(); setError(t(`No result after ${SAVE_TIMEOUT_S} s; stopped (the save may be too big for this browser).`, `${SAVE_TIMEOUT_S} 秒还没读完，已停止（存档可能太大）。`)) }, SAVE_TIMEOUT_S * 1000)
+      w.onmessage = (e: MessageEvent<{ progress?: number; summary?: SaveSummary; error?: string }>) => {
+        if (e.data.progress !== undefined) { setBusy(e.data.progress); return }
+        end()
+        const sum = e.data.summary
+        if (!sum) { setError(e.data.error ?? t('unknown error', '未知错误')); return }
+        setP(cur => {
+          const base = dropSave(cur)
+          const hubSite = sum.hub ? GRID.reduce((b, g) => (Math.hypot(g.x - sum.hub!.x, g.y - sum.hub!.y) < Math.hypot(b.x - sum.hub!.x, b.y - sum.hub!.y) ? g : b)).id : base.base
+          const prev: Record<string, Purity | 'off' | null> = {}
+          for (const id of Object.keys(sum.purity)) prev[id] = base.nodeEdits[id] ?? null
+          return {
+            ...base,
+            // no milestone recognised (an unknown save version): the tier is left as it is
+            tier: sum.milestones > 0 ? sum.tier : base.tier, base: hubSite,
+            nodeEdits: { ...base.nodeEdits, ...sum.purity },
+            save: { ...sum, file: f.name, hubSite, applied: { ...sum.purity }, prev, prevTier: base.tier, prevBase: base.base },
+          }
+        })
+      }
+      w.onerror = ev => { end(); setError(ev.message || t('The save could not be read', '读不了这个存档')) }
+      w.postMessage({ buf, name: f.name }, [buf])
+    }).catch(err => { end(); setError(String((err as Error)?.message ?? err)) })
+  }
+  const mined = s ? [...new Set(s.extractors.filter(e => !NOT_MINING.has(e.building)).map(e => e.node))] : []
+  const excluded = s ? mined.filter(id => p.nodeEdits[id] === 'off' && s.applied[id] === 'off').length : 0
+  const exclude = () => setP(cur => {
+    if (!cur.save) return cur
+    const sv = cur.save, edits = { ...cur.nodeEdits }, applied = { ...sv.applied }, prev = { ...sv.prev }
+    for (const id of mined) {
+      if (!(id in applied)) prev[id] = edits[id] ?? null
+      edits[id] = 'off'; applied[id] = 'off'
+    }
+    return { ...cur, nodeEdits: edits, save: { ...sv, applied, prev } }
+  })
+  const include = () => setP(cur => {
+    if (!cur.save) return cur
+    const sv = cur.save, edits = { ...cur.nodeEdits }, applied = { ...sv.applied }, prev = { ...sv.prev }
+    for (const id of mined) {
+      if (applied[id] !== 'off' || edits[id] !== 'off') continue
+      const pur = sv.purity[id]
+      if (pur) { edits[id] = pur; applied[id] = pur; continue } // back to the save's own purity
+      const old = prev[id]
+      if (old) edits[id] = old; else delete edits[id]
+      delete applied[id]; delete prev[id]
+    }
+    return { ...cur, nodeEdits: edits, save: { ...sv, applied, prev } }
+  })
+  const byBuilding = s ? Object.entries(s.extractors.reduce<Record<string, number>>((m, e) => ({ ...m, [e.building]: (m[e.building] ?? 0) + 1 }), {})) : []
+  const byItem = s ? Object.entries(s.extractors.filter(e => !NOT_MINING.has(e.building)).reduce<Record<string, number>>((m, e) => ({ ...m, [e.item]: (m[e.item] ?? 0) + 1 }), {})).sort((a, b) => b[1] - a[1]) : []
+  return (
+    <details className="geosite">
+      <summary>{t('Import a save (.sav)', '导入存档 (.sav)')}{s ? ` · ${s.session}` : ''}</summary>
+      <p className="hint small">{t('Reads your save in this browser (nothing is uploaded): the tech tier from the milestones bought (the highest one; the map then allows everything up to that tier, and alternates bought are not read), the base at the HUB, and the nodes your miners, oil pumps and well extractors already use. Node purity is read only if the save itself stores it (a normal save keeps purity in the game files, so the map stays as it is). Saves are in %LOCALAPPDATA%\\FactoryGame\\Saved\\SaveGames. Big saves need a lot of memory: about 1 GB per 12 MB of file.', '在本浏览器里读取存档（不上传）：按已买的里程碑定科技层级（取最高的一个；地图按这一层级以下全部可用，买过的替代配方没有读），HUB 所在格作为基地，标出你的矿机、抽油机和资源井提取器已经在用的矿点。只有存档本身存了矿点纯度时才读纯度（普通存档的纯度在游戏文件里，地图保持不变）。存档在 %LOCALAPPDATA%\\FactoryGame\\Saved\\SaveGames。大存档很占内存：每 12 MB 文件约需 1 GB。')}</p>
+      <p className="small muted">{t('Parser: ', '解析器：')}<a href={`${import.meta.env.BASE_URL}licenses/satisfactory-file-parser-LICENSE.txt`} target="_blank" rel="noreferrer">@etothepii/satisfactory-file-parser (MIT)</a>{' · '}<a href={`${import.meta.env.BASE_URL}licenses/pako-LICENSE.txt`} target="_blank" rel="noreferrer">pako (MIT AND Zlib)</a></p>
+      {busy === null
+        ? <label className="filebtn">{t('Choose a .sav file', '选择 .sav 文件')}
+          <input type="file" accept=".sav" aria-label={t('Save file', '存档文件')} onChange={e => { const f = e.target.files?.[0]; if (f) load(f); e.target.value = '' }} /></label>
+        : <p className="solving small" role="status">{t(`Reading the save… ${fmt(busy * 100, 0)}%`, `正在读取存档… ${fmt(busy * 100, 0)}%`)}{sizeMb > SAVE_WARN_MB ? t(` (big save: about ${fmt(sizeMb * 0.085, 1)} GB of memory)`, `（大存档：约需 ${fmt(sizeMb * 0.085, 1)} GB 内存）`) : ''} <button className="linkbtn" onClick={end}>{t('Cancel', '取消')}</button></p>}
+      {error && <p className="warn small">{t('Could not read the save: ', '读取存档失败：')}{error}</p>}
+      {s && <>
+        <table className="small"><tbody>
+          <tr><td>{t('Save', '存档')}</td><td>{s.file} · {s.session} · {t(`${fmt(s.playHours, 1)} h played`, `已玩 ${fmt(s.playHours, 1)} 小时`)} · {t('save version', '存档版本')} {s.saveVersion}</td></tr>
+          <tr><td>{t('Tier', '层级')}</td><td>{s.milestones ? t(`T${s.tier} (highest of ${s.milestones} milestones bought; set above)`, `T${s.tier}（已买 ${s.milestones} 个里程碑中最高的；已设到上面）`) : t('no milestone recognised; the tier is left as it was', '没有认出里程碑；层级保持不变')}</td></tr>
+          <tr><td>{t('Base', '基地')}</td><td>{s.hub ? t(`HUB at ${fmt(s.hub.x / 1000, 2)}, ${fmt(s.hub.y / 1000, 2)} km → site ${s.hubSite}`, `HUB 在 ${fmt(s.hub.x / 1000, 2)}, ${fmt(s.hub.y / 1000, 2)} km → 站点 ${s.hubSite}`) : t('no HUB in the save', '存档里没有 HUB')}</td></tr>
+          <tr><td>{t('On nodes', '矿点上的建筑')}</td><td>{byBuilding.map(([b, n]) => `${EXTRACTOR_NAME[b] ? t(...EXTRACTOR_NAME[b]) : b} ×${n}`).join(t(', ', '，')) || '—'}{s.waterPumps ? t(`; ${s.waterPumps} water pumps (not on nodes)`, `；${s.waterPumps} 台抽水机（不在矿点上）`) : ''}{s.unmatched ? t(`; ${s.unmatched} on nodes this map does not have (older game version)`, `；${s.unmatched} 台所在矿点本地图没有（旧版本游戏）`) : ''}</td></tr>
+          <tr><td>{t('Nodes mined', '在开采的矿点')}</td><td>{byItem.map(([i, n]) => `${itemName(i)} ${n}`).join(t(', ', '，')) || '—'}</td></tr>
+          <tr><td>{t('Purity from the save', '存档里的纯度')}</td><td>{Object.keys(s.purity).length ? t(`${Object.keys(s.purity).length} nodes differ from the map (applied as node edits)`, `${Object.keys(s.purity).length} 个矿点和地图不同（已作为矿点修改应用）`) : t('none (as on the map)', '无（按地图）')}</td></tr>
+        </tbody></table>
+        {mined.length > 0 && (excluded < mined.length
+          ? <button className="tabbtn" onClick={exclude}>{t(`Plan on free nodes only (leave out the ${mined.length} mined)`, `只在空矿点上规划（排除 ${mined.length} 个在开采的）`)}</button>
+          : <button className="tabbtn" onClick={include}>{t('Use the mined nodes again', '恢复在开采的矿点')}</button>)}
+        <button className="linkbtn" onClick={() => setP(cur => dropSave(cur))}>{t('Forget the save (undo its changes)', '清除存档（撤销它的改动）')}</button>
+      </>}
     </details>
   )
 }
