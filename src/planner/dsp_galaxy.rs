@@ -667,6 +667,8 @@ pub struct GalaxyPlanSettings {
     pub station_a: f64,
     pub station_d0: f64,
     pub dark_fog: DarkFog,
+    /// At most one rocky planet per system (MILP; gas giants' collectors stay allowed).
+    pub one_planet: bool,
 }
 
 impl Default for GalaxyPlanSettings {
@@ -693,6 +695,7 @@ impl Default for GalaxyPlanSettings {
             station_a: 432_000.0,
             station_d0: 8.0,
             dark_fog: DarkFog::default(),
+            one_planet: false,
         }
     }
 }
@@ -758,6 +761,9 @@ pub struct Extraction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemResult {
     pub star: usize,
+    /// `one_planet`: the rocky planet chosen (index within the system), None when off or none used.
+    #[serde(default)]
+    pub planet: Option<usize>,
     pub name: String,
     pub distance: f64,
     pub cubes: f64,
@@ -969,11 +975,42 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let receiver_rate = data.resource(PHOTON).map(|r| r.extractor_rate).unwrap_or(6.0);
     let mut collectors: Vec<(usize, Variable, Vec<(String, f64)>)> = vec![];
     let mut photon_vars = vec![];
+    let mut chosen: Vec<(usize, usize, Variable)> = vec![];
     for (s, st) in stars.iter().enumerate() {
+      // one planet per system (笑笑 under a full-strength Dark Fog, report §5.1): each rocky planet is its own
+      // group with a binary y, at most one per system; gas giants (orbital collectors) stay free
+      let groups: Vec<(Vec<&PlanetInfo>, Option<Variable>)> = if gs.one_planet {
+          let mut g: Vec<(Vec<&PlanetInfo>, Option<Variable>)> = st
+              .planets
+              .iter()
+              .filter(|pl| pl.gases.is_empty())
+              .map(|pl| (vec![pl], Some(p.add_integer_var(0.0, (0, 1)))))
+              .collect();
+          for (pls, y) in &g {
+              if let (Some(y), Some(pl)) = (y, pls.first()) {
+                  chosen.push((s, pl.index, *y));
+              }
+          }
+          let ys: Vec<(Variable, f64)> = g.iter().filter_map(|x| x.1.map(|y| (y, 1.0))).collect();
+          if !ys.is_empty() {
+              rows.push((ys, ComparisonOp::Le, 1.0));
+          }
+          g.push((st.planets.iter().filter(|pl| !pl.gases.is_empty()).collect(), None));
+          g
+      } else {
+          vec![(st.planets.iter().collect(), None)]
+      };
+      for (planets, y) in &groups {
+        // a group's extraction only where its planet is chosen (veins and oceans have no rate cap: big M)
+        let gate = |v: Variable, rows: &mut Vec<(Vec<(Variable, f64)>, ComparisonOp, f64)>| {
+            if let Some(y) = y {
+                rows.push((vec![(v, 1.0), (*y, -1e7)], ComparisonOp::Le, 0.0));
+            }
+        };
         let mut stock: BTreeMap<String, f64> = BTreeMap::new();
         let (mut oil_rate, mut seeps) = (0.0, 0);
         let mut oceans = BTreeSet::new();
-        for pl in &st.planets {
+        for pl in planets.iter() {
             for v in &pl.veins {
                 *stock.entry(v.item.clone()).or_default() += stock_of(v);
             }
@@ -1028,6 +1065,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
                 bld_terms.push((v, per_bld));
             }
             bal[idx[item.as_str()]][s].push((v, 1.0));
+            gate(v, &mut rows);
             let quota = if gs.stock_quotas && !g.infinite {
                 let k = points_per_unit(item, mult);
                 // m·ρ·k·S(L) ≤ B·(1−φ)·z
@@ -1043,9 +1081,11 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
                 let v = p.add_var(bld_w / pump_rate + tb * 1e-6, (0.0, f64::INFINITY));
                 bld_terms.push((v, 1.0 / pump_rate));
                 bal[k][s].push((v, 1.0));
+                gate(v, &mut rows);
                 ext.push(Ext { s, item: o.clone(), v, per_bld: 1.0 / pump_rate, kind: 1, quota: None, rate_cap: None });
             }
         }
+      }
         if let Some(&k) = idx.get(PHOTON) {
             let w = if photons_obj { 1.0 } else { tb * 1e-6 };
             let v = p.add_var(bld_w / receiver_rate + w, (0.0, f64::INFINITY));
@@ -1147,6 +1187,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         .iter()
         .enumerate()
         .map(|(s, st)| SystemResult {
+            planet: chosen.iter().find(|c| c.0 == s && sol[c.2] > 0.5).map(|c| c.1),
             star: st.index,
             name: st.name.clone(),
             distance: st.distance,

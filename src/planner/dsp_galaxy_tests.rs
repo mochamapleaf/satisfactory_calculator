@@ -503,3 +503,27 @@ fn warnings_follow_the_interface_language() {
     assert_eq!(first("zh"), "没有选星系");
     assert_eq!(first(""), "没有选星系");
 }
+
+#[test]
+fn galaxy_plan_one_planet_per_system() {
+    // memo step 13: 笑笑 opens one planet per system under a full-strength Dark Fog (report §5.1)
+    let mut s = gp();
+    s.target = 300.0;
+    s.stock_quotas = false;
+    let p_all = plan_galaxy(dsp(), galaxy(), &s);
+    s.one_planet = true;
+    let t = web_time::Instant::now();
+    let p1 = plan_galaxy(dsp(), galaxy(), &s);
+    eprintln!("one planet: {:?} in {:.0} ms, buildings {:.0} (all planets {:.0}); planets {:?}",
+        p1.status, t.elapsed().as_secs_f64() * 1e3, p1.buildings, p_all.buildings,
+        p1.systems.iter().map(|r| (r.name.clone(), r.planet)).collect::<Vec<_>>());
+    assert_eq!(p1.status, Status::Optimal, "{:?}", p1.warnings);
+    // the restriction never helps
+    assert!(p1.buildings >= p_all.buildings * (1.0 - 1e-6));
+    // every system that mines from rocky planets has one chosen
+    for r in &p1.systems {
+        if r.extraction.iter().any(|e| !e.item.ends_with("(gas)") && e.rate > 1e-6) {
+            assert!(r.planet.is_some(), "{} mines without a chosen planet", r.name);
+        }
+    }
+}

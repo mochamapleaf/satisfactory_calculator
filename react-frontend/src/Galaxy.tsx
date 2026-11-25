@@ -24,7 +24,7 @@ interface DarkFog { enabled: boolean; level: number; bases: [number, number][]; 
 interface ThresholdRow { item: string; stock: number; per_cube: number; level: (number | null)[]; cubes: (number | null)[]; hours: (number | null)[]; quota_at_level: number }
 interface ThresholdReport { rows: ThresholdRow[]; feasible_from: (number | null)[]; raw_at_feasible: ItemRate[]; raw_at_level: ItemRate[]; level: number; s_level: number; warnings: string[]; error?: string }
 interface SystemResult {
-  star: number; name: string; distance: number; cubes: number; production_buildings: number; miners: number; pumps: number; oil_extractors: number; collectors: number
+  star: number; planet?: number | null; name: string; distance: number; cubes: number; production_buildings: number; miners: number; pumps: number; oil_extractors: number; collectors: number
   receivers: number; stations: number; power_mw: number; recipes: { recipe: string; mode: string; building: string; machines: number }[]
   extraction: { item: string; rate: number; cap: number | null; limit: string }[]; drops: ItemRate[]
 }
@@ -55,7 +55,7 @@ interface RateReport {
 interface Opts {
   seed: SeedSettings
   rate_level: number; miners_per_node: number; miner_speed: number; dyson: boolean; dyson_share: number; swarm: boolean
-  total_levels: number; total_research: boolean; total_scope: 'all' | 'ticked'; total_warpers: boolean; total_alts: boolean; stock_quotas: boolean
+  total_levels: number; total_research: boolean; total_scope: 'all' | 'ticked'; total_warpers: boolean; total_alts: boolean; stock_quotas: boolean; one_planet: boolean
   rate: number; remaining: number; level: number
   goal: 'target' | 'max'; target: number; objective: 'buildings' | 'photons'; rho: number; phi: number
   oil: 'initial' | 'floor'; building_cap: number | null; photon_gw: number | null; vessel_capacity: number; warpers_per_trip: number
@@ -67,7 +67,7 @@ const DEFAULTS: Opts = {
   seed: { seed: 12345678, stars: 32, resource_multiplier: 0.1, hive_initial_colonize: 1, hive_max_density: 1 },
   rate_level: 81, miners_per_node: 1, miner_speed: 100, dyson: true, dyson_share: 100, swarm: true,
   rate: 750, remaining: 100, level: 81,
-  total_levels: 0, total_research: true, total_scope: 'all', total_warpers: false, total_alts: true, stock_quotas: true,
+  total_levels: 0, total_research: true, total_scope: 'all', total_warpers: false, total_alts: true, stock_quotas: true, one_planet: false,
   goal: 'target', target: 1000, objective: 'buildings', rho: 1, phi: 0,
   oil: 'initial', building_cap: null, photon_gw: null, vessel_capacity: 400, warpers_per_trip: 2,
   systems: null,
@@ -245,7 +245,7 @@ export default function GalaxyTab({ data, settings }: Props) {
   }), [o.seed, plan, o.rate, o.remaining, darkFog, o.level])
   const gpPayload = useMemo(() => JSON.stringify({
     seed: o.seed, plan, goal: o.goal, target: o.target, objective: o.objective, level: o.level, rho: o.rho, phi: o.phi / 100,
-    stock_quotas: o.stock_quotas, remaining: o.remaining / 100, systems, oil: o.oil, building_cap: o.building_cap, photon_gw: o.photon_gw,
+    stock_quotas: o.stock_quotas, one_planet: o.one_planet, remaining: o.remaining / 100, systems, oil: o.oil, building_cap: o.building_cap, photon_gw: o.photon_gw,
     vessel_capacity: o.vessel_capacity, warpers_per_trip: o.warpers_per_trip, dark_fog: darkFog,
   }), [o, plan, systems, darkFog])
   const totPayload = useMemo(() => JSON.stringify({
@@ -380,7 +380,7 @@ export default function GalaxyTab({ data, settings }: Props) {
       {g && !g.error && <>
         <h3>{tr('Multi-system plan: what each system makes and how it is shipped', '多星系规划：哪个星系做什么、怎么运')}</h3>
         <p className="hint">
-          {tr(`A linear programme over the ${systems.length} systems ticked above (all planets of a system together; 笑笑 opens only one planet per system at full-strength Dark Fog): each system's output, interstellar transport (logistics station count by distance, fitted to 笑笑's "4 quad-stack blue belts within 7 ly, 3 at 12 ly"; each trip costs warpers), finite reserves split among the systems by the quota m·ρ·S(L) ≤ B·z, oil and gas giants at the level-L rate (×${fmt(1 + 0.1 * (o.level - 1), 1)}), water and sulfuric acid only in systems with an ocean. Power plants are not modelled; photons are unlimited when no cap is set.`, `对上面勾选的 ${systems.length} 个星系做一个线性规划（一个星系的所有行星合在一起算；笑笑在满强度黑雾下每个星系只开一颗行星）：每个星系的产量、星际运输（物流塔数按距离，按笑笑「7 光年内 4 条四堆叠蓝带、12 光年 3 条」拟合；每趟耗翘曲器）、有限储量按配额 m·ρ·S(L) ≤ B·z 分到各星系、原油和气巨按 L 级速率（×${fmt(1 + 0.1 * (o.level - 1), 1)}）、有海洋的星系才有水和硫酸。发电厂没有建模；光子不设上限时不限。`)}
+          {tr(`A linear programme over the ${systems.length} systems ticked above (all planets of a system together; 笑笑 opens only one planet per system at full-strength Dark Fog, which the option “One planet per system” under More enforces): each system's output, interstellar transport (logistics station count by distance, fitted to 笑笑's "4 quad-stack blue belts within 7 ly, 3 at 12 ly"; each trip costs warpers), finite reserves split among the systems by the quota m·ρ·S(L) ≤ B·z, oil and gas giants at the level-L rate (×${fmt(1 + 0.1 * (o.level - 1), 1)}), water and sulfuric acid only in systems with an ocean. Power plants are not modelled; photons are unlimited when no cap is set.`, `对上面勾选的 ${systems.length} 个星系做一个线性规划（一个星系的所有行星合在一起算；笑笑在满强度黑雾下每个星系只开一颗行星，可在「更多」里勾选「每个星系只开一颗行星」）：每个星系的产量、星际运输（物流塔数按距离，按笑笑「7 光年内 4 条四堆叠蓝带、12 光年 3 条」拟合；每趟耗翘曲器）、有限储量按配额 m·ρ·S(L) ≤ B·z 分到各星系、原油和气巨按 L 级速率（×${fmt(1 + 0.1 * (o.level - 1), 1)}）、有海洋的星系才有水和硫酸。发电厂没有建模；光子不设上限时不限。`)}
         </p>
         <div className="mbsettings">
           <label>{tr('Goal', '目标')}
@@ -404,6 +404,7 @@ export default function GalaxyTab({ data, settings }: Props) {
             <summary>{tr('More: quotas, cubes not spent on research', '更多：配额、不拿去研究的白糖')}</summary>
             <div className="mbsettings">
               <label className="check"><input type="checkbox" checked={o.stock_quotas} onChange={e => set({ stock_quotas: e.target.checked })} /> {tr('Reserve quotas (off = rates only)', '储量配额（关掉 = 只看速率）')}</label>
+              <label className="check"><input type="checkbox" checked={o.one_planet} onChange={e => set({ one_planet: e.target.checked })} /> {tr('One planet per system (gas giants still collected)', '每个星系只开一颗行星（气巨照常采集）')}</label>
               <label>{tr('φ cubes not spent on research %', 'φ 不研究的白糖 %')}<NumField value={o.phi} lo={0} hi={95} onCommit={v => set({ phi: v ?? 0 })} /></label>
             </div>
           </details>
@@ -718,7 +719,7 @@ function PlanView({ gp, name, starName, recipeName }: { gp: GalaxyPlan; name: (i
         <tbody>
           {gp.systems.map(s => [
             <tr key={s.star} className="clickable" onClick={() => setSel(sel === s.star ? null : s.star)}>
-              <td><span className="caret">{sel === s.star ? '▾' : '▸'}</span>{s.name}</td><td className="num">{fmt(s.distance, 1)}</td><td className="num">{num(s.cubes, 0)}</td>
+              <td><span className="caret">{sel === s.star ? '▾' : '▸'}</span>{s.name}{s.planet !== null && s.planet !== undefined ? <span className="muted"> · P{s.planet}</span> : null}</td><td className="num">{fmt(s.distance, 1)}</td><td className="num">{num(s.cubes, 0)}</td>
               <td className="num">{num(s.production_buildings, 0)}</td><td className="num">{num(s.miners, 0)}</td><td className="num">{num(s.collectors, 0)}</td><td className="num">{fmt(s.stations, 1)}</td>
             </tr>,
             sel === s.star && <tr key={`${s.star}-d`}><td colSpan={7} className="small">
