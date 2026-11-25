@@ -73,6 +73,9 @@ def sf_group(k, v, is_raw, building):
     return SF_GROUP.get(building, "other")
 
 
+TIME_FIXES = {"Recipe_Alternate_RocketFuel_Nitro_C": 2.4}
+
+
 def main(src, dst):
     d = json.load(open(src, encoding="utf8"))
     items_used = set()
@@ -85,6 +88,9 @@ def main(src, dst):
         if not machines:
             continue
         b = machines[0]
+        # crafting-time changes after the 1.0 dump (memo step 10: checked against FactorioLab 1.2, every
+        # other machine recipe matches): Nitro Rocket Fuel 2 s -> 2.4 s (satisfactory.wiki.gg Rocket_Fuel)
+        r = {**r, "time": TIME_FIXES.get(r["className"], r["time"])}
         per_min = 60.0 / r["time"]
         ins = [[i["item"], round(i["amount"] * per_min, 6)] for i in r["ingredients"]]
         outs = [[i["item"], round(i["amount"] * per_min, 6)] for i in r["products"]]
@@ -230,7 +236,7 @@ def main(src, dst):
     recipes.sort(key=lambda r: (r["alt"], r["name"]))
     items.sort(key=lambda i: i["name"])
     out = {
-        "version": "Satisfactory 1.0 (unchanged for production in 1.1)",
+        "version": "Satisfactory 1.2 (1.0 data, checked against 1.2)",
         "source": "greeny/SatisfactoryTools data/data1.0.json @2192bd15 (parsed from Docs.json)",
         "items": items,
         "recipes": recipes,

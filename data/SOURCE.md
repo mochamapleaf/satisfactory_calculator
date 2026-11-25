@@ -80,3 +80,10 @@
   data (by id: items, recipes, buildings, modules, beacons, planets, research) from FactorioLab (MIT) i18n at
   `a61e43fd`, copied to `data/raw/i18n/`. A few names FactorioLab lacks are hand-entered in the script's MANUAL
   table (generators, Converter, Quantum Encoder, "X回收" recycling, 星块产能) — our own translations.
+
+## Satisfactory 1.2 check (2026-11-25, memo step 10)
+- Every machine recipe compared with FactorioLab's Satisfactory 1.2 data (`data/raw/i18n/factoriolab-sfy-data.json`,
+  version "Satisfactory 1.2", commit `a61e43fd`): same inputs, outputs and rates for all 283 shared recipes except
+  Nitro Rocket Fuel, whose crafting time is 2.4 s now (2 s in the 1.0 dump; satisfactory.wiki.gg Rocket_Fuel agrees).
+  `tools/convert_data.py` TIME_FIXES applies it. FactorioLab-only entries are generator fuel burns, Alien Power
+  Matrix (a power augmenter fuel), Turbo Rifle Ammo (Blender) and the Space Elevator phases.
