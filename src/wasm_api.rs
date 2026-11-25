@@ -285,6 +285,15 @@ pub fn dsp_galaxy_plan_json(settings_json: &str) -> String {
     }
 }
 
+/// Satisfactory speedrun: `SpeedrunSettings` JSON → `SpeedrunReport` JSON (memo step 17).
+#[wasm_bindgen]
+pub fn speedrun_json(settings_json: &str) -> String {
+    match serde_json::from_str::<planner::speedrun::SpeedrunSettings>(settings_json) {
+        Ok(ss) => serde_json::to_string(&planner::speedrun::speedrun(data("satisfactory", ""), &ss)).unwrap(),
+        Err(e) => bad(e),
+    }
+}
+
 /// Highest cube rate: `RateSettings` JSON → `RateReport` JSON.
 #[wasm_bindgen]
 pub fn dsp_galaxy_rate_json(settings_json: &str) -> String {

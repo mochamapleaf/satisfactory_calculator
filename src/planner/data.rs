@@ -294,6 +294,38 @@ pub struct GameData {
     pub research: Vec<Research>,
     #[serde(default)]
     pub beacons: Vec<Beacon>,
+    /// Satisfactory tech progression for the speedrun planner (not sent to the page).
+    #[serde(default, skip_serializing)]
+    pub progression: Option<Progression>,
+}
+
+/// Satisfactory milestones and building costs (`tools/convert_data.py`, from Docs.json via SatisfactoryTools).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Progression {
+    pub tutorial_recipes: Vec<String>,
+    #[serde(default)]
+    pub mam_recipes: Vec<String>,
+    pub milestones: Vec<Milestone>,
+    /// Building descriptor id → recipe, name and cost to place one.
+    pub building_costs: std::collections::BTreeMap<String, BuildingCost>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Milestone {
+    pub id: String,
+    pub name: String,
+    pub tier: u32,
+    /// HUB freighter return time, s (the next milestone can be submitted after it).
+    pub time: f64,
+    pub cost: Vec<(String, f64)>,
+    pub recipes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildingCost {
+    pub recipe: String,
+    pub name: String,
+    pub cost: Vec<(String, f64)>,
 }
 
 fn yes() -> bool {

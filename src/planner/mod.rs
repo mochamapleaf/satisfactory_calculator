@@ -12,6 +12,7 @@ pub mod mixed_belt;
 pub mod mixed_station;
 pub mod quality;
 pub mod rules;
+pub mod speedrun;
 #[cfg(test)]
 mod quality_tests;
 #[cfg(test)]

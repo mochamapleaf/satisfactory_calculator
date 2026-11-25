@@ -193,6 +193,34 @@ def main(src, dst):
             "extractor_rate": rate,
             "extractor_power": mw,
         })
+    # progression for the speedrun planner (memo step 17): tutorial unlocks, milestones (tier, cost,
+    # HUB ship time, unlocked recipes), and what each building costs to place. Costs keep only
+    # items the machines make (hand-crafted ones such as the Portable Miner are dropped).
+    known = {i["id"] for i in items}
+    tutorial = sorted({r for x in d["schematics"].values() if x["type"] == "EST_Tutorial" for r in x["unlock"]["recipes"]})
+    # MAM research unlocks (non-alternate): the speedrun planner treats them as available once the MAM
+    # exists, without their research cost (MINE simplification, see src/planner/speedrun.rs)
+    mam = sorted({r for x in d["schematics"].values() if x["type"] == "EST_MAM" and not x.get("alternate") for r in x["unlock"]["recipes"]})
+    milestones = []
+    for x in d["schematics"].values():
+        if x["type"] != "EST_Milestone":
+            continue
+        milestones.append({
+            "id": x["className"], "name": x["name"], "tier": x["tier"], "time": x["time"],
+            "cost": [[c["item"], c["amount"]] for c in x["cost"] if c["item"] in known],
+            "recipes": sorted(x["unlock"]["recipes"]),
+        })
+    milestones.sort(key=lambda m: (m["tier"], m["name"]))
+    building_costs = {}
+    for r in d["recipes"].values():
+        if not r["forBuilding"] or not r["products"]:
+            continue
+        p = r["products"][0]["item"]
+        building_costs[p] = {
+            "recipe": r["className"],
+            "name": r["name"],
+            "cost": [[i["item"], i["amount"]] for i in r["ingredients"] if i["item"] in known],
+        }
     recipes.sort(key=lambda r: (r["alt"], r["name"]))
     items.sort(key=lambda i: i["name"])
     out = {
@@ -202,6 +230,7 @@ def main(src, dst):
         "recipes": recipes,
         "buildings": buildings,
         "resources": resources,
+        "progression": {"tutorial_recipes": tutorial, "mam_recipes": mam, "milestones": milestones, "building_costs": building_costs},
         "belts": [60, 120, 270, 480, 780, 1200],
         "pipes": [300, 600],
     }

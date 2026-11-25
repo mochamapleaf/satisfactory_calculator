@@ -16,10 +16,12 @@ import { PRESETS } from './presets'
 const MapView = lazy(() => import('./MapView'))
 // the DSP galaxy tab (seed generator + its worker) loads on first use too
 const GalaxyTab = lazy(() => import('./Galaxy'))
+// the Satisfactory speedrun planner (memo step 17) loads on first use
+const SpeedrunTab = lazy(() => import('./Speedrun'))
 
-type Tab = 'table' | 'flow' | 'graph' | 'values' | 'mixed' | 'galaxy' | 'map'
-const tabLabel = (id: Tab): string => ({ table: t('Plan', '规划'), flow: t('Item flow', '物流'), graph: t('Machine graph', '机器图'), values: t('Item values', '物品价值'), mixed: t('Mixed belts', '混带'), galaxy: t('Galaxy', '星区'), map: t('Map', '地图') })[id]
-const TABS: Tab[] = ['table', 'flow', 'graph', 'values', 'mixed', 'galaxy', 'map']
+type Tab = 'table' | 'flow' | 'graph' | 'values' | 'mixed' | 'galaxy' | 'map' | 'speedrun'
+const tabLabel = (id: Tab): string => ({ table: t('Plan', '规划'), flow: t('Item flow', '物流'), graph: t('Machine graph', '机器图'), values: t('Item values', '物品价值'), mixed: t('Mixed belts', '混带'), galaxy: t('Galaxy', '星区'), map: t('Map', '地图'), speedrun: t('Speedrun', '速通') })[id]
+const TABS: Tab[] = ['table', 'flow', 'graph', 'values', 'mixed', 'galaxy', 'map', 'speedrun']
 const gameName = (id: Game, en: string): string => ({ satisfactory: t('Satisfactory', '幸福工厂'), dsp: t('Dyson Sphere Program', '戴森球计划'), factorio: t('Factorio', '异星工厂') } as Record<string, string>)[id] ?? en
 
 export default function App() {
@@ -173,7 +175,7 @@ export default function App() {
   if (error) return <div className="loading">{t(`The solver did not load: ${error}. Reload the page to try again.`, `求解器未能加载：${error}。请刷新页面重试。`)}</div>
   if (!data) return <div className="loading">{t('Loading solver…', '正在加载求解器…')}</div>
   // tabs that exist for this game; a tab chosen in another game (Galaxy, Map, Mixed belts) falls back to the plan
-  const visibleTabs = TABS.map((id): [Tab, string] => [id, tabLabel(id)]).filter(([id]) => (id !== 'mixed' && id !== 'galaxy' || data.game === 'dsp') && (id !== 'map' || data.game === 'satisfactory'))
+  const visibleTabs = TABS.map((id): [Tab, string] => [id, tabLabel(id)]).filter(([id]) => (id !== 'mixed' && id !== 'galaxy' || data.game === 'dsp') && ((id !== 'map' && id !== 'speedrun') || data.game === 'satisfactory'))
   const tab: Tab = visibleTabs.some(([id]) => id === tabSel) ? tabSel : 'table'
 
   return (
@@ -272,6 +274,7 @@ ${p.desc()}`))) return
           {plan && tab === 'graph' && <FlowGraph data={data} plan={plan} />}
           {plan && tab === 'values' && <ItemValues data={data} plan={plan} settings={settings} />}
           {!pending && tab === 'mixed' && data.game === 'dsp' && <MixedBelt plan={plan} planSettings={planSettings} current={current} settings={settings} setSettings={setSettings} />}
+          {tab === 'speedrun' && data.game === 'satisfactory' && <Suspense fallback={<p className="muted">{t('Loading the speedrun planner…', '正在加载速通规划…')}</p>}><SpeedrunTab data={data} /></Suspense>}
           {tab === 'galaxy' && data.game === 'dsp' && <Suspense fallback={<p className="muted">{t('Loading the galaxy planner…', '正在加载星区规划器…')}</p>}><GalaxyTab data={data} settings={settings} /></Suspense>}
           {plan && tab === 'map' && data.game === 'satisfactory' && <Suspense fallback={<p className="muted">{t('Loading the map…', '正在加载地图…')}</p>}><MapView data={data} plan={plan} /></Suspense>}
         </main>
