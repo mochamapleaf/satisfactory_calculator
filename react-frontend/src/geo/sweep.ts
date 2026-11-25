@@ -12,6 +12,8 @@ export interface SweepOptions {
   targets: Record<string, number>; base: string; tier: number; workKm: number; pmax: number; timeLimit: number
   /** recipe ids to use (the plan's), or null for the base-recipe closure as in geo_solve.py */
   recipeIds: string[] | null
+  /** Recipes unlocked at `tier` (null = all): the plan's or the base recipes are limited to them. */
+  tierRecipes?: string[] | null
   fmults?: number[]
   /** steps already done (`${fmult}|${p}`), when the page restarts a sweep after a stuck solve; and the envelope so far */
   skip?: string[]; envStart?: number | null
@@ -52,17 +54,29 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
   const docHubs = geo.sitesDoc.hubs.map(h => h.site)
   if (!geo.sitesDoc.sites.some(s => s.id === o.base)) throw new Error(`Unknown base site ${o.base}.`)
   const hubs = docHubs.includes(o.base) ? docHubs : hubsFor(geo.sitesDoc, o.base)
-  const d = new Data(game, geo.sitesDoc, geo.nodes, geo.transport, hubs)
+  // tech tier (report G9): only recipes unlocked by then
+  const atTier = o.tierRecipes ? new Set(o.tierRecipes) : null
+  const gameAt = atTier ? { ...game, recipes: game.recipes.filter(r => atTier.has(r.id)) } : game
+  const d = new Data(gameAt, geo.sitesDoc, geo.nodes, geo.transport, hubs)
   let recipes: GameRecipe[] | null = null
   if (o.recipeIds) {
-    const byId = new Map(game.recipes.map(r => [r.id, r]))
+    const byId = new Map(gameAt.recipes.map(r => [r.id, r]))
     recipes = [...new Set(o.recipeIds)].map(id => byId.get(id)).filter((r): r is GameRecipe => !!r).sort((a, b) => (a.id < b.id ? -1 : 1))
   }
   const supplied = o.recipeIds ? o.supplied ?? null : null
   // nothing provides an input: say which, before any solve (the LP would only answer "infeasible")
-  const lost = unmakeable(d, recipes ?? recipeClosure(d, o.targets), o.targets, supplied)
-  if (lost.length) throw new Error(`Nothing on the map makes ${lost.map(nm).join(', ')} with ${o.recipeIds ? "this plan's recipes" : 'the base recipes'}. ${o.recipeIds ? 'Choose “base recipes”, or change the plan.' : ''}`.trim())
-  const oe = oreEquivalents(d, materials(), solve)
+  let closure: GameRecipe[]
+  try {
+    closure = recipes ?? recipeClosure(d, o.targets)
+  } catch (e) {
+    // the base recipes of this tier make nothing for a target (plastic before tier 5)
+    throw new Error(`${e instanceof Error ? e.message : String(e)}${atTier ? ` (tier ${o.tier}). Nothing on the map makes it with the recipes unlocked so far: only the recipes unlocked by then count, a higher tier may make it.` : ''}`)
+  }
+  const lost = unmakeable(d, closure, o.targets, supplied)
+  if (lost.length) throw new Error(`Nothing on the map makes ${lost.map(nm).join(', ')} with ${o.recipeIds ? "this plan's recipes" : 'the base recipes'}. ${o.recipeIds ? 'Choose “base recipes”, or change the plan.' : ''}${atTier ? ` At tier ${o.tier} only the recipes unlocked by then count: a higher tier may make it.` : ''}`.trim())
+  // ore equivalents of belt / rail materials price construction with every recipe (they are prices,
+  // not what this tier can make: aluminium casing is tier 7)
+  const oe = oreEquivalents(atTier ? new Data(game, geo.sitesDoc, geo.nodes, geo.transport, hubs) : d, materials(), solve)
   const common = { base: o.base, tier: o.tier, workKm: o.workKm, oe, recipes, supplied }
   let env: number | null = o.envStart ?? null
   const skip = new Set(o.skip ?? [])

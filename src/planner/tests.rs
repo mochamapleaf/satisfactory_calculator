@@ -1077,3 +1077,16 @@ fn max_output_with_a_somersloop_budget_still_plans() {
     let px = plan(&d, &x);
     assert!(px.warnings.iter().all(|w| !w.contains("Max output")), "{:?}", px.warnings);
 }
+
+#[test]
+fn tier_recipes_grow_with_the_tier() {
+    use super::speedrun::recipes_up_to_tier;
+    let d = data();
+    let n: Vec<usize> = (0..=9).map(|t| recipes_up_to_tier(&d, t).len()).collect();
+    eprintln!("recipes per tier: {n:?}");
+    assert!(n.windows(2).all(|w| w[1] >= w[0]));
+    let t2 = recipes_up_to_tier(&d, 2);
+    assert!(t2.iter().any(|r| r == "Recipe_IronPlateReinforced_C"));
+    assert!(!t2.iter().any(|r| r == "Recipe_Plastic_C"), "plastic is tier 5");
+    assert!(recipes_up_to_tier(&d, 5).iter().any(|r| r == "Recipe_Plastic_C"));
+}

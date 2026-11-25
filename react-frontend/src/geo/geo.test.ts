@@ -250,3 +250,15 @@ test('meta.F is the 1× hub cost also when a restarted sweep begins at F 0.5×',
   assert.ok(Math.abs(r.meta!.F - 3490) < 1e-6)
   assert.ok(Math.abs(r.rows[0].F - 1745) < 1e-6)
 })
+
+test('tech tier limits the recipes (report G9): plastic is not made at tier 2, but is at tier 5', () => {
+  // the recipe set a tier unlocks comes from the WASM (speedrun.rs recipes_up_to_tier); here: everything but
+  // the plastic recipes at "tier 2", everything at "tier 5"
+  const all = D.recipes.map(r => r.id)
+  const t2 = all.filter(id => !/Plastic/.test(id))
+  const low = sweepRun({ targets: { Desc_Plastic_C: 20 }, recipeIds: null, tierRecipes: t2, tier: 5, fmults: [] })
+  assert.equal(low.rows.length, 0)
+  assert.match(low.error!, /Nothing on the map makes .* only the recipes unlocked by then count/)
+  const high = sweepRun({ targets: { Desc_Plastic_C: 20 }, recipeIds: null, tierRecipes: all, tier: 5, fmults: [] })
+  assert.equal(high.error, null); assert.ok(high.done)
+})

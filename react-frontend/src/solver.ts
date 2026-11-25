@@ -1,6 +1,6 @@
 import { lang, t } from './i18n'
 // Typed wrapper around the Rust/WASM planner (src/wasm_api.rs).
-import init, { compute_weights_json, game_data_json, mixed_belt_json, solve_json } from './wasm-pkg/satisfactory_calculator.js'
+import init, { compute_weights_json, game_data_json, mixed_belt_json, solve_json, tier_recipes_json } from './wasm-pkg/satisfactory_calculator.js'
 
 export type Game = 'satisfactory' | 'dsp' | 'factorio'
 export const GAMES: { id: Game; name: string }[] = [
@@ -420,6 +420,11 @@ export async function loadSolver(game: Game, dataset = ''): Promise<GameData> {
 export function dn(x: { name: string; name_zh?: string | null } | undefined, _game: Game, fallback = ''): string {
   if (!x) return fallback
   return lang() === 'zh' && x.name_zh ? x.name_zh : x.name
+}
+
+/** Satisfactory recipe ids unlocked by tech tier `tier` (memo step 14: the map's tier limits recipes too). */
+export function tierRecipes(tier: number): string[] {
+  return JSON.parse(tier_recipes_json(tier)) as string[]
 }
 
 export function solve(s: Settings): Plan {

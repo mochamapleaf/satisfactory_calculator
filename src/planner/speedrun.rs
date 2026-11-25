@@ -650,3 +650,26 @@ fn solve_stage(
     }
     best
 }
+
+/// Recipe ids unlocked by tier `tier` (memo step 14, report G9): the start of the game, every
+/// milestone of tier ≤ `tier`, MAM recipes from tier 1 (Field Research builds the MAM; research cost
+/// not counted), byproduct handling, and generators whose building is unlocked. No hard-drive
+/// alternates except MAM ones.
+pub fn recipes_up_to_tier(data: &GameData, tier: u32) -> Vec<String> {
+    let Some(prog) = data.progression.as_ref() else { return data.recipes.iter().map(|r| r.id.clone()).collect() };
+    let mut u: BTreeSet<String> = prog.tutorial_recipes.iter().cloned().chain(START.iter().map(|s| s.to_string())).collect();
+    for m in prog.milestones.iter().filter(|m| m.tier <= tier) {
+        u.extend(m.recipes.iter().cloned());
+    }
+    if u.contains("Recipe_Mam_C") {
+        u.extend(prog.mam_recipes.iter().cloned());
+    }
+    for r in &data.recipes {
+        let byproduct = r.name.starts_with("Residual") || r.name.starts_with("Unpackage");
+        let generator = r.generator && prog.building_costs.get(&r.building).is_some_and(|bc| u.contains(&bc.recipe));
+        if byproduct || generator {
+            u.insert(r.id.clone());
+        }
+    }
+    data.recipes.iter().filter(|r| u.contains(&r.id)).map(|r| r.id.clone()).collect()
+}

@@ -3,7 +3,7 @@
 // mine and process, belts / pipes per grid link, and rail lines between candidate hubs; a p sweep over the number of
 // open hubs runs in a worker on highs-js. Drawn as a plain vector map from node coordinates (no game map images).
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { dn, fmt, type GameData, type Plan } from './solver'
+import { dn, fmt, tierRecipes, type GameData, type Plan } from './solver'
 import { t } from './i18n'
 import { Icon } from './Icon'
 import { haulCosts, stackOf, thresholdBelts, type GeoNode, type SitesDoc, type Summary } from './geo/model.ts'
@@ -60,9 +60,12 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
   const recipeIds = useMemo(() => [...new Set(plan.recipes.map(r => r.id))].sort(), [plan])
   // the plan's supplied inputs are taken at the base site, free, up to the rate the plan uses
   const suppliedIn = useMemo(() => Object.fromEntries(plan.supplied.filter(t => t.rate > 0).map(t => [t.item, t.rate * (1 + 1e-6)])), [plan])
+  // recipes unlocked at the chosen tier (report G9)
+  const atTier = useMemo(() => tierRecipes(p.tier), [p.tier])
   const opts: SweepOptions = {
     targets, base: p.base, tier: p.tier, workKm: p.workKm, pmax: p.pmax, timeLimit: p.timeLimit, recipeIds: p.recipes === 'plan' ? recipeIds : null,
     supplied: p.recipes === 'plan' && Object.keys(suppliedIn).length ? suppliedIn : null,
+    tierRecipes: atTier,
   }
   const key = JSON.stringify(opts)
   const itemName = (id: string) => dn(data.items.find(i => i.id === id), data.game, id)

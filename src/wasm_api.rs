@@ -297,6 +297,12 @@ pub fn dsp_galaxy_plan_json(settings_json: &str) -> String {
     }
 }
 
+/// Satisfactory: recipe ids unlocked by tech tier `tier` (map tab, memo step 14), JSON array.
+#[wasm_bindgen]
+pub fn tier_recipes_json(tier: u32) -> String {
+    serde_json::to_string(&planner::speedrun::recipes_up_to_tier(data("satisfactory", ""), tier)).unwrap()
+}
+
 /// Satisfactory speedrun: `SpeedrunSettings` JSON → `SpeedrunReport` JSON (memo step 17).
 #[wasm_bindgen]
 pub fn speedrun_json(settings_json: &str) -> String {
