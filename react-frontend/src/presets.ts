@@ -80,14 +80,15 @@ export const PRESETS: Preset[] = [
   {
     id: 'fa-legendary',
     name: () => t('Factorio Space Age · legendary quality modules', '异星工厂太空时代 · 传说级品质插件'),
-    desc: () => t('1 legendary quality module 3 per minute: quality modules in the quality slots, productivity modules where allowed, recycling along the chain, every planet enabled.',
-      '每分钟 1 个传说级三级品质插件：品质插槽放品质插件，能放产能插件的放产能插件，沿产线回收，开启所有星球。'),
+    desc: () => t('1 legendary quality module 3 per minute: quality modules in the quality slots, productivity modules where allowed, recycling along the chain, quality mining, every planet enabled.',
+      '每分钟 1 个传说级三级品质插件：品质插槽放品质插件，能放产能插件的放产能插件，沿产线回收，品质采矿，开启所有星球。'),
     settings: () => ({
       ...withDataset(defaultSettings('factorio'), 'spa'),
       targets: [{ item: withQ('quality-module-3', 4), rate: 1 }],
       quality_module: 'quality-module-3',
       prod_module: 'productivity-module-3',
       recycling: 'chain',
+      quality_mining: true,
       time_limit_ms: LONG,
       planets: ['nauvis', 'vulcanus', 'gleba', 'fulgora', 'aquilo', 'space-platform'],
       objective: 'resources',

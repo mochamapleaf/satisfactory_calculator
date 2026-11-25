@@ -119,6 +119,8 @@ pub struct PlanSettings {
     /// Max-output mode (memo step 8): the targets are a ratio; plan the largest multiple of it that the
     /// resource limits allow (found on the continuous LP, then solved as asked).
     pub max_output: bool,
+    /// Factorio quality plans: mining drills with quality modules reroll ore into higher tiers (memo step 15).
+    pub quality_mining: bool,
     /// Interface language for names in the plan: "zh" | "en" | "" (game default: Chinese for DSP).
     pub lang: String,
     pub targets: Vec<ItemRate>,
@@ -211,6 +213,7 @@ impl Default for PlanSettings {
             game: "satisfactory".into(),
             self_power: false,
             max_output: false,
+            quality_mining: false,
             lang: String::new(),
             targets: vec![],
             supplies: vec![],

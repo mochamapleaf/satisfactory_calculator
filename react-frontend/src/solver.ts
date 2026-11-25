@@ -125,6 +125,8 @@ export interface Settings {
   self_power: boolean
   /** Max-output mode: the targets are a ratio, scaled up to the resource limits (memo step 8). */
   max_output: boolean
+  /** Factorio quality plans: drills with quality modules reroll ore (memo step 15). */
+  quality_mining: boolean
   /** Satisfactory: highest clock per recipe id, percent (overrides max_clock_percent). */
   recipe_clocks: Record<string, number>
   targets: ItemRate[]
@@ -366,6 +368,7 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   recipe_clocks: {},
   self_power: false,
   max_output: false,
+  quality_mining: false,
   // DSP Dark Fog machines are endgame drops: off unless the player enables them
   disabled_buildings: game === 'dsp' ? ['df-negentropy-smelter', 'df-recomposing-assembler', 'df-self-evolution-lab'] : [],
   effects: [],

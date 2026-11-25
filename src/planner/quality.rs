@@ -200,6 +200,95 @@ pub fn expand(data: &GameData, s: &PlanSettings, allowed: &[&Recipe], target_ids
             }
         }
     }
+    if s.quality_mining {
+        out.extend(mining(data, s, &out, &qm, &solid));
+    }
+    out
+}
+
+/// Quality mining (memo step 15): drills with quality modules reroll mined ore into higher tiers. A
+/// drill unit takes normal ore (the raw resource, counted as mined) and yields it split by Q(k·q).
+/// The data has no drills (mining became raw resources), so they are hand-entered here (MINE, from
+/// wiki.factorio.com Electric_mining_drill / Big_mining_drill, 2.0): electric 0.5/s, 3 slots, 90 kW;
+/// big 2.5/s, 4 slots, 300 kW, Vulcanus only. Mining productivity research is not applied.
+fn mining(data: &GameData, s: &PlanSettings, chain: &[(Recipe, Vec<Mode>)], qm: &Option<Module>, solid: &dyn Fn(&str) -> bool) -> Vec<(Recipe, Vec<Mode>)> {
+    let Some(q) = qm else { return vec![] };
+    // solid raw resources the expanded recipes take at a tier above normal
+    let mut ores: BTreeSet<String> = BTreeSet::new();
+    for (r, _) in chain {
+        for (i, _) in &r.inputs {
+            let (base, t) = split(i);
+            if t > 0 && solid(base) && data.resource(base).is_some_and(|res| data.located(&res.locations, &s.planets)) {
+                ores.insert(base.to_string());
+            }
+        }
+    }
+    let drills: [(&str, &str, &str, f64, u32, f64, Option<&str>); 2] = [
+        ("electric-mining-drill", "Electric mining drill", "电力采矿机", 30.0, 3, 0.09, None),
+        ("big-mining-drill", "Big mining drill", "大型采矿机", 150.0, 4, 0.3, Some("vulcanus")),
+    ];
+    let mut out = vec![];
+    for ore in ores {
+        let name = data.item(&ore).map(|i| data.pick(&i.name, &i.name_zh).to_string()).unwrap_or_else(|| ore.clone());
+        let r = Recipe {
+            id: format!("quality-mining-{ore}"),
+            name: format!("{name} (quality mining)"),
+            name_zh: Some(format!("{name}（品质采矿）")),
+            building: drills[0].0.into(),
+            producers: vec![],
+            inputs: vec![(ore.clone(), 1.0)],
+            outputs: vec![(ore.clone(), 1.0)],
+            alt: false,
+            productivity_allowed: false,
+            time: 60.0,
+            power: None,
+            power_range: None,
+            recycling: false,
+            generator: false,
+            quality_allowed: true,
+            catalyst: vec![],
+            locations: vec![],
+        };
+        let mut modes = vec![];
+        for (id, en, zh, rate, slots, mw, planet) in drills {
+            if planet.is_some_and(|p| !s.planets.is_empty() && !s.planets.iter().any(|x| x == p)) {
+                continue;
+            }
+            for k in 1..=slots {
+                let kq = k as f64;
+                let row = qrow((kq * q.v.quality).max(0.0), 0);
+                // the normal share is left out: mined ore cannot be mined again, and a normal output here
+                // would let the LP feed it back and reroll it forever (MINE: conservative, the normal ore
+                // these drills dig counts as spent; plain raw ore still supplies normal recipes)
+                let outs: Vec<(String, f64)> =
+                    row.iter().enumerate().skip(1).filter(|(_, sh)| **sh > 1e-12).map(|(j, sh)| (qid(&ore, j as u8), *sh)).collect();
+                let speed = rate * (1.0 + kq * q.v.speed).max(0.2);
+                let consumption = (1.0 + kq * q.v.consumption).max(0.2);
+                modes.push(Mode {
+                    key: format!("{id}|q{k}"),
+                    label: format!("{} · {k}Q", data.pick(en, &Some(zh.to_string()))),
+                    building: id.into(),
+                    speed,
+                    out_mult: 1.0,
+                    power_base: mw * consumption,
+                    beacon_power: 0.0,
+                    power_exp: 1.0,
+                    overclock: false,
+                    extra_inputs: vec![],
+                    extra_outputs: vec![],
+                    held: vec![(q.item.clone(), kq)],
+                    somersloops: 0,
+                    sprayed: false,
+                    outputs: Some(outs),
+                    beacons: 0.0,
+                    max_clock: None,
+                });
+            }
+        }
+        if !modes.is_empty() {
+            out.push((r, modes));
+        }
+    }
     out
 }
 

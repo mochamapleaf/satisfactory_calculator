@@ -239,7 +239,11 @@ function QualitySettings({ data, s, set }: { data: GameData; s: Settings; set: (
         {s.recycling === 'all' && t('Every recycling recipe: finds detours through other items, but the model grows to ~16 000 columns and takes minutes, so the planner asks before solving it (and you can cancel).', '所有回收配方：能找到经由其他物品的迂回路线，但模型会增长到约 16 000 列、需要几分钟，所以求解前会先询问（可取消）。')}
       </p>
       <AllowList data={data} list={s.recycle_allow} onChange={recycle_allow => set({ recycle_allow })} />
-      <p className="hint">{t('Quality mining is not modelled yet: ores come in normal quality. Inputs can carry a quality (set it on the row). Catalyst recipes (Kovarex, pentapod eggs) roll quality on their whole output, catalyst included; not yet checked in game.', '尚未模拟品质采矿：矿石都是普通品质。输入物品可以带品质（在该行设置）。催化剂配方（Kovarex、五足虫卵）会对整个产出（含催化剂）随机品质；尚未在游戏中核实。')}</p>
+      <label className="row small">
+        <input type="checkbox" checked={s.quality_mining} onChange={e => set({ quality_mining: e.target.checked })} />
+        <span>{t('Quality mining: drills with quality modules', '品质采矿：采矿机装品质插件')}</span>
+      </label>
+      <p className="hint">{t('Quality mining rerolls mined ore into higher tiers (electric drill 3 slots, big drill 4 on Vulcanus; mining productivity not counted; the normal ore those drills dig counts as spent). Inputs can carry a quality (set it on the row). Catalyst recipes (Kovarex, pentapod eggs) roll quality on their whole output, catalyst included; not yet checked in game.', '品质采矿：采到的矿按品质插件随机升档（电力采矿机 3 槽，祝融星大型采矿机 4 槽；不计采矿产能研究；这些采矿机挖出的普通矿算作消耗掉）。输入物品可以带品质（在该行设置）。催化剂配方（Kovarex、五足虫卵）会对整个产出（含催化剂）随机品质；尚未在游戏中核实。')}</p>
     </section>
   )
 }

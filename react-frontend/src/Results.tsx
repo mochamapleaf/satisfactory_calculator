@@ -27,13 +27,17 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
   }
   const liquid = (id: string) => isLiquid(data, id)
   const recipeById = new Map(data.recipes.map(r => [r.id, r]))
-  const bld = (name: string) => dn(data.buildings.find(b => b.name === name || b.id === name), data.game, name)
+  // buildings the data lacks (quality-mining drills) are named by their item
+  const bld = (name: string) => {
+    const b = data.buildings.find(x => x.name === name || x.id === name)
+    return b ? dn(b, data.game, name) : data.items.some(i => i.id === name) ? itemName(data, name) : name
+  }
   const rn = (r: PlanRecipe) => {
     const [base, q] = qsplit(r.id)
     const x = recipeById.get(r.id) ?? recipeById.get(base)
     return x ? dn(x, data.game, r.name) + (q ? ` ★${tierName(q)}` : '') : r.name
   }
-  const bid = (name: string) => data.buildings.find(b => dn(b, data.game) === name || b.name === name)?.id
+  const bid = (name: string) => data.buildings.find(b => dn(b, data.game) === name || b.name === name)?.id ?? (data.items.some(i => i.id === name) ? name : undefined)
   const slots = (rid: string) => {
     const b = recipeById.get(rid)?.building
     return data.buildings.find(x => x.id === b)?.somersloop_slots ?? 0

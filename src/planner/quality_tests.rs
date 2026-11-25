@@ -1103,3 +1103,23 @@ fn integer_shared_beacons_at_whole_machines() {
     let shown = p.building_counts.iter().find(|b| b.building.to_lowercase().contains("beacon")).map(|b| b.count).unwrap();
     assert_eq!(shown, (total - 1e-6).ceil());
 }
+
+#[test]
+fn quality_mining_lowers_ore_per_legendary_plate() {
+    // memo step 15: drills with quality modules reroll ore; legendary plates then need less raw ore
+    let d = GameData::for_set("factorio", "spa");
+    let mut s = lp_settings("spa", "iron-plate@4", 10.0);
+    s.quality_module = "quality-module-3".into();
+    s.prod_module = "productivity-module-3".into();
+    s.quality_mining = false;
+    let p0 = plan(&d, &s);
+    s.quality_mining = true;
+    let p1 = plan(&d, &s);
+    assert_eq!(p0.status, Status::Optimal, "{:?}", p0.warnings);
+    assert_eq!(p1.status, Status::Optimal, "{:?}", p1.warnings);
+    let ore = |p: &Plan| p.raw.iter().filter(|l| l.item.starts_with("iron-ore")).map(|l| l.rate).sum::<f64>();
+    let drills: Vec<String> = p1.recipes.iter().filter(|r| r.id.starts_with("quality-mining")).map(|r| format!("{} {} ×{:.1}", r.id, r.mode_label, r.machines)).collect();
+    eprintln!("iron ore for 10 legendary plates/min: {:.0} without quality mining, {:.0} with; drills {:?}", ore(&p0), ore(&p1), drills);
+    assert!(ore(&p1) <= ore(&p0) * (1.0 + 1e-6));
+    assert!(!drills.is_empty(), "quality mining should pay off for legendary plates");
+}
