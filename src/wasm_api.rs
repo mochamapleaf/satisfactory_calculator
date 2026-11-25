@@ -110,6 +110,12 @@ pub fn solve_start(settings_json: &str) -> String {
     };
     planner::data::set_lang(&settings.lang);
     ASKED.with(|a| *a.borrow_mut() = Some(settings.clone()));
+    // max output with budgets may need several whole-building solves at smaller scales (planner::plan
+    // steps down): solve it in one go, without streaming
+    if settings.max_output && (settings.somersloop_budget.is_some() || settings.shard_budget.is_some()) {
+        let p = planner::plan(data(&settings.game, &settings.dataset), &settings);
+        return serde_json::json!({"done": true, "plan": p}).to_string();
+    }
     let (settings, scale) = planner::prepared_settings(data(&settings.game, &settings.dataset), &settings);
     SCALE.with(|c| c.set(scale));
     match planner::lp::start(data(&settings.game, &settings.dataset), &settings) {

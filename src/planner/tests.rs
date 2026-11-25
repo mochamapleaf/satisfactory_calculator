@@ -1057,3 +1057,23 @@ fn max_output_scales_the_targets_to_the_limits() {
     assert_eq!(pi.status, Status::Optimal, "{:?}", pi.warnings);
     assert!(pi.raw.iter().find(|l| l.item == "Desc_OreIron_C").map(|l| l.rate).unwrap_or(0.0) <= 600.0 + 1e-6);
 }
+
+#[test]
+fn max_output_with_a_somersloop_budget_still_plans() {
+    // review: a Somersloop budget made the scaled whole-building plan infeasible
+    let d = data();
+    let mut s = settings(&[("Desc_Rotor_C", 1.0)]);
+    s.resource_limits.insert("Desc_OreIron_C".into(), Some(600.0));
+    s.max_output = true;
+    s.somersloops.insert("Recipe_Rotor_C".into(), 2);
+    s.somersloop_budget = Some(3);
+    let p = plan(&d, &s);
+    eprintln!("{:?} {:?}", p.status, p.warnings);
+    assert_eq!(p.status, Status::Optimal);
+    // a disabled recipe: the normal diagnostics, not "nothing within the limits"
+    let mut x = settings(&[("Desc_Rotor_C", 1.0)]);
+    x.max_output = true;
+    x.disabled_recipes = vec!["Recipe_Rotor_C".into(), "Recipe_Alternate_Rotor_C".into(), "Recipe_Alternate_CopperRotor_C".into(), "Recipe_Alternate_SteelRotor_C".into()];
+    let px = plan(&d, &x);
+    assert!(px.warnings.iter().all(|w| !w.contains("Max output")), "{:?}", px.warnings);
+}

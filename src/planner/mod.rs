@@ -452,7 +452,8 @@ pub fn max_output_scale(data: &GameData, settings: &PlanSettings) -> Option<f64>
         lp::solve(data, &x).status == Status::Optimal
     };
     if !ok(1e-6) {
-        return Some(0.0);
+        // not plannable at all (a disabled recipe, too large, …): no scaling, so the normal solve reports why
+        return Some(-1.0);
     }
     let (mut lo, mut hi) = (1e-6, 1.0);
     while ok(hi) {
@@ -477,7 +478,7 @@ pub fn max_output_scale(data: &GameData, settings: &PlanSettings) -> Option<f64>
 pub fn prepared_settings(data: &GameData, settings: &PlanSettings) -> (PlanSettings, Option<f64>) {
     let mut s = self_powered_settings(data, settings);
     let scale = max_output_scale(data, settings);
-    if let Some(k) = scale {
+    if let Some(k) = scale.filter(|k| *k > 0.0) {
         // whole buildings may round some machine down a hair: 0.5 % headroom (MINE)
         let k = k * 0.995;
         for t in s.targets.iter_mut().filter(|t| t.item != ELECTRICITY || settings.targets.iter().any(|u| u.item == ELECTRICITY)) {
@@ -490,8 +491,26 @@ pub fn prepared_settings(data: &GameData, settings: &PlanSettings) -> (PlanSetti
 
 pub fn plan(data: &GameData, settings: &PlanSettings) -> Plan {
     data::set_lang(&settings.lang);
-    let (s, scale) = prepared_settings(data, settings);
+    let (mut s, mut scale) = prepared_settings(data, settings);
     let mut p = lp::solve(data, &s);
+    // whole buildings with Somersloop / shard budgets can fall short of the continuous scale (review):
+    // step down until a plan exists
+    if let Some(k) = scale.filter(|k| *k > 0.0) {
+        let mut f = 1.0;
+        for _ in 0..40 {
+            if p.status == Status::Optimal {
+                break;
+            }
+            f *= 0.9;
+            let mut x = s.clone();
+            for t in x.targets.iter_mut().filter(|t| t.item != ELECTRICITY || settings.targets.iter().any(|u| u.item == ELECTRICITY)) {
+                t.rate *= 0.9;
+            }
+            s = x;
+            p = lp::solve(data, &s);
+        }
+        scale = Some(k * f);
+    }
     finish_power(data, settings, &mut p);
     finish_max_output(settings, scale, &mut p);
     p
@@ -504,10 +523,11 @@ pub fn finish_max_output(settings: &PlanSettings, scale: Option<f64>, p: &mut Pl
     }
     match scale {
         Some(k) if k > 0.0 => p.warnings.push(data::tr(
-            &format!("Max output: {:.4}× the target ratio, the most the resource limits allow.", k * 0.995),
-            &format!("最大产出：目标比例的 {:.4} 倍，资源上限允许的最大值。", k * 0.995),
+            &format!("Max output: {:.4}× the target ratio, the most the resource limits, supplies and budgets allow.", k * 0.995),
+            &format!("最大产出：目标比例的 {:.4} 倍，资源上限、可用输入和预算允许的最大值。", k * 0.995),
         )),
-        Some(_) => p.warnings.push(data::tr("Max output: nothing can be made within the resource limits.", "最大产出：在资源上限内什么都做不出来。")),
+        // not plannable: the plan's own message says why
+        Some(_) => {}
         None => p.warnings.push(data::tr(
             "Max output: no resource limit binds (limits ignored?), so the targets are planned as given.",
             "最大产出：没有资源上限起作用（是否忽略了上限？），按给定目标规划。",
