@@ -225,6 +225,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
             <option value="normal">{t('all normal', '全部普通')}</option>
             <option value="impure">{t('all impure', '全部不纯')}</option>
           </select></label>
+        {(p.purity !== 'game' || Object.keys(p.nodeEdits).length > 0) && <span className="small muted">{t('The edited world is used here on the map only; the Plan tab keeps the real resource limits.', '修改后的世界只用于地图选址；规划页仍按真实的资源上限。')}</span>}
         {Object.keys(p.nodeEdits).length > 0 && <button className="tabbtn" onClick={() => setP({ ...p, nodeEdits: {} })}>{t(`Reset ${Object.keys(p.nodeEdits).length} node edits`, `重置 ${Object.keys(p.nodeEdits).length} 个矿点修改`)}</button>}
         <label>{t('Hubs up to', '枢纽上限')}
           <select aria-label={t('Hubs up to', '枢纽上限')} value={p.pmax} onChange={e => setP({ ...p, pmax: +e.target.value })}>

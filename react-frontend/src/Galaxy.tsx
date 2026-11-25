@@ -404,7 +404,7 @@ export default function GalaxyTab({ data, settings }: Props) {
             <summary>{tr('More: quotas, cubes not spent on research', '更多：配额、不拿去研究的白糖')}</summary>
             <div className="mbsettings">
               <label className="check"><input type="checkbox" checked={o.stock_quotas} onChange={e => set({ stock_quotas: e.target.checked })} /> {tr('Reserve quotas (off = rates only)', '储量配额（关掉 = 只看速率）')}</label>
-              <label className="check"><input type="checkbox" checked={o.one_planet} onChange={e => set({ one_planet: e.target.checked })} /> {tr('One planet per system (gas giants still collected)', '每个星系只开一颗行星（气巨照常采集）')}</label>
+              <label className="check"><input type="checkbox" checked={o.one_planet} onChange={e => set({ one_planet: e.target.checked })} /> {tr('One planet per system (gas giants still collected; whole-number choice, can take a minute with many systems)', '每个星系只开一颗行星（气巨照常采集；整数选择，星系多时可能要一分钟）')}</label>
               <label>{tr('φ cubes not spent on research %', 'φ 不研究的白糖 %')}<NumField value={o.phi} lo={0} hi={95} onCommit={v => set({ phi: v ?? 0 })} /></label>
             </div>
           </details>
@@ -719,7 +719,7 @@ function PlanView({ gp, name, starName, recipeName }: { gp: GalaxyPlan; name: (i
         <tbody>
           {gp.systems.map(s => [
             <tr key={s.star} className="clickable" onClick={() => setSel(sel === s.star ? null : s.star)}>
-              <td><span className="caret">{sel === s.star ? '▾' : '▸'}</span>{s.name}{s.planet !== null && s.planet !== undefined ? <span className="muted"> · P{s.planet}</span> : null}</td><td className="num">{fmt(s.distance, 1)}</td><td className="num">{num(s.cubes, 0)}</td>
+              <td><span className="caret">{sel === s.star ? '▾' : '▸'}</span>{s.name}{s.planet !== null && s.planet !== undefined ? <span className="muted" title={tr('The one planet mined in this system', '这个星系开采的那颗行星')}> · {tr('planet', '行星')} {s.planet + 1}</span> : null}</td><td className="num">{fmt(s.distance, 1)}</td><td className="num">{num(s.cubes, 0)}</td>
               <td className="num">{num(s.production_buildings, 0)}</td><td className="num">{num(s.miners, 0)}</td><td className="num">{num(s.collectors, 0)}</td><td className="num">{fmt(s.stations, 1)}</td>
             </tr>,
             sel === s.star && <tr key={`${s.star}-d`}><td colSpan={7} className="small">

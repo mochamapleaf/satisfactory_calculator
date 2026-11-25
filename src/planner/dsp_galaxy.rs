@@ -976,9 +976,13 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     let mut collectors: Vec<(usize, Variable, Vec<(String, f64)>)> = vec![];
     let mut photon_vars = vec![];
     let mut chosen: Vec<(usize, usize, Variable)> = vec![];
+    // big M of the planet gates: no item is needed at more than ~1000 per cube (review: a fixed 1e7 silently capped
+    // fire ice at a target of 3e5/min); max mode has no target, so a large fixed bound
+    let big_m = if target_mode { (gs.target.max(1.0) * 1000.0).max(1e6) } else { 1e9 };
     for (s, st) in stars.iter().enumerate() {
-      // one planet per system (笑笑 under a full-strength Dark Fog, report §5.1): each rocky planet is its own
-      // group with a binary y, at most one per system; gas giants (orbital collectors) stay free
+      // one planet per system (笑笑 under a full-strength Dark Fog; docs/research/dsp-seed/_过程文件/xiaoxiao-hints.md:80):
+      // each rocky planet is its own group with a binary y, at most one per system; gas giants (orbital collectors)
+      // stay free (MINE). Only extraction is gated: production and stations are per system as before
       let groups: Vec<(Vec<&PlanetInfo>, Option<Variable>)> = if gs.one_planet {
           let mut g: Vec<(Vec<&PlanetInfo>, Option<Variable>)> = st
               .planets
@@ -1004,7 +1008,7 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         // a group's extraction only where its planet is chosen (veins and oceans have no rate cap: big M)
         let gate = |v: Variable, rows: &mut Vec<(Vec<(Variable, f64)>, ComparisonOp, f64)>| {
             if let Some(y) = y {
-                rows.push((vec![(v, 1.0), (*y, -1e7)], ComparisonOp::Le, 0.0));
+                rows.push((vec![(v, 1.0), (*y, -big_m)], ComparisonOp::Le, 0.0));
             }
         };
         let mut stock: BTreeMap<String, f64> = BTreeMap::new();
@@ -1187,7 +1191,8 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
         .iter()
         .enumerate()
         .map(|(s, st)| SystemResult {
-            planet: chosen.iter().find(|c| c.0 == s && sol[c.2] > 0.5).map(|c| c.1),
+            // only for a system that mines on a rocky planet (review: idle systems got one too); set below
+            planet: None,
             star: st.index,
             name: st.name.clone(),
             distance: st.distance,
@@ -1293,6 +1298,14 @@ pub fn plan_galaxy(data: &GameData, g: &Galaxy, gs: &GalaxyPlanSettings) -> Gala
     out.buildings =
         out.production_buildings + out.miners + out.pumps + out.oil_extractors + out.collectors + out.receivers + out.stations;
     out.receiver_gw = out.photons_per_min * PHOTON_MJ / 60.0 / 1000.0;
+    for r in systems.iter_mut() {
+        let mines = r.extraction.iter().any(|e| !e.item.ends_with("(gas)") && e.rate > 1e-6);
+        if mines {
+            if let Some(si) = stars.iter().position(|st| st.index == r.star) {
+                r.planet = chosen.iter().find(|c| c.0 == si && sol[c.2] > 0.5).map(|c| c.1);
+            }
+        }
+    }
     if zv > 1e-9 {
         out.raw_per_cube = mined.iter().map(|(i, r)| ItemRate { item: i.clone(), rate: r / zv }).collect();
         out.rares = FINITE
