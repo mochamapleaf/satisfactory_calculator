@@ -23,11 +23,13 @@ jobs:
       - name: Install Rust toolchain
         run: rustup show active-toolchain || rustup toolchain install
 
+      # pinned to the version used locally; no third-party installer script
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack --version 0.15.1 --locked
 
+      # release: the LP tests take minutes unoptimised
       - name: Test planner
-        run: cargo test
+        run: cargo test --release
 
       - name: Build WASM
         run: wasm-pack build --release --target web --out-dir react-frontend/src/wasm-pkg --out-name satisfactory_calculator
