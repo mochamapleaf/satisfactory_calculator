@@ -502,3 +502,4 @@ svg.belt { display: block; font-family: var(--font-ui); }
 .seg.langsel button { padding: 2px 10px; }
 html:lang(zh-CN) td, html:lang(zh-CN) th { word-break: keep-all; }
 .sidesection { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--rule); } .sidesection summary { cursor: pointer; font-weight: 600; margin-bottom: var(--s2); } .sidesection > button { margin: var(--s2) 0; }
+.tierplan { margin: var(--s3) 0; } .tierplan summary { cursor: pointer; font-weight: 600; } .tierplan input { width: 9em; }

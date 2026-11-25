@@ -21,6 +21,8 @@ export interface SweepOptions {
   supplied?: Record<string, number> | null
   /** display names for messages (item id -> name) */
   names?: Record<string, string>
+  /** multi-period (report G9): what earlier periods built, by variable name; free up to that amount */
+  existing?: Record<string, number> | null
 }
 export interface SweepRow {
   fmult: number; F: number; p: number; obj: number | null; bound: number | null; gap: number; status: string; time_s: number
@@ -35,7 +37,9 @@ export type SweepEvent =
   | { type: 'solving'; label: string; fmult: number; p: number; limit: number }
   | { type: 'progress'; label: string; bound: number | null; best: number | null; nodes: number }
   | { type: 'row'; row: SweepRow; summary: Summary | null }
-  | { type: 'done'; ms: number }
+  | { type: 'done'; ms: number; best?: Record<string, number> | null; bestObj?: number | null; bestSummary?: Summary | null
+      /** the best plan's solve status and gap, and the belt / pipe capacity of this tier (multi-period) */
+      bestStatus?: string | null; bestGap?: number | null; beltCap?: number; pipeCap?: number }
   | { type: 'error'; message: string }
 
 export interface GeoInput { sitesDoc: SitesDoc; nodes: GeoNode[]; transport: unknown }
@@ -77,7 +81,7 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
   // ore equivalents of belt / rail materials price construction with every recipe (they are prices,
   // not what this tier can make: aluminium casing is tier 7)
   const oe = oreEquivalents(atTier ? new Data(game, geo.sitesDoc, geo.nodes, geo.transport, hubs) : d, materials(), solve)
-  const common = { base: o.base, tier: o.tier, workKm: o.workKm, oe, recipes, supplied }
+  const common = { base: o.base, tier: o.tier, workKm: o.workKm, oe, recipes, supplied, existing: o.existing ?? null }
   let env: number | null = o.envStart ?? null
   const skip = new Set(o.skip ?? [])
   let warm: Map<string, number> | null = null
@@ -125,10 +129,22 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
     fmult, F, p, obj: r.obj, bound: r.bound, gap: r.gap, status: r.status, time_s: Math.round(r.time * 100) / 100, envelope,
     hubs: s?.hubs ?? [], n_lines: s?.lines.length ?? 0, rail_flow: s?.rail_flow_items_per_min ?? 0, belts: s?.belt_count ?? 0,
   })
+  // the best plan at F 1× (the envelope's), for a multi-period run: what it built, by variable name
+  // belts / pipes as capacity (items or m³ per minute at this tier); integers rounded (0.9999999999999999)
+  const bestOut = (b: { named: Map<string, number>; obj: number; summary: Summary | null; status: string; gap: number; beltCap: number; pipeCap: number } | null) => {
+    if (!b) return { best: null, bestObj: null, bestSummary: null, bestStatus: null, bestGap: null }
+    const best: Record<string, number> = {}
+    for (const [nm, v0] of b.named) {
+      if (!/^(b|bp|h|u|z|c|cf|x|e)\|/.test(nm)) continue
+      const v = /^(b|bp|h|u|z|c|cf)\|/.test(nm) ? Math.round(v0) : v0
+      best[nm] = nm.startsWith('b|') ? v * b.beltCap : nm.startsWith('bp|') ? v * b.pipeCap : v
+    }
+    return { best, bestObj: b.obj, bestSummary: b.summary, bestStatus: b.status, bestGap: b.gap, beltCap: b.beltCap, pipeCap: b.pipeCap }
+  }
   let lastRow: SweepRow | null = null
   let lastSummary: Summary | null = null
   {
-    let best: { named: Map<string, number>; obj: number } | null = null
+    let best: { named: Map<string, number>; obj: number; summary: Summary | null; status: string; gap: number; beltCap: number; pipeCap: number } | null = null
     for (let p = 0; p <= o.pmax; p++) {
       if (skip.has(`1|${p}`)) continue
       if (p === 1) {
@@ -151,16 +167,16 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
       const row = rowOf(p, 1, r.meta.F, r.res, r.summary, env)
       lastRow = row; lastSummary = r.summary
       emit({ type: 'row', row, summary: r.summary })
-      if (r.named && obj !== null && (warm === null || obj <= env! + 1e-9)) { warm = r.named; best = { named: r.named, obj } }
+      if (r.named && obj !== null && (warm === null || obj <= env! + 1e-9)) { warm = r.named; best = { named: r.named, obj, summary: r.summary, status: r.res.status, gap: r.res.gap, beltCap: r.meta.belt_cap, pipeCap: r.meta.pipe_cap } }
       // no rail at this tier: every p is the same model, one solve is the whole sweep
-      if (!r.meta.rail) { emit({ type: 'done', ms: performance.now() - t0 }); return }
+      if (!r.meta.rail) { emit({ type: 'done', ms: performance.now() - t0, ...bestOut(best) }); return }
     }
     for (const fm of o.fmults ?? [0.5, 2]) {
       if (skip.has(`${fm}|${o.pmax}`)) continue
       const r = solveOne(o.pmax, fm, best?.named ?? null)
       emit({ type: 'row', row: rowOf(o.pmax, fm, r.meta.F, r.res, r.summary, r.res.obj), summary: r.summary })
     }
-    emit({ type: 'done', ms: performance.now() - t0 })
+    emit({ type: 'done', ms: performance.now() - t0, ...bestOut(best) })
   }
   }
 }

@@ -262,6 +262,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           </>}
           {sol && site && <SiteDetail id={site} sol={sol} itemName={itemName} recipeName={recipeName} onBase={() => setP({ ...p, base: site })} isBase={site === (meta?.base ?? p.base)} />}
           {sol && meta && <Links sol={sol} meta={meta} itemName={itemName} />}
+          <TierPlan data={data} opts={opts} />
           {run?.done && meta && <p className="hint">{t(`Model: ${fmt(meta.n_vars, 0)} variables (${meta.n_int} integer), ${fmt(meta.n_rows, 0)} rows, ${meta.recipes.length} recipes; ${meta.hubs.length} candidate hubs; Mk.${meta.belt_tier} belts (${meta.belt_cap}/min, ${fmt(meta.belt_oe_km, 0)} OE/km), double track ${fmt(meta.track_oe_km, 0)} OE/km. Sweep ${fmt(run.ms / 1000, 0)} s.`, `模型:${fmt(meta.n_vars, 0)} 个变量 (${meta.n_int} 个整数),${fmt(meta.n_rows, 0)} 行,${meta.recipes.length} 个配方;${meta.hubs.length} 个候选枢纽;Mk.${meta.belt_tier} 传送带 (${meta.belt_cap}/min,${fmt(meta.belt_oe_km, 0)} OE/km),双轨 ${fmt(meta.track_oe_km, 0)} OE/km。扫描耗时 ${fmt(run.ms / 1000, 0)} 秒。`)}</p>}
         </div>
       </div>
@@ -458,5 +459,100 @@ function Legend({ sol, itemName }: { sol: Summary | null; itemName: (id: string)
       <li><svg width="12" height="12"><circle cx="6" cy="6" r="5" className="mach" /></svg>{t('machines', '机器')}</li>
       {used.map(k => <li key={k}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill={RES_COLOR[k] ?? 'gray'} /></svg>{itemName(k)}</li>)}
     </ul>
+  )
+}
+
+/** Multi-period build-out (report G9): the plan grows tier by tier; each period reuses what earlier periods built
+ *  (free up to that amount, `BuildOptions.existing`) and pays only for the new part. One solve per period at the
+ *  hub limit (no F sensitivity), the targets a share of the plan's. */
+function TierPlan({ data, opts }: { data: GameData; opts: SweepOptions }) {
+  const [tiers, setTiers] = useState('4, 6, 8')
+  const [shares, setShares] = useState('25, 50, 100')
+  type Period = { tier: number; share: number; newOe: number | null; total: number | null; sum: Summary | null; error: string | null; ms: number; status: string | null; gap: number | null }
+  const [periods, setPeriods] = useState<Period[]>([])
+  const [busy, setBusy] = useState(false)
+  // the running period's worker and its promise's resolve (Stop ends both; review: a live watchdog resumed an old run)
+  const stopRef = useRef<{ w: Worker; done: () => void } | null>(null)
+  const runId = useRef(0)
+  useEffect(() => () => { stopRef.current?.w.terminate(); stopRef.current?.done(); runId.current++ }, [])
+  const nums = (x: string) => x.split(/[\s,，]+/).map(Number).filter(v => Number.isFinite(v) && v > 0)
+  const ts = nums(tiers).map(v => Math.min(9, Math.max(0, Math.round(v))))
+  const ss = nums(shares)
+  const n = Math.min(ts.length, ss.length)
+  const game = () => ({
+    items: data.items.map(i => ({ id: i.id, liquid: i.liquid })),
+    recipes: data.recipes.map(r => ({ id: r.id, alt: r.alt, building: r.building, in: r.in, out: r.out })),
+    resources: data.resources.map(r => ({ item: r.item })),
+  })
+  type One = { best: Record<string, number> | null; obj: number | null; sum: Summary | null; error: string | null; ms: number; status: string | null; gap: number | null }
+  const one = (o: SweepOptions) => new Promise<One>(resolve => {
+    const w = new Worker(new URL('./geo/geoWorker.ts', import.meta.url), { type: 'module' })
+    let settled = false
+    const fail = (error: string): One => ({ best: null, obj: null, sum: null, error, ms: 0, status: null, gap: null })
+    const res = (r: One) => { if (settled) return; settled = true; clearTimeout(dog); w.terminate(); stopRef.current = null; resolve(r) }
+    stopRef.current = { w, done: () => res(fail(t('Stopped.', '已停止。'))) }
+    // the solves stop themselves at the time limit; a worker silent far past it is stopped
+    const dog = setTimeout(() => res(fail(t('The solver stopped responding.', '求解器无响应。'))), (o.timeLimit * (o.pmax + 1) + 120) * 1000)
+    w.onmessage = (ev: MessageEvent<SweepEvent>) => {
+      const e = ev.data
+      if (e.type === 'done') res(e.best ? { best: e.best, obj: e.bestObj ?? null, sum: e.bestSummary ?? null, error: null, ms: e.ms, status: e.bestStatus ?? null, gap: e.bestGap ?? null }
+        : fail(t('No plan was found within the time limit.', '时限内没有找到方案。')))
+      if (e.type === 'error') res(fail(e.message))
+    }
+    w.onerror = ev => res(fail(ev.message || 'worker failed'))
+    w.postMessage({ game: game(), opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, dn(i, data.game, i.name)])) } })
+  })
+  const go = async () => {
+    const id = ++runId.current
+    setBusy(true)
+    setPeriods([])
+    let existing: Record<string, number> = {}
+    let total = 0
+    const out: Period[] = []
+    for (let i = 0; i < n; i++) {
+      const tier = ts[i], share = ss[i] / 100
+      const o: SweepOptions = {
+        ...opts, tier, fmults: [], existing: Object.keys(existing).length ? existing : null,
+        targets: Object.fromEntries(Object.entries(opts.targets).map(([k, v]) => [k, v * share])),
+        tierRecipes: tierRecipes(tier),
+        supplied: opts.supplied ? Object.fromEntries(Object.entries(opts.supplied).map(([k, v]) => [k, v * share])) : null,
+      }
+      const r = await one(o)
+      if (id !== runId.current) return // stopped, or a newer run started
+      if (r.obj !== null) total += r.obj
+      out.push({ tier, share: ss[i], newOe: r.obj, total: r.obj !== null ? total : null, sum: r.sum, error: r.error, ms: r.ms, status: r.status, gap: r.gap })
+      setPeriods([...out])
+      if (!r.best) break
+      // what stands after this period: the larger of before and now, per variable
+      const next = { ...existing }
+      for (const [k, v] of Object.entries(r.best)) next[k] = Math.max(next[k] ?? 0, v)
+      existing = next
+    }
+    if (id === runId.current) setBusy(false)
+  }
+  const stop = () => { runId.current++; stopRef.current?.done(); setBusy(false) }
+  return (
+    <details className="tierplan">
+      <summary>{t('Build out tier by tier', '按科技层逐期扩张')}</summary>
+      <p className="hint">{t('The plan grows with the tech tiers: each period plans a share of the targets with the recipes and transport of its tier, reuses what earlier periods built for free (old belts and pipes count as the capacity they carry), and pays only for the new part (ore equivalents; mining counts per item/min as in the single plan). Periods are solved one after another, each for its own targets (not looking ahead), at the hub limit, with the time limit per solve. Leaving old infrastructure idle costs nothing; dismantling (materials come back) and its work are not counted. With “this plan’s recipes”, an early tier fails when the plan uses a later recipe: choose base recipes.',
+        '方案随科技层级逐期扩大：每一期按该层级的配方和运输方式规划目标的一部分，前几期建好的东西免费沿用（旧传送带和管道按它们实际的运力算），只为新增部分付费（原矿当量；开采按每分钟物品数计，与单期方案一致）。各期依次求解，每期只看自己的目标（不往后看），按枢纽上限、每次求解的时限。旧设施闲置不收费；拆除（材料返还）和拆除工作量不计。选「本方案的配方」时，若方案用到更高层级的配方，早期会失败：请改选基础配方。')}</p>
+      <div className="row small">
+        <label>{t('Tiers', '各期层级')} <input value={tiers} onChange={e => setTiers(e.target.value)} aria-label={t('Tiers of the periods', '各期层级')} /></label>
+        <label>{t('Share of targets %', '目标比例 %')} <input value={shares} onChange={e => setShares(e.target.value)} aria-label={t('Share of the targets per period', '各期目标比例')} /></label>
+        {!busy && <button className="tabbtn" disabled={n === 0} onClick={() => void go()}>{t(`Plan ${n} period${n === 1 ? '' : 's'}`, `规划 ${n} 期`)}</button>}
+        {busy && <button className="tabbtn" onClick={stop}>{t('Stop', '停止')}</button>}
+      </div>
+      {periods.length > 0 && <div className="tablewrap"><table className="small">
+        <thead><tr><th>{t('Period', '期')}</th><th>{t('Tier', '层级')}</th><th className="num">{t('Targets', '目标')}</th><th className="num">{t('New build OE', '新建 OE')}</th><th className="num">{t('Total OE', '累计 OE')}</th><th>{t('Hubs', '枢纽')}</th><th className="num">{t('Belts', '传送带')}</th></tr></thead>
+        <tbody>{periods.map((q, i) => <tr key={i}>
+          <td>{i + 1}</td><td>T{q.tier}</td><td className="num">{q.share}%</td>
+          <td className="num" title={q.status && q.status !== 'Optimal' && q.gap !== null ? t(`not proven optimal: within ${fmt(q.gap * 100, 1)} % of the bound`, `未证最优：与下界相差 ${fmt(q.gap * 100, 1)} %`) : undefined}>
+            {q.newOe !== null ? fmt(q.newOe, 0) : '—'}{q.status && q.status !== 'Optimal' && q.gap !== null ? ` (±${fmt(q.gap * 100, 0)}%)` : ''}</td>
+          <td className="num">{q.total !== null ? fmt(q.total, 0) : '—'}</td>
+          <td className="small">{q.error ?? (q.sum?.hubs.join(t(', ', '、')) || '—')}</td><td className="num">{q.sum ? q.sum.belt_count : '—'}</td>
+        </tr>)}</tbody>
+      </table></div>}
+      {busy && <p className="solving" role="status">{t(`Solving period ${periods.length + 1} of ${n}…`, `正在求第 ${periods.length + 1}/${n} 期…`)}</p>}
+    </details>
   )
 }

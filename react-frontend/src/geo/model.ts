@@ -201,6 +201,11 @@ export interface BuildOptions {
   recipes?: GameRecipe[] | null
   /** Web addition: items the plan takes as supplied inputs, available free at the base site up to this rate (/min). */
   supplied?: Record<string, number> | null
+  /** Web addition (report G9, multi-period): what an earlier period already built, by variable name (`b|a|b` belts and
+   *  `bp|…` pipes as CAPACITY in items or m³ per minute, so old Mk.1 belts are not credited as this tier's Mk.5; `h|s`
+   *  hubs, `u|a|b` track, `z|…` trains, `c|…` / `cf|…` cars, `x|r|s` machines, `e|k|s` mining as counts / rates):
+   *  free up to that amount, only the rest is built (and paid) now. */
+  existing?: Record<string, number> | null
 }
 export interface Line { a: string; b: string; length_m: number; rtd_min: number; cbar: number; cbar_fluid: number }
 export interface Meta {
@@ -372,6 +377,22 @@ export function build(d: Data, targets: Record<string, number>, solve: LpSolve, 
     lines, water_anywhere: waterAnywhere, slots, feed, dock_s: dock, fluid_car: fluidCar, v_mps: v, supply,
   }
   const idx: Index = { x, e, f, b, bp, h: hvar, u, z, c: cs, cf: cfl, g, A, solids, fluids, sup: supVar }
+  // multi-period (G9): earlier periods' infrastructure is sunk. A variable v of cost c with an existing amount E
+  // costs c·max(0, v − E) (a paid part w ≥ v − E carries the cost). Idle old infrastructure costs nothing (it can be
+  // left standing), so there is no demolition term: belts and machines may stay above what the period needs
+  if (o.existing) {
+    const byName = new Map(m.names.map((nm, j) => [nm, j]))
+    for (const [nm, amount] of Object.entries(o.existing).sort((a_, b_) => cmp(a_[0], b_[0]))) {
+      const j = byName.get(nm)
+      if (j === undefined || !(amount > 0) || !(m.c[j] > 0)) continue
+      // belts / pipes: old capacity in this tier's belts (review: crediting counts gave Mk.1 the Mk.5 capacity)
+      const E = nm.startsWith('b|') ? amount / cap : nm.startsWith('bp|') ? amount / pipeCap : amount
+      const c = m.c[j]
+      m.c[j] = 0
+      const w = m.var(`new|${nm}`, c)
+      m.row(`new|${nm}`, new Map([[w, 1], [j, -1]]), -E, Infinity)
+    }
+  }
   return { m, idx, meta }
 }
 

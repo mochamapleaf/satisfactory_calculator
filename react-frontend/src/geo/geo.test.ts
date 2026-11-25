@@ -187,13 +187,14 @@ const GEO = { sitesDoc, nodes, transport: tr }
 function sweepRun(o: Partial<SweepOptions> & { targets: Record<string, number> }, s: LpSolve = solve) {
   const rows: SweepRow[] = [], sums: (Summary | null)[] = []
   let error: string | null = null, done = false, meta: SweepMeta | null = null
+  let best: Record<string, number> | null = null, bestObj: number | null = null
   runSweep(game, GEO, s, { base: 'S0_m1', tier: 8, workKm: 0, pmax: 2, timeLimit: 30, recipeIds: null, ...o }, e => {
     if (e.type === 'row') { rows.push(e.row); sums.push(e.summary) }
     if (e.type === 'error') error = e.message
-    if (e.type === 'done') done = true
+    if (e.type === 'done') { done = true; best = e.best ?? null; bestObj = e.bestObj ?? null }
     if (e.type === 'meta') meta = e.meta
   })
-  return { rows, sums, error: error as string | null, done, meta: meta as SweepMeta | null }
+  return { rows, sums, error: error as string | null, done, meta: meta as SweepMeta | null, best: best as Record<string, number> | null, bestObj: bestObj as number | null }
 }
 
 test('fmt keeps integer zeros at 0 decimals (9.7 s is "10", 57040.3 OE is "57040")', async () => {
@@ -261,4 +262,16 @@ test('tech tier limits the recipes (report G9): plastic is not made at tier 2, b
   assert.match(low.error!, /Nothing on the map makes .* only the recipes unlocked by then count/)
   const high = sweepRun({ targets: { Desc_Plastic_C: 20 }, recipeIds: null, tierRecipes: all, tier: 5, fmults: [] })
   assert.equal(high.error, null); assert.ok(high.done)
+})
+
+test('multi-period (G9): what an earlier period built is free; growing the same plan costs only the extra', () => {
+  const small = sweepRun({ targets: { Desc_IronPlate_C: 60 }, tier: 4, fmults: [] })
+  assert.equal(small.error, null); assert.ok(small.best && small.bestObj! > 0)
+  // the same plan again on top of itself: nothing new to build
+  const again = sweepRun({ targets: { Desc_IronPlate_C: 60 }, tier: 4, fmults: [], existing: small.best })
+  assert.ok(again.bestObj! <= 1e-6 * small.bestObj!, `${again.bestObj} vs ${small.bestObj}`)
+  // growing to 120/min later costs less than building 120/min from scratch
+  const fresh = sweepRun({ targets: { Desc_IronPlate_C: 120 }, tier: 6, fmults: [] })
+  const grow = sweepRun({ targets: { Desc_IronPlate_C: 120 }, tier: 6, fmults: [], existing: small.best })
+  assert.ok(grow.bestObj! < fresh.bestObj!, `${grow.bestObj} vs ${fresh.bestObj}`)
 })
