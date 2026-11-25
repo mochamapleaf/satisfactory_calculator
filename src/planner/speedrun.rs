@@ -2,22 +2,25 @@
 //! 在各个阶段不同的需要建造的工厂。假设建造工厂也需要…每建造一个建筑需要一定的时间…可能需要个20到30秒，然后以及
 //! 剩下的这个拉线路的时间都是需要时间的。那么按照这个时间，然后以及生产速度大概能爬多少科技，在固定时间爬多少科技」).
 //!
-//! Model (v1, every simplification MINE unless cited):
-//! - The tech tree is climbed one stage at a time: the milestones up to a tier in tier order (cheapest first
-//!   within a tier), with the Space Elevator phase that gates the next tiers in between (phase 1 before
-//!   tier 3, 2 before 5, 3 before 7, 4 before 9; satisfactory.wiki.gg Project_Assembly), phase 5 last.
-//! - Recipes: the tutorial unlocks + Iron Ingot / Plate / Rod (start of the game), each milestone's unlocks
-//!   once it is shipped, MAM research recipes from "Field Research" on (their research cost is not counted).
-//!   No alternate recipes (hard drives are a separate hunt).
-//! - Each stage adds factories (a continuous LP, fewest buildings) that make the stage's cost at rate
-//!   cost / τ, using what earlier factories already make as free supplies. The stage takes
-//!   build time + τ, build time = (new buildings + new miners/extractors) × (place + wire seconds), and τ
-//!   is chosen to minimise it (more buildings → shorter production). The materials of the new buildings
-//!   are added to the cost (one fixed-point pass): as if the stage's factory also made its own parts.
-//! - Factories stay and keep producing; the next stage gets their output as supplies.
-//! - The HUB ship: a milestone can be submitted only after the previous one's ship returned.
-//! - Not modelled: power plants and power, hand-crafting, walking / exploration, belts and poles as
-//!   materials (their time is the per-building wiring time), node purity and distance.
+//! Model (every simplification MINE unless cited):
+//! - The tech tree is climbed one step at a time: in each tier the cheapest milestone whose cost the
+//!   recipes unlocked so far can make, only those the Space Elevator parts need (`needed_only`), with
+//!   the elevator phase that gates the next tiers in between (phase 1 before tier 3, 2 before 5, 3 before
+//!   7, 4 before 9; satisfactory.wiki.gg Project_Assembly), phase 5 last.
+//! - Recipes: the tutorial unlocks + Iron Ingot / Plate / Rod, each milestone's unlocks once shipped, MAM
+//!   recipes once the MAM exists (with `mam_cost`, the first step that uses one pays its node and its
+//!   tree's `_0` entry node; other prerequisites and research time are not in the dump), no hard-drive
+//!   alternates except MAM ones.
+//! - Each step adds factories (continuous LP, fewest buildings) that make its cost (after the stockpile)
+//!   at rate cost / τ, earlier factories' output being free supplies; τ minimises build + τ for the step
+//!   alone (a heuristic: with overlap the whole timeline is not optimised). Build time = (new buildings +
+//!   extractors) × (place + wire s); the new buildings' parts are added to the cost.
+//! - Timeline (v2): the player builds steps in order; with `overlap` the next step is built while this
+//!   one produces, with the recipes shipped by then (else from the first later ship that suffices);
+//!   milestones ship in order, one HUB ship at a time, phases in order; with `stockpile` finished
+//!   factories' output piles up and pays later costs first.
+//! - Not modelled: hand-crafting, walking, node purity / distance / counts, splitting a phase into
+//!   parts, several steps in parallel beyond the overlap, belts and poles as materials.
 use super::data::{GameData, MamNode, Milestone};
 use super::{plan, ItemRate, Objective, PlanSettings, Status};
 use serde::{Deserialize, Serialize};
@@ -104,6 +107,9 @@ pub struct SpeedrunReport {
     pub stages: Vec<Stage>,
     pub total_min: f64,
     pub total_buildings: f64,
+    /// Where the time goes: the player building (Σ build), and the rest (waiting for production, ships, phases).
+    pub build_min: f64,
+    pub idle_min: f64,
     /// Stages done within `hours` (when set), and the last one.
     pub done_in_hours: Option<usize>,
     pub reached: Option<String>,
@@ -295,6 +301,7 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
     let start_unlocked = unlocked.clone();
     let mut player = 0.0; // when the player is free to build the next step
     let mut last_submit = 0.0;
+    let mut last_phase = 0.0;
     let mut ship_back = 0.0; // when the HUB ship of the last milestone returns
     let mut total_buildings = 0.0;
     // stock and finished factories up to time t
@@ -341,7 +348,14 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
             }
             u
         };
-        let tries: Vec<f64> = if ss.overlap && player < last_submit { vec![player, last_submit] } else { vec![player.max(last_submit)] };
+        // the first time from which the step can be made: now, then each later ship (review: not only the last)
+        let mut tries: Vec<f64> = if ss.overlap { vec![player] } else { vec![player.max(last_submit)] };
+        if ss.overlap {
+            let mut later: Vec<f64> = shipped.iter().map(|(t, _)| *t).filter(|t| *t > player).collect();
+            later.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            later.dedup();
+            tries.extend(later);
+        }
         let mut found = None;
         for &t in &tries {
             advance(t, &mut factory, &mut stock, &mut stock_t, &mut running);
@@ -376,7 +390,8 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
         let build_end = start + t.build_min;
         let ready = build_end + t.tau;
         // milestones go in order, one HUB ship at a time; phases need only their parts
-        let submit = if kind == "milestone" { ready.max(ship_back).max(last_submit) } else { ready };
+        // milestones ship in order, one HUB ship at a time; phases in order among themselves
+        let submit = if kind == "milestone" { ready.max(ship_back).max(last_submit) } else { ready.max(last_phase) };
         let wait = submit - ready;
         total_buildings += t.buildings + t.miners;
         // this step's factories take their supplies from now on and add their output once ready
@@ -401,6 +416,7 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
             last_submit = submit;
         } else {
             last_submit = last_submit.max(submit);
+            last_phase = submit;
         }
         player = if ss.overlap { build_end } else { submit };
         out.stages.push(Stage {
@@ -442,6 +458,8 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
     let clock = out.stages.iter().map(|s| s.end_min).fold(0.0, f64::max);
     out.status = if out.stages.is_empty() { Status::Infeasible } else { Status::Optimal };
     out.total_min = clock;
+    out.build_min = out.stages.iter().map(|s| s.build_min).sum();
+    out.idle_min = (clock - out.build_min).max(0.0);
     out.total_buildings = total_buildings;
     if ss.hours > 0.0 {
         let done: Vec<&Stage> = out.stages.iter().filter(|s| s.end_min <= ss.hours * 60.0 + 1e-9).collect();
@@ -482,8 +500,10 @@ fn solve_stage(
     allowed.extend(always.iter().cloned());
     let disabled: Vec<String> = data.recipes.iter().filter(|r| !allowed.contains(&r.id)).map(|r| r.id.clone()).collect();
     // parts the unlocked recipes make; others (Portable Miner: Equipment Workshop) count as hand-crafted
-    let made_by_machine: BTreeSet<&str> =
-        data.recipes.iter().filter(|r| allowed.contains(&r.id)).flat_map(|r| r.outputs.iter().map(|(i, _)| i.as_str())).collect();
+    // raw resources count too (MAM nodes cost ore; review: dropping them made research free)
+    let made_by_machine: BTreeSet<&str> = data.resources.iter().map(|r| r.item.as_str()).chain(
+        data.recipes.iter().filter(|r| allowed.contains(&r.id)).flat_map(|r| r.outputs.iter().map(|(i, _)| i.as_str())),
+    ).collect();
     // generators whose building is unlocked (their build recipe), for the step's own power
     let gens: Vec<String> = data
         .recipes

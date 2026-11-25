@@ -12,7 +12,7 @@ interface Stage {
   total_buildings: number; unlocks: string[]; note: string
   recipes: { building: string; count: number }[]; raw: ItemRate[]; power_mw: number
 }
-interface Report { status: string; stages: Stage[]; total_min: number; total_buildings: number; done_in_hours: number | null; reached: string | null; skipped: string[]; solve_ms: number; warnings: string[]; error?: string }
+interface Report { status: string; stages: Stage[]; total_min: number; total_buildings: number; build_min: number; idle_min: number; done_in_hours: number | null; reached: string | null; skipped: string[]; solve_ms: number; warnings: string[]; error?: string }
 interface Opts { up_to_tier: number; place_s: number; wire_s: number; elevator: boolean; hours: number; needed_only: boolean; power: boolean; overlap: boolean; stockpile: boolean; mam_cost: boolean }
 const DEFAULTS: Opts = { up_to_tier: 9, place_s: 25, wire_s: 20, elevator: true, hours: 8, needed_only: true, power: true, overlap: true, stockpile: true, mam_cost: true }
 const KEY = 'speedrun.v1'
@@ -86,6 +86,7 @@ export default function Speedrun({ data }: { data: GameData }) {
       {r && !r.error && <div className={stale ? 'staleresult' : undefined}>
         <div className="cards">
           <div className="card"><span className="big">{hm(r.total_min)}</span><span className="muted">{t(`to finish (${r.stages.length} steps)`, `爬完（${r.stages.length} 步）`)}</span></div>
+          <div className="card"><span className="big">{hm(r.build_min)}</span><span className="muted">{t(`spent building (${hm(r.idle_min)} waiting for factories, ships, phases)`, `用于建造（另有 ${hm(r.idle_min)} 在等生产、飞船、阶段）`)}</span></div>
           <div className="card"><span className="big">{num(r.total_buildings)}</span><span className="muted">{t('buildings at the end', '最后的建筑数')}</span></div>
           {r.done_in_hours !== null && <div className="card"><span className="big">{r.done_in_hours}</span><span className="muted">{t(`steps done in ${o.hours} h${r.reached ? ` (up to ${r.reached})` : ''}`, `${o.hours} 小时内完成的步数${r.reached ? `（到「${r.reached}」）` : ''}`)}</span></div>}
         </div>
@@ -118,15 +119,15 @@ export default function Speedrun({ data }: { data: GameData }) {
                   {s.raw.length > 0 && <div><b>{t('New raw input', '新增原矿')}</b>{t(': ', '：')}{s.raw.map(x => `${itemName(data, x.item)} ${fmt(x.rate, 1)}${t('/min', '/分钟')}`).join(' · ')}</div>}
                   {s.power_mw > 0 && <div><b>{t('Power', '发电')}</b>{t(': ', '：')}{fmt(s.power_mw, 0)} MW</div>}
                   {s.unlocks.length > 0 && <div><b>{t('Unlocks', '解锁')}</b>{t(': ', '：')}{s.unlocks.join('、')}</div>}
-                  {s.wait_min > 0.05 && <div>{t(`Waits ${hm(s.wait_min)} for the HUB ship.`, `等 HUB 飞船 ${hm(s.wait_min)}。`)}</div>}
+                  {s.wait_min > 0.05 && <div>{t(`Waits ${hm(s.wait_min)} after it is ready: for the HUB ship, the previous milestone or phase.`, `做好后还要等 ${hm(s.wait_min)}：等 HUB 飞船、上一个里程碑或阶段。`)}</div>}
                 </td></tr>,
               ])}
             </tbody>
           </table>
         </div>
         <p className="small muted">
-          {t('Not modelled yet: hand-crafting and hand-fed biomass power at the start, walking and exploring, node purity, distance and node counts, MAM research time and prerequisites beyond the first node of each tree, alternate recipes from hard drives, belts and poles as materials. Miners count as Mk.1 / Mk.2 / Mk.3 on normal nodes as they unlock; the parts of the buildings of each step are made by the factories of that step; once a generator is unlocked each step builds its own power. Real speedruns are much faster (e.g. an 11–12 h co-op run): read this as a planning baseline, not a record. ',
-            '暂未建模：开局手搓和手喂生物质发电、跑图探索、矿点纯度/距离/数量、MAM 研究时间和每棵树第一个节点以外的前置、硬盘替代配方、传送带和电线杆本身的材料。采矿机按解锁情况算一/二/三级、普通矿点；每一步新建筑的材料由这一步的工厂生产；解锁发电机后每一步自建发电。真实速通快得多（例如 11–12 小时的多人速通），这里的数字当作规划基线，不是纪录。')}
+          {t('Not modelled yet: hand-crafting and hand-fed biomass power at the start, walking and exploring, node purity, distance and node counts, MAM research time and prerequisites beyond the first node of each tree, alternate recipes from hard drives, belts and poles as materials. Steps are built strictly in order and a phase is one step; each step is sized on its own (fastest build + production for that step), not for the whole run, which is why the player waits for a good part of the time. Miners count as Mk.1 / Mk.2 / Mk.3 on normal nodes as they unlock; the parts of the buildings of each step are made by the factories of that step; once a generator is unlocked each step builds its own power. Real speedruns are much faster (e.g. an 11–12 h co-op run): read this as a planning baseline, not a record. ',
+            '暂未建模：开局手搓和手喂生物质发电、跑图探索、矿点纯度/距离/数量、MAM 研究时间和每棵树第一个节点以外的前置、硬盘替代配方、传送带和电线杆本身的材料。各步严格按顺序建，一个阶段算一步；每一步单独定规模（这一步的建造 + 生产最快），没有对整个流程统一优化，所以玩家有相当一部分时间在等。采矿机按解锁情况算一/二/三级、普通矿点；每一步新建筑的材料由这一步的工厂生产；解锁发电机后每一步自建发电。真实速通快得多（例如 11–12 小时的多人速通），这里的数字当作规划基线，不是纪录。')}
           {fmt(r.solve_ms / 1000, 1)} s.
         </p>
       </div>}
