@@ -527,3 +527,60 @@ fn galaxy_plan_one_planet_per_system() {
         }
     }
 }
+
+#[test]
+fn galaxy_periods_keeps_the_reserve_and_uses_caps() {
+    // memo step 13 (report 5.2): early periods spend stock, the end keeps the research reserve
+    let mut ps = PeriodSettings::default();
+    ps.rate.plan.effects = vec!["proliferator-3-speed".into(), "proliferator-3-products".into()];
+    let r = galaxy_periods(dsp(), galaxy(), &ps);
+    assert_eq!(r.status, Status::Optimal, "{:?}", r.warnings);
+    eprintln!("cubes {:.0}, end L{}, tail {:.0}, {} solves, {:.0} ms {:?}", r.cubes, r.end_level, r.tail_cubes, r.iterations, r.solve_ms, r.warnings);
+    for p in &r.periods {
+        eprintln!("  {}h L{} (from {} to {}) z {:.1}/min, {:.0}/{:.0} bld {}", p.hours, p.level, p.level_reached, p.level_end, p.cubes_per_min, p.buildings, p.building_cap, p.cap_binding);
+        assert!(p.building_cap <= 0.0 || p.buildings <= p.building_cap * (1.0 + 1e-6));
+    }
+    for s in &r.stocks {
+        eprintln!("  {:24} stock {:>12.0} used {:>12.0} reserve {:>12.0} {}", s.item, s.stock, s.used, s.reserve, s.binding);
+        assert!(s.used + s.reserve <= s.stock * (1.0 + 1e-6) + 1e-6, "{}", s.item);
+    }
+    assert!(r.cubes > 0.0 && r.tail_cubes > 0.0);
+    assert!((r.cubes - r.periods.iter().map(|p| p.cubes).sum::<f64>()).abs() < 1e-6 * r.cubes);
+    // more buildings never give fewer cubes
+    let mut more = ps.clone();
+    for p in more.periods.iter_mut() {
+        p.building_cap *= 2.0;
+    }
+    let r2 = galaxy_periods(dsp(), galaxy(), &more);
+    assert!(r2.cubes >= r.cubes * (1.0 - 1e-6), "{} < {}", r2.cubes, r.cubes);
+    // dropping the reserve never gives fewer cubes
+    let mut free = ps.clone();
+    free.reserve = false;
+    let r3 = galaxy_periods(dsp(), galaxy(), &free);
+    assert!(r3.cubes >= r.cubes * (1.0 - 1e-6));
+    assert_eq!(r3.tail_cubes, 0.0);
+    // review H2: each later period runs at the level its predecessors researched
+    for w in r.periods.windows(2) {
+        assert_eq!(w[0].level_end, w[1].level_reached);
+        assert!(w[1].level_reached <= w[1].level && w[1].level <= w[1].level_end, "{:?}", w[1]);
+    }
+    // review H1: the reserve is the last period's use per cube × rho·S(L_E)/(1−phi) (report 5.2)
+    let check = |r: &PeriodReport, rho: f64, phi: f64| {
+        assert!((r.tail_cubes - rho * s_of(r.end_level) / (1.0 - phi)).abs() < 1e-6 * r.tail_cubes);
+        let last = r.periods.last().unwrap();
+        for s in &r.stocks {
+            let m = last.mined.iter().find(|m| m.item == s.item).map(|m| m.rate).unwrap_or(0.0);
+            let want = m / last.cubes_per_min * r.tail_cubes * points_per_unit(&s.item, galaxy().settings.resource_multiplier);
+            assert!((s.reserve - want).abs() <= 2e-3 * want.max(s.reserve) + 1e-3, "{}: {} vs {}", s.item, s.reserve, want);
+        }
+    };
+    check(&r, 1.0, 0.0);
+    let mut alt = ps.clone();
+    alt.rate.rho = 0.8;
+    alt.phi = 0.5;
+    let r4 = galaxy_periods(dsp(), galaxy(), &alt);
+    assert_eq!(r4.status, Status::Optimal, "{:?}", r4.warnings);
+    eprintln!("rho 0.8 phi 0.5: cubes {:.0}, end L{}, tail {:.0}, {} solves", r4.cubes, r4.end_level, r4.tail_cubes, r4.iterations);
+    check(&r4, 0.8, 0.5);
+    assert!(r4.end_level < r.end_level);
+}

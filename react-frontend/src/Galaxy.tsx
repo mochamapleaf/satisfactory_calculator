@@ -52,6 +52,13 @@ interface RateReport {
   recipes: RecipeUse[]; raw_per_cube: ItemRate[]; warpers_per_min: number; machines: number; power_gw: number; power_mw_per_rate: number; ceiling_shells: number
   solve_ms: number; warnings: string[]; error?: string
 }
+interface PeriodOpt { hours: number; level: number; building_cap: number; dyson_share: number }
+interface PeriodResult { hours: number; level: number; level_end: number; cubes_per_min: number; cubes: number; buildings: number; building_cap: number; cap_binding: boolean; level_reached: number; mined: ItemRate[] }
+interface PeriodReport {
+  status: string; cubes: number; end_level: number; tail_cubes: number; iterations: number; periods: PeriodResult[]
+  stocks: { item: string; stock: number; used: number; reserve: number; binding: boolean }[]
+  solve_ms: number; warnings: string[]; error?: string
+}
 interface Opts {
   seed: SeedSettings
   rate_level: number; miners_per_node: number; miner_speed: number; dyson: boolean; dyson_share: number; swarm: boolean
@@ -61,6 +68,7 @@ interface Opts {
   oil: 'initial' | 'floor'; building_cap: number | null; photon_gw: number | null; vessel_capacity: number; warpers_per_trip: number
   systems: number[] | null
   dark_fog: DarkFog
+  periods: PeriodOpt[]; periods_reserve: boolean; periods_follow: boolean
 }
 
 const DEFAULTS: Opts = {
@@ -72,6 +80,15 @@ const DEFAULTS: Opts = {
   oil: 'initial', building_cap: null, photon_gw: null, vessel_capacity: 400, warpers_per_trip: 2,
   systems: null,
   dark_fog: { enabled: false, level: 24, bases: [], drops: [], measured_at_level: 81 },
+  // MINE: an example ramp (same as PeriodSettings::default)
+  periods: [
+    { hours: 5, level: 6, building_cap: 1500, dyson_share: 5 },
+    { hours: 10, level: 20, building_cap: 4000, dyson_share: 20 },
+    { hours: 20, level: 50, building_cap: 10000, dyson_share: 50 },
+    { hours: 40, level: 81, building_cap: 25000, dyson_share: 100 },
+  ],
+  periods_reserve: true,
+  periods_follow: true,
 }
 const KEY = 'dspGalaxy.v1'
 function loadOpts(): Opts {
@@ -80,6 +97,8 @@ function loadOpts(): Opts {
     if (raw && typeof raw === 'object') {
       const o = { ...DEFAULTS, ...raw, seed: { ...DEFAULTS.seed, ...raw.seed }, dark_fog: { ...DEFAULTS.dark_fog, ...raw.dark_fog } }
       if (!MULTS.includes(o.seed.resource_multiplier)) o.seed.resource_multiplier = 1
+      const okP = (p: unknown): p is PeriodOpt => !!p && typeof p === 'object' && (['hours', 'level', 'building_cap', 'dyson_share'] as const).every(k => Number.isFinite((p as PeriodOpt)[k]))
+      if (!Array.isArray(o.periods) || !o.periods.length || !o.periods.every(okP)) o.periods = DEFAULTS.periods
       return o
     }
   } catch { /* private mode or bad JSON: defaults */ }
@@ -147,7 +166,7 @@ function NumField({ value, onCommit, lo, hi, integer, nullable, ...rest }: {
 let worker: Worker | null = null
 let nextId = 1
 const waiting = new Map<number, (s: string) => void>()
-function call<T>(fn: 'galaxy' | 'thresholds' | 'plan' | 'total' | 'rate', payload: unknown): Promise<T> {
+function call<T>(fn: 'galaxy' | 'thresholds' | 'plan' | 'total' | 'rate' | 'periods', payload: unknown): Promise<T> {
   if (!worker) {
     worker = new Worker(new URL('./galaxyWorker.ts', import.meta.url), { type: 'module' })
     worker.onmessage = (e: MessageEvent<{ id: number; out: string }>) => {
@@ -186,6 +205,8 @@ export default function GalaxyTab({ data, settings }: Props) {
   const [gp, setGp] = useState<GalaxyPlan | null>(null)
   const [tot, setTot] = useState<TotalReport | null>(null)
   const [rr, setRr] = useState<RateReport | null>(null)
+  const [pr, setPr] = useState<PeriodReport | null>(null)
+  const [prKey, setPrKey] = useState('')
   const [totKey, setTotKey] = useState('')
   const [rrKey, setRrKey] = useState('')
   const [open, setOpen] = useState<number | null>(null)
@@ -204,7 +225,7 @@ export default function GalaxyTab({ data, settings }: Props) {
   const importSeed = (s: SeedSettings) => {
     const t = ++gen.current
     setBusy(tr('Generating the galaxy…', '正在生成星区…'))
-    setTh(null); setGp(null); setTot(null); setRr(null)
+    setTh(null); setGp(null); setTot(null); setRr(null); setPr(null)
     void call<Galaxy>('galaxy', s).then(r => {
       if (t !== gen.current) return
       setBusy('')
@@ -236,6 +257,18 @@ export default function GalaxyTab({ data, settings }: Props) {
     void call<RateReport>('rate', JSON.parse(sent)).then(r => { if (t !== gen.current) return; setBusy(''); setRr(r); setRrKey(sent) })
   }
   const rrStale = !!rr && !rr.error && rrKey !== rrPayload
+  const setPeriod = (k: number, p: Partial<PeriodOpt>) => set({ periods: o.periods.map((x, j) => (j === k ? { ...x, ...p } : x)) })
+  const prPayload = useMemo(() => JSON.stringify({
+    // MINE: early factories run on their own power plants, not the spheres
+    rate: { ...JSON.parse(rrPayload), power: false }, reserve: o.periods_reserve, follow_research: o.periods_follow, phi: o.phi / 100,
+    periods: o.periods.map(p => ({ ...p, dyson_share: p.dyson_share / 100 })),
+  }), [rrPayload, o.periods, o.periods_reserve, o.periods_follow, o.phi])
+  const runPeriods = () => {
+    const t = gen.current, sent = prPayload
+    setBusy(tr('Planning the periods…', '正在规划各时段…'))
+    void call<PeriodReport>('periods', JSON.parse(sent)).then(r => { if (t !== gen.current) return; setBusy(''); setPr(r); setPrKey(sent) })
+  }
+  const prStale = !!pr && !pr.error && prKey !== prPayload
   // the headline is computed as soon as the galaxy is there
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (g && !g.error && !rr && !busy) runRate() }, [g])
@@ -356,6 +389,43 @@ export default function GalaxyTab({ data, settings }: Props) {
         {tot && !tot.error && <div className={totStale ? 'staleresult' : undefined}><TotalView t={tot} name={name} level={o.level} recipeName={recipeName} research={o.total_research} /></div>}
       </>}
 
+      {/* ---- early multi-period plan (memo step 13) */}
+      {g && !g.error && <>
+        <h3>{tr('Early game by periods: how much rare ore to spend before the threshold', '前期分段规划：到阈值之前稀有矿该用多少')}</h3>
+        <p className="hint">
+          {tr('Before the infinite threshold, ore spent now is gone for good. Cut the game into periods; for each give its length, how many buildings you have (production machines plus ore miners) and how much of the Dyson spheres is built. One linear programme maximises the cubes made over all periods. With "Levels follow research" on, every cube goes into vein utilisation research as it is made (×(1−φ)/ρ, from the first period level), so each period runs at the levels its cubes reach: mining speed at the mean level, each unit mined costing the mean 0.94^(L−1) of the stock; the plan is re-solved until this settles. Off, the levels are as entered. With "Keep the research reserve" on, the stock left at the end must let the last period mix keep running while research goes on forever from the end level (ρ·S(L)/(1−φ) cubes, the "Infinite thresholds" condition). Only vein and oil stock is counted: buildings, gas giants, oceans and photons are not charged against it. Factories run on their own power plants here, not the spheres. Oil extractors, gas collectors and ray receivers are not counted as buildings; one miner per ore node; no Dyson swarm. Stock and rates are pooled over the chosen stars.', '到无限阈值之前，现在用掉的矿就没了。把游戏切成几段，每段填时长、手上有多少建筑（生产机器加采矿机）、戴森球建成多少。一个线性规划求所有时段加起来白糖最多。勾上「等级跟着研究走」时，白糖做出来就拿去研究矿物利用（×(1−φ)/ρ，从第一段的等级起），每段按自己的白糖研究到的等级算：采矿速度按平均等级，每采一个矿扣平均 0.94^(L−1) 的储量；反复重解直到稳定。不勾就用填的等级。勾上「最后留研究储备」时，最后剩下的储量还要够末段的配比一直跑下去、同时从最终等级起永远研究（ρ·S(L)/(1−φ) 个白糖，就是「无限阈值」的条件）。只扣矿脉和原油的储量：建筑材料、气巨、海洋、光子都不扣。这里工厂用自己的电厂供电，不用戴森球。抽油机、气巨采集器、射线接收站不算建筑；每个矿点一台采矿机；不算戴森云。储量和速率按所选恒星合起来算。')}
+        </p>
+        <table className="mbtable periods">
+          <thead><tr>
+            <th>{tr('Period', '时段')}</th><th>{tr('Hours', '小时')}</th><th>{o.periods_follow ? tr('Start level', '起始等级') : tr('Level', '等级')}</th>
+            <th>{tr('Building cap', '建筑上限')}</th><th>{tr('Dyson built %', '戴森球建成 %')}</th><th />
+          </tr></thead>
+          <tbody>
+            {o.periods.map((p, k) => (
+              <tr key={k}>
+                <td>{k + 1}</td>
+                <td><NumField value={p.hours} lo={0.1} hi={10000} onCommit={v => setPeriod(k, { hours: v ?? p.hours })} style={{ width: 70 }} /></td>
+                <td>{o.periods_follow && k > 0 ? <span className="muted">{tr('from research', '按研究算')}</span> : <NumField value={p.level} lo={1} hi={10000} integer onCommit={v => setPeriod(k, { level: v ?? p.level })} style={{ width: 70 }} />}</td>
+                <td><NumField placeholder={tr('unlimited', '不限')} nullable value={p.building_cap || null} lo={1} hi={1e8} onCommit={v => setPeriod(k, { building_cap: v ?? 0 })} style={{ width: 90 }} /></td>
+                <td><NumField step={5} value={p.dyson_share} lo={0} hi={100} onCommit={v => setPeriod(k, { dyson_share: v ?? 0 })} style={{ width: 70 }} /></td>
+                <td><button className="small" disabled={o.periods.length <= 1} onClick={() => set({ periods: o.periods.filter((_, j) => j !== k) })}>{tr('Remove', '删除')}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="mbsettings">
+          <button className="small" disabled={o.periods.length >= 12} onClick={() => { const l = o.periods[o.periods.length - 1]; set({ periods: [...o.periods, { ...l, level: Math.min(10000, l.level + 20) }] }) }}>{tr('Add period', '加一段')}</button>
+          <button className="small" onClick={() => set({ periods: DEFAULTS.periods })}>{tr('Example periods', '示例时段')}</button>
+          <label className="check"><input type="checkbox" checked={o.periods_follow} onChange={e => set({ periods_follow: e.target.checked })} /> {tr('Levels follow research', '等级跟着研究走')}</label>
+          <label className="check"><input type="checkbox" checked={o.periods_reserve} onChange={e => set({ periods_reserve: e.target.checked })} /> {tr('Keep the research reserve at the end', '最后留研究储备')}</label>
+          <button onClick={runPeriods} disabled={busyNow || (o.total_scope === 'ticked' && systems.length === 0)}>{tr('Plan the periods', '规划各时段')}</button>
+        </div>
+        <p className="hint small">{tr('Stars, recipes, oil, ρ and the Dyson cap come from "Highest cube rate" and its common settings; φ from the multi-system plan.', '算哪些星、配方、原油、ρ、戴森球上限用「最高白糖速率」和通用设置里的；φ 用多星系规划里的。')}</p>
+        {pr?.error && <p className="warn">{pr.error}</p>}
+        {prStale && <Stale what={tr('Plan the periods', '规划各时段')} />}
+        {pr && !pr.error && <div className={prStale ? 'staleresult' : undefined}><PeriodsView r={pr} name={name} /></div>}
+      </>}
+
       {/* ---- thresholds */}
       {g && !g.error && <>
         <h3>{tr('Infinite thresholds: from which level each ore never runs out', '无限阈值：每种矿从几级起用不完')}</h3>
@@ -414,6 +484,53 @@ export default function GalaxyTab({ data, settings }: Props) {
         {gp && !gp.error && <div className={gpStale ? 'staleresult' : undefined}><PlanView gp={gp} name={name} starName={starName} recipeName={recipeName} /></div>}
       </>}
     </div>
+  )
+}
+
+function PeriodsView({ r, name }: { r: PeriodReport; name: (id: string) => string }) {
+  if (r.status !== 'optimal') {
+    return <>{r.warnings.map((w, i) => <p key={i} className="warn">{statusName(r.status)}: {w}</p>)}</>
+  }
+  const rareOf = (p: PeriodResult) => p.mined.filter(m => RARE.has(m.item))
+  return (
+    <>
+      <div className="cards">
+        <div className="card"><span className="big">{compact(r.cubes)}</span><span className="muted">{tr(`Cubes over ${num(r.periods.reduce((a, p) => a + p.hours, 0), 1)} h`, `${num(r.periods.reduce((a, p) => a + p.hours, 0), 1)} 小时一共做的白糖`)}</span></div>
+        <div className="card"><span className="big">{lv(r.end_level)}</span><span className="muted">{tr('Vein utilisation at the end', '最后的矿物利用等级')}</span></div>
+      </div>
+      {r.warnings.map((w, i) => <p key={i} className="warn">{w}</p>)}
+      <table className="mbtable">
+        <thead><tr>
+          <th>{tr('Period', '时段')}</th><th>{tr('Hours', '小时')}</th><th>{tr('Level computed at', '按几级算')}</th><th>{tr('Research: start → end', '研究：起 → 止')}</th>
+          <th>{tr('Cubes/min', '白糖/分钟')}</th><th>{tr('Cubes', '白糖')}</th><th>{tr('Buildings', '建筑')}</th><th>{tr('Rare ore used /min', '稀有矿用量 /分钟')}</th>
+        </tr></thead>
+        <tbody>
+          {r.periods.map((p, k) => (
+            <tr key={k}>
+              <td>{k + 1}</td><td>{num(p.hours, 1)}</td><td>{p.level}</td>
+              <td className={k > 0 && p.level_reached < Math.max(6, p.level) ? 'warn' : undefined}>{p.level_reached} → {p.level_end}</td>
+              <td>{num(p.cubes_per_min, 1)}</td><td>{compact(p.cubes)}</td>
+              <td>{num(p.buildings, 0)}{p.building_cap > 0 ? ` / ${num(p.building_cap, 0)}` : ''}{p.cap_binding ? <b> {tr('(full)', '（满）')}</b> : null}</td>
+              <td className="small">{rareOf(p).length ? rareOf(p).map(m => `${name(m.item)} ${num(m.rate, 0)}`).join(tr(', ', '，')) : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h4>{tr('Stock: used in the periods and kept for later', '储量：各段用掉的和留给以后的')}</h4>
+      <table className="mbtable">
+        <thead><tr><th>{tr('Resource', '资源')}</th><th>{tr('Stock', '储量')}</th><th>{tr('Used', '用掉')}</th><th>{tr('Reserve', '储备')}</th><th>{tr('Left over', '剩余')}</th></tr></thead>
+        <tbody>
+          {r.stocks.map(s => (
+            <tr key={s.item}>
+              <td><Icon id={s.item} size={18} /> {name(s.item)}{s.binding ? <b> {tr('(all of it)', '（全部用上）')}</b> : null}</td>
+              <td>{compact(s.stock)}</td><td>{compact(s.used)} ({num(100 * s.used / Math.max(1e-9, s.stock), 0)}%)</td>
+              <td>{compact(s.reserve)}</td><td>{compact(Math.max(0, s.stock - s.used - s.reserve))}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="hint small">{tr(`Reserve: research from level ${r.end_level} on takes ${compact(r.tail_cubes)} stock-weighted cubes. Solved ${r.iterations} times in ${num(r.solve_ms, 0)} ms. Oil is counted above the 2500 floor of each well (at the floor rate it never runs out and is not charged).`, `储备：从 ${r.end_level} 级起研究要 ${compact(r.tail_cubes)} 个白糖（按储量折算）。重解 ${r.iterations} 次，用时 ${num(r.solve_ms, 0)} 毫秒。原油只算每个油井 2500 底线以上的部分（按底线速率时永远采不完，不扣储量）。`)}</p>
+    </>
   )
 }
 

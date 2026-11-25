@@ -325,6 +325,19 @@ pub fn dsp_galaxy_rate_json(settings_json: &str) -> String {
     }
 }
 
+/// Early multi-period plan: `PeriodSettings` JSON → `PeriodReport` JSON (memo step 13).
+#[wasm_bindgen]
+pub fn dsp_galaxy_periods_json(settings_json: &str) -> String {
+    match serde_json::from_str::<planner::dsp_galaxy::PeriodSettings>(settings_json) {
+        Ok(ps) => {
+            planner::data::set_lang(&ps.rate.plan.lang);
+            let g = galaxy_for(&ps.rate.seed);
+            serde_json::to_string(&planner::dsp_galaxy::galaxy_periods(data("dsp", ""), &g, &ps)).unwrap()
+        }
+        Err(e) => bad(e),
+    }
+}
+
 /// Galaxy total: `TotalSettings` JSON → `TotalReport` JSON (most cubes the finite stock makes).
 #[wasm_bindgen]
 pub fn dsp_galaxy_total_json(settings_json: &str) -> String {

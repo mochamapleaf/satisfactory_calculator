@@ -2184,3 +2184,468 @@ pub fn dyson_max_gw(st: &StarInfo) -> f64 {
     }
     kw * st.luminosity.max(0.0) * 1e-6
 }
+
+// ---------------------------------------------------------------------------------------------
+// Early multi-period plan (memo step 13, report §5.2, first version). Time is cut into periods, each
+// with a building cap and a built share of the Dyson spheres; one LP maximises the cubes made over
+// all periods. Finite veins are drawn down at k·0.94^(L−1) per unit at the period's level L.
+// Levels: by default every cube goes into research as it is made (cubes·(1−φ)/ρ from the first
+// period's level on), so each period runs at the mean level of its own research and its stock is
+// charged at the mean 0.94^(L−1) over it (fixed-point re-solve on the cube rates); or as entered.
+// Terminal reserve (report §5.2): after the last period all research cubes go on forever from the
+// end level L_E, which takes a_k·ρ·k·S(L_E)/(1−φ) of each finite stock, a_k = the last period's use
+// per cube (its mix keeps running). a_k = m_{k,T}/z_T is not linear, so z_T is fixed from the
+// previous solve and the LP re-solved until it settles (successive LP).
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Period {
+    pub hours: f64,
+    /// Vein utilisation level being researched in this period (L−1 done). With `follow_research` only
+    /// the first period's is used.
+    pub level: u32,
+    /// Most buildings (production + ore miners); 0 or less = no cap.
+    pub building_cap: f64,
+    /// Built share of every star's full Dyson sphere in this period, 0..1.
+    pub dyson_share: f64,
+}
+
+impl Default for Period {
+    fn default() -> Self {
+        Self { hours: 2.0, level: 10, building_cap: 500.0, dyson_share: 0.1 }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PeriodSettings {
+    /// Systems, recipes, miners, oil, Dyson on/off and rho as in the highest-rate model (its level,
+    /// dyson_share and swarm are unused: periods set them; MINE: no swarm in this first version).
+    pub rate: RateSettings,
+    pub periods: Vec<Period>,
+    /// Keep the terminal reserve (off: the stock may be used up by the end).
+    pub reserve: bool,
+    /// Each period's level is what the cubes before it research (off: the levels as entered).
+    pub follow_research: bool,
+    /// Share of cubes not spent on research (phi), 0..0.95.
+    pub phi: f64,
+}
+
+impl Default for PeriodSettings {
+    fn default() -> Self {
+        // MINE: an example ramp, not a measured one
+        let rate = RateSettings { power: false, ..Default::default() };
+        Self {
+            rate,
+            periods: vec![
+                Period { hours: 5.0, level: 6, building_cap: 1500.0, dyson_share: 0.05 },
+                Period { hours: 10.0, level: 20, building_cap: 4000.0, dyson_share: 0.2 },
+                Period { hours: 20.0, level: 50, building_cap: 10000.0, dyson_share: 0.5 },
+                Period { hours: 40.0, level: 81, building_cap: 25000.0, dyson_share: 1.0 },
+            ],
+            reserve: true,
+            follow_research: true,
+            phi: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PeriodResult {
+    pub hours: f64,
+    /// Level the period's mining speed is computed at (following research: the mean level while its
+    /// cubes are researched; its stock is charged at the mean of 0.94^(L−1) over the period).
+    pub level: u32,
+    pub cubes_per_min: f64,
+    pub cubes: f64,
+    pub buildings: f64,
+    pub building_cap: f64,
+    /// The building cap is used in full.
+    pub cap_binding: bool,
+    /// Level the cubes made before this period reach (from the first period's level on at
+    /// cubes·(1−phi)/rho).
+    pub level_reached: u32,
+    /// Level reached by the end of this period.
+    pub level_end: u32,
+    /// Finite-vein and oil resources mined per minute.
+    pub mined: Vec<ItemRate>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct StockUse {
+    pub item: String,
+    pub stock: f64,
+    /// Stock points used over the periods.
+    pub used: f64,
+    /// Stock points kept for research after the last period.
+    pub reserve: f64,
+    /// used + reserve = stock.
+    pub binding: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PeriodReport {
+    pub status: Status,
+    pub cubes: f64,
+    /// Level researched by the end of the last period (the reserve's start).
+    pub end_level: u32,
+    /// Stock-weighted cubes research needs after the last period (rho·S(L_E)/(1−phi)).
+    pub tail_cubes: f64,
+    /// Re-solves used (levels and the end mix settling).
+    pub iterations: u32,
+    pub periods: Vec<PeriodResult>,
+    pub stocks: Vec<StockUse>,
+    pub solve_ms: f64,
+    pub warnings: Vec<String>,
+}
+
+type Row = (Vec<(Variable, f64)>, ComparisonOp, f64);
+
+fn push_bal(rows: &mut Vec<Row>, bal: Vec<Vec<(Variable, f64)>>) {
+    for terms in bal.into_iter().filter(|t| !t.is_empty()) {
+        let mut merged: BTreeMap<usize, (Variable, f64)> = BTreeMap::new();
+        for (v, c) in terms {
+            merged.entry(v.idx()).or_insert((v, 0.0)).1 += c;
+        }
+        rows.push((merged.into_values().collect(), ComparisonOp::Ge, 0.0));
+    }
+}
+
+/// One solve of the period LP at fixed levels; `tie` = (reserve cubes / end cube rate) charges the
+/// last period's finite use per minute that many minutes again (k per unit, S already weighted).
+struct PeriodSol {
+    z: Vec<f64>,
+    buildings: Vec<f64>,
+    mined: Vec<BTreeMap<String, f64>>,
+    used: BTreeMap<String, f64>,
+    reserve: BTreeMap<String, f64>,
+}
+
+/// Level researched with `cubes` research cubes from level `l0` on.
+fn level_after(l0: u32, cubes: f64, rho: f64) -> u32 {
+    let l0 = l0.max(6);
+    let budget = cubes + cubes_to_reach(l0, rho);
+    let mut l = l0;
+    while l < 10_000 && cubes_to_reach(l + 1, rho) <= budget + 1e-6 {
+        l += 1;
+    }
+    l
+}
+
+pub fn galaxy_periods(data: &GameData, g: &Galaxy, ps: &PeriodSettings) -> PeriodReport {
+    let t0 = web_time::Instant::now();
+    let mut out = PeriodReport::default();
+    let rs = &ps.rate;
+    let mut sys: Vec<usize> = if rs.systems.is_empty() { (0..g.stars.len()).collect() } else { rs.systems.clone() };
+    sys.retain(|i| *i < g.stars.len());
+    sys.sort();
+    sys.dedup();
+    let periods: Vec<Period> = ps
+        .periods
+        .iter()
+        .filter(|p| p.hours.is_finite() && p.hours > 0.0)
+        .cloned()
+        .map(|mut p| {
+            p.level = p.level.clamp(1, 10_000);
+            p.dyson_share = if p.dyson_share.is_finite() { p.dyson_share.clamp(0.0, 1.0) } else { 0.0 };
+            if !p.building_cap.is_finite() || p.building_cap < 0.0 {
+                p.building_cap = 0.0;
+            }
+            p
+        })
+        .collect();
+    if sys.is_empty() || periods.is_empty() {
+        out.status = Status::Infeasible;
+        out.warnings.push(tr_zh("No star system or no period", "没有星系或没有时段"));
+        return out;
+    }
+    let mut pl = rs.plan.clone();
+    pl.game = "dsp".into();
+    let mut units = unit_cols(data, &pl, &[CUBE, WARPER]);
+    units.retain(|u| u.net.iter().all(|(i, q)| *q > 0.0 || !(i.starts_with("df-") || i == "log" || i == "plant-fuel")));
+    if rs.power && rs.dyson {
+        for u in units.iter_mut() {
+            let ph = u.mode.power_base.max(0.0) * 60.0 / PHOTON_MJ;
+            if ph > 0.0 {
+                match u.net.iter_mut().find(|(i, _)| i == PHOTON) {
+                    Some(e) => e.1 -= ph,
+                    None => u.net.push((PHOTON.to_string(), -ph)),
+                }
+            }
+        }
+    }
+    let rs1 = RateSettings { dyson_share: 1.0, ..rs.clone() };
+    let inp = rate_input(data, g, &rs1, &sys);
+    let mut unlimited = inp.unlimited.clone();
+    if !rs.dyson {
+        unlimited.insert(PHOTON.into());
+    }
+    let mut items: BTreeSet<String> = units.iter().flat_map(|u| u.net.iter().map(|(i, _)| i.clone())).collect();
+    items.insert(CUBE.into());
+    let items: Vec<String> = items.into_iter().collect();
+    let idx: HashMap<&str, usize> = items.iter().enumerate().map(|(k, i)| (i.as_str(), k)).collect();
+    let mult = g.settings.resource_multiplier;
+    let stock_of_item = |it: &str| -> f64 {
+        sys.iter().flat_map(|&s| g.stars[s].planets.iter()).flat_map(|p| p.veins.iter()).filter(|v| v.item == it).map(stock_of).sum::<f64>()
+    };
+    let gas_cap = |it: &str, speed: f64| -> f64 {
+        sys.iter()
+            .flat_map(|&s| g.stars[s].planets.iter())
+            .filter(|p| !p.gases.is_empty())
+            .flat_map(|p| collector_net(&p.gases, speed))
+            .filter(|(i, _)| i == it)
+            .map(|(_, r)| r.max(0.0) * 60.0 * COLLECTORS_PER_GIANT)
+            .sum()
+    };
+    let src = |it: &str| -> &str { inp.caps.get(it).map(|c| c.0.as_str()).unwrap_or("") };
+    // finite sources: veins, the vein part of vein+gas items, and oil at its initial rate (at the
+    // floor rate a seep never runs dry, so it is a rate only)
+    let finite = |it: &str| -> bool {
+        !g.infinite && match src(it) {
+            "vein" | "vein+gas" => true,
+            "oil" => rs.oil == OilRate::Initial,
+            _ => false,
+        }
+    };
+    let rho = if rs.rho.is_finite() && rs.rho > 0.0 { rs.rho } else { 1.0 };
+    let phi = if ps.phi.is_finite() { ps.phi.clamp(0.0, 0.95) } else { 0.0 };
+    let miner = data.resource("iron-ore").map(|r| r.extractor_rate).unwrap_or(60.0) * rs.miner_speed.clamp(1.0, 3.0);
+    let finite_items: Vec<String> = items.iter().filter(|i| finite(i)).cloned().collect();
+
+    let solve = |levels: &[u32], weights: &[f64], tie: Option<f64>| -> Result<PeriodSol, Option<microlp::Error>> {
+        let mut p = Problem::new(OptimizationDirection::Maximize);
+        let mut rows: Vec<Row> = vec![];
+        let mut zs = vec![];
+        let mut bld_rows: Vec<Vec<(Variable, f64)>> = vec![];
+        let mut mined: Vec<BTreeMap<String, Variable>> = vec![];
+        let mut draw: BTreeMap<String, Vec<(Variable, f64)>> = BTreeMap::new();
+        for (t, (per, &lv)) in periods.iter().zip(levels).enumerate() {
+            let minutes = per.hours * 60.0;
+            let speed = speed_at(lv);
+            let z = p.add_var(minutes, (0.0, f64::INFINITY));
+            let mut bal: Vec<Vec<(Variable, f64)>> = vec![vec![]; items.len()];
+            bal[idx[CUBE]].push((z, -1.0));
+            let mut bld: Vec<(Variable, f64)> = vec![];
+            for u in &units {
+                // MINE: a tiny cost per machine picks the leanest of equally many cubes
+                let v = p.add_var(-1e-9 * minutes, (0.0, f64::INFINITY));
+                for (i, q) in &u.net {
+                    bal[idx[i.as_str()]].push((v, *q));
+                }
+                bld.push((v, 1.0));
+            }
+            let mut m: BTreeMap<String, Variable> = BTreeMap::new();
+            for (it, (c, _)) in rate_caps(g, &inp, lv, None, &sys) {
+                let Some(&k) = idx.get(it.as_str()) else { continue };
+                let cap = if it == PHOTON { c * per.dyson_share } else { c };
+                let gas = if src(&it) == "vein+gas" { gas_cap(&it, speed).min(cap) } else { 0.0 };
+                if finite(&it) {
+                    // the vein part draws stock and needs miners; the gas part (giants) does not
+                    let v = p.add_var(-1e-10 * minutes, (0.0, (cap - gas).max(0.0)));
+                    bal[k].push((v, 1.0));
+                    if src(&it) != "oil" {
+                        bld.push((v, 1.0 / (miner * speed)));
+                    }
+                    draw.entry(it.clone()).or_default().push((v, minutes * points_per_unit(&it, mult) * weights[t]));
+                    m.insert(it.clone(), v);
+                    if gas > 0.0 {
+                        let w = p.add_var(-1e-11 * minutes, (0.0, gas));
+                        bal[k].push((w, 1.0));
+                    }
+                } else {
+                    let v = p.add_var(-1e-11 * minutes, (0.0, cap));
+                    bal[k].push((v, 1.0));
+                    if src(&it) == "vein" || src(&it) == "oil" {
+                        m.insert(it.clone(), v);
+                    }
+                }
+            }
+            for it in &unlimited {
+                if let Some(&k) = idx.get(it.as_str()) {
+                    let v = p.add_var(-1e-12 * minutes, (0.0, f64::INFINITY));
+                    bal[k].push((v, 1.0));
+                }
+            }
+            push_bal(&mut rows, bal);
+            if per.building_cap > 0.0 {
+                rows.push((bld.clone(), ComparisonOp::Le, per.building_cap));
+            }
+            bld_rows.push(bld);
+            zs.push(z);
+            mined.push(m);
+        }
+        let last = mined.last().unwrap();
+        for it in &finite_items {
+            let b = stock_of_item(it);
+            let mut t = draw.get(it).cloned().unwrap_or_default();
+            if let (Some(c), Some(&v)) = (tie, last.get(it)) {
+                // the last period's draw term holds the same variable: add to its coefficient
+                match t.iter_mut().find(|(w, _)| w.idx() == v.idx()) {
+                    Some(e) => e.1 += c * points_per_unit(it, mult),
+                    None => t.push((v, c * points_per_unit(it, mult))),
+                }
+            }
+            if !t.is_empty() {
+                rows.push((t, ComparisonOp::Le, b));
+            }
+        }
+        for (t, op, rhs) in &rows {
+            p.add_constraint(t.as_slice(), *op, *rhs);
+        }
+        let sol = p.solve().map_err(Some)?.into_solution().map_err(|_| None)?;
+        let used = draw.iter().map(|(i, t)| (i.clone(), t.iter().map(|(v, c)| sol[*v] * c).sum())).collect();
+        let reserve = match tie {
+            Some(c) => last.iter().filter(|(i, _)| finite(i)).map(|(i, v)| (i.clone(), sol[*v] * c * points_per_unit(i, mult))).collect(),
+            None => BTreeMap::new(),
+        };
+        Ok(PeriodSol {
+            z: zs.iter().map(|v| sol[*v]).collect(),
+            buildings: bld_rows.iter().map(|r| r.iter().map(|(v, c)| sol[*v] * c).sum()).collect(),
+            mined: mined.iter().map(|m| m.iter().map(|(i, v)| (i.clone(), sol[*v])).collect()).collect(),
+            used,
+            reserve,
+        })
+    };
+    let reached = |z: &[f64]| -> Vec<u32> {
+        let mut made = 0.0;
+        let mut r = vec![];
+        for (per, zt) in periods.iter().zip(z) {
+            r.push(level_after(periods[0].level, made * (1.0 - phi), rho));
+            made += zt * per.hours * 60.0;
+        }
+        r.push(level_after(periods[0].level, made * (1.0 - phi), rho));
+        r
+    };
+    // research during each period (its cubes go into research as they are made): the mean level
+    // (mining speed is linear in it) and the mean stock weight 0.94^(L−1), sampled at 16 points
+    let profile = |z: &[f64]| -> (Vec<u32>, Vec<f64>) {
+        let mut made = 0.0;
+        let (mut lv, mut wt) = (vec![], vec![]);
+        for (per, zt) in periods.iter().zip(z) {
+            let n = per.hours * 60.0 * zt;
+            let (mut sl, mut sw) = (0.0, 0.0);
+            for j in 0..16 {
+                let l = level_after(periods[0].level, (made + n * (j as f64 + 0.5) / 16.0) * (1.0 - phi), rho);
+                sl += l as f64;
+                sw += Q.powi(l as i32 - 1);
+            }
+            lv.push(((sl / 16.0).floor() as u32).max(1));
+            wt.push(sw / 16.0);
+            made += n;
+        }
+        (lv, wt)
+    };
+    let entered: Vec<u32> = periods.iter().map(|p| p.level).collect();
+    let mut levels = entered.clone();
+    let mut weights: Vec<f64> = entered.iter().map(|l| Q.powi(*l as i32 - 1)).collect();
+    let mut tie: Option<f64> = None;
+    let mut sol: Option<(PeriodSol, Vec<u32>)> = None;
+    let reserve_on = ps.reserve && !g.infinite && !finite_items.is_empty();
+    let mut iters = 0;
+    for it in 0..12 {
+        iters = it + 1;
+        let s = match solve(&levels, &weights, tie) {
+            Ok(s) => s,
+            Err(None) => {
+                out.status = Status::Infeasible;
+                out.warnings.push(tr_zh("The solver stopped before finding a plan", "求解器还没找到方案就停了"));
+                return out;
+            }
+            Err(Some(microlp::Error::Unbounded)) => {
+                out.status = Status::Unbounded;
+                out.warnings.push(tr_zh("Unbounded: set building caps or turn the Dyson cap on", "无上限：请设建筑上限或打开戴森球上限"));
+                return out;
+            }
+            Err(Some(microlp::Error::Infeasible)) => {
+                out.status = Status::Infeasible;
+                out.warnings.push(tr_zh("Infeasible: the stock cannot hold what these periods must use", "不可行：储量不够这些时段的用量"));
+                return out;
+            }
+            Err(Some(e)) => {
+                out.status = Status::Infeasible;
+                out.warnings.push(tr_zh(&format!("Solver: {e}"), &format!("求解器：{e}")));
+                return out;
+            }
+        };
+        let r = reached(&s.z);
+        let (mut next, mut next_w) = (levels.clone(), weights.clone());
+        if ps.follow_research {
+            (next, next_w) = profile(&s.z);
+        }
+        let end_level = if ps.follow_research { r[periods.len()] } else { levels[periods.len() - 1].max(r[periods.len()]) };
+        let zt = *s.z.last().unwrap();
+        let next_tie = if reserve_on && zt > 1e-9 { Some(rho * s_of(end_level) / (1.0 - phi) / zt) } else { None };
+        let tie_settled = match (tie, next_tie) {
+            (Some(a), Some(b)) => (a - b).abs() <= 1e-3 * b,
+            (None, None) => true,
+            _ => false,
+        };
+        let done = next == levels && next_w.iter().zip(&weights).all(|(a, b)| (a - b).abs() <= 1e-3 * b) && tie_settled;
+        out.end_level = end_level;
+        out.tail_cubes = if reserve_on { rho * s_of(end_level) / (1.0 - phi) } else { 0.0 };
+        sol = Some((s, levels.clone()));
+        if done {
+            break;
+        }
+        // damp the end-mix factor (it can swing when z_T moves a lot between solves)
+        tie = match (tie, next_tie) {
+            (Some(a), Some(b)) if it >= 4 => Some((a * b).sqrt()),
+            (_, b) => b,
+        };
+        levels = next;
+        weights = next_w;
+    }
+    let (s, levels) = sol.unwrap();
+    out.iterations = iters;
+    if iters >= 12 {
+        out.warnings.push(tr_zh("The levels and end mix did not fully settle in 12 re-solves; the last one is shown", "等级和末段配比 12 次重解后还没完全稳定，显示的是最后一次"));
+    }
+    if reserve_on && s.z.last().copied().unwrap_or(0.0) <= 1e-9 {
+        out.warnings.push(tr_zh("The last period makes no cubes, so no reserve is kept", "最后一段不出白糖，所以没留储备"));
+    }
+    out.status = Status::Optimal;
+    let r = reached(&s.z);
+    for (t, per) in periods.iter().enumerate() {
+        let z = s.z[t];
+        let minutes = per.hours * 60.0;
+        let lv = levels[t];
+        out.periods.push(PeriodResult {
+            hours: per.hours,
+            level: lv,
+            cubes_per_min: z,
+            cubes: z * minutes,
+            buildings: s.buildings[t],
+            building_cap: per.building_cap,
+            cap_binding: per.building_cap > 0.0 && s.buildings[t] >= per.building_cap * (1.0 - 1e-6),
+            level_reached: if t == 0 { per.level } else { r[t] },
+            level_end: r[t + 1],
+            mined: s.mined[t].iter().filter(|(_, v)| **v > 1e-9).map(|(i, v)| ItemRate { item: i.clone(), rate: *v }).collect(),
+        });
+        if t > 0 && !ps.follow_research && r[t] < lv.max(6) {
+            out.warnings.push(tr_zh(
+                &format!("Period {}: the cubes made before it only reach level {}, not {lv}", t + 1, r[t]),
+                &format!("第 {} 段：之前造的白糖只够研究到 {} 级，达不到 {lv} 级", t + 1, r[t]),
+            ));
+        }
+        if t > 0 && !ps.follow_research && r[t] > lv + 5 {
+            out.warnings.push(tr_zh(
+                &format!("Period {}: the cubes made before it already reach level {}, above the {lv} entered (stock charged too high)", t + 1, r[t]),
+                &format!("第 {} 段：之前造的白糖已经能研究到 {} 级，高于填的 {lv} 级（储量扣多了）", t + 1, r[t]),
+            ));
+        }
+        out.cubes += z * minutes;
+    }
+    for it in &finite_items {
+        let b = stock_of_item(it);
+        let used = s.used.get(it).copied().unwrap_or(0.0);
+        let reserve = s.reserve.get(it).copied().unwrap_or(0.0);
+        if used + reserve <= 1e-6 {
+            continue;
+        }
+        out.stocks.push(StockUse { item: it.clone(), stock: b, used, reserve, binding: b > 0.0 && used + reserve >= b * (1.0 - 1e-6) });
+    }
+    let share = |s: &StockUse| (s.used + s.reserve) / s.stock.max(1e-9);
+    out.stocks.sort_by(|a, b| share(b).partial_cmp(&share(a)).unwrap_or(std::cmp::Ordering::Equal));
+    out.solve_ms = t0.elapsed().as_secs_f64() * 1e3;
+    out
+}
