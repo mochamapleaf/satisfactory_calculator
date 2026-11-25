@@ -367,6 +367,10 @@ export default function Sidebar({ data, settings: s, setSettings }: Props) {
       <section>
         <h2>{t('Targets', '目标')}</h2>
         <ItemRates data={data} list={s.targets} onChange={targets => set({ targets })} producibleOnly quality={hasQuality} />
+        <label className="row small">
+          <input type="checkbox" checked={s.max_output} onChange={e => set({ max_output: e.target.checked })} />
+          <span>{t('Max output: targets are a ratio, scaled to the most the resource limits allow', '最大产出：目标只当比例，按资源上限放到最大')}</span>
+        </label>
       </section>
 
       {sf && <SpaceElevator set={set} />}

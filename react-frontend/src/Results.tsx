@@ -240,6 +240,16 @@ export default function Results({ data, plan, settings: s, setSettings }: Props)
             </tbody>
           </table></div>
         </div>
+        {(plan.build_materials?.length ?? 0) > 0 && <div>
+          <h3>{t('Build materials', '建造材料')}</h3>
+          <div className="tablewrap"><table>
+            <thead><tr><th>{t('Item', '物品')}</th><th className="num">{t('Total', '总数')}</th></tr></thead>
+            <tbody>
+              {plan.build_materials!.map(l => <tr key={l.item}><td><Icon id={l.item} />{itemName(data, l.item)}</td><td className="num">{fmt(l.rate, 0)}</td></tr>)}
+            </tbody>
+          </table></div>
+          <p className="hint">{t('Parts to place every machine and extractor once (Miner Mk.3 on normal nodes; belts, pipes and poles not counted).', '把所有机器和采矿设备各摆一次所需的零件（采矿机按三级、普通矿点；传送带、管道和电线杆不计）。')}</p>
+        </div>}
       </div>
     </div>
   )

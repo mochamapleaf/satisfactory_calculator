@@ -123,6 +123,8 @@ export interface Settings {
   game: Game
   /** Satisfactory: build generators for the plan's own power (generators as recipes, memo step 8). */
   self_power: boolean
+  /** Max-output mode: the targets are a ratio, scaled up to the resource limits (memo step 8). */
+  max_output: boolean
   /** Satisfactory: highest clock per recipe id, percent (overrides max_clock_percent). */
   recipe_clocks: Record<string, number>
   targets: ItemRate[]
@@ -334,6 +336,7 @@ export interface Plan {
   compute?: ComputeSummary | null
   /** Model size: solver columns and item rows; quality = item@q expansion was used. */
   columns?: number; rows?: number; quality?: boolean
+  build_materials?: RateLine[]
 }
 
 export const emptyPlan = (): Plan => ({
@@ -362,6 +365,7 @@ export const defaultSettings = (game: Game = 'satisfactory'): Settings => ({
   somersloops: {},
   recipe_clocks: {},
   self_power: false,
+  max_output: false,
   // DSP Dark Fog machines are endgame drops: off unless the player enables them
   disabled_buildings: game === 'dsp' ? ['df-negentropy-smelter', 'df-recomposing-assembler', 'df-self-evolution-lab'] : [],
   effects: [],

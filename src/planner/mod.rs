@@ -23,7 +23,7 @@ mod solve_tests;
 mod mixed_belt_tests;
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub use data::GameData;
 
@@ -116,6 +116,9 @@ pub struct PlanSettings {
     /// as recipes, fuel → "Electricity" MW). Solved by raising an Electricity target until it covers the
     /// plan's production + extraction power.
     pub self_power: bool,
+    /// Max-output mode (memo step 8): the targets are a ratio; plan the largest multiple of it that the
+    /// resource limits allow (found on the continuous LP, then solved as asked).
+    pub max_output: bool,
     /// Interface language for names in the plan: "zh" | "en" | "" (game default: Chinese for DSP).
     pub lang: String,
     pub targets: Vec<ItemRate>,
@@ -207,6 +210,7 @@ impl Default for PlanSettings {
         Self {
             game: "satisfactory".into(),
             self_power: false,
+            max_output: false,
             lang: String::new(),
             targets: vec![],
             supplies: vec![],
@@ -413,6 +417,9 @@ pub struct Plan {
     pub rows: usize,
     /// Factorio quality expansion was used (`quality.rs`).
     pub quality: bool,
+    /// Satisfactory: the parts to build every machine and extractor of the plan (memo step 8, 建造材料成本).
+    #[serde(default)]
+    pub build_materials: Vec<RateLine>,
 }
 
 pub const ELECTRICITY: &str = "Electricity";
@@ -430,11 +437,114 @@ pub fn self_powered_settings(data: &GameData, settings: &PlanSettings) -> PlanSe
 /// Waste that cannot be sunk or dumped in game (satisfactory.wiki.gg Uranium_Waste, Plutonium_Waste).
 pub const UNSINKABLE: [&str; 2] = ["Desc_NuclearWaste_C", "Desc_PlutoniumWaste_C"];
 
+/// Max-output mode: the largest scale s of the targets the continuous LP can plan within the
+/// resource limits (doubling, then bisection to 1e-4); None when not in that mode or unbounded.
+pub fn max_output_scale(data: &GameData, settings: &PlanSettings) -> Option<f64> {
+    if !settings.max_output || settings.targets.iter().all(|t| t.rate <= 0.0) {
+        return None;
+    }
+    let mut lp = self_powered_settings(data, settings);
+    lp.integer = false;
+    lp.max_output = false;
+    let ok = |s: f64| {
+        let mut x = lp.clone();
+        x.targets.iter_mut().filter(|t| t.item != ELECTRICITY || settings.targets.iter().any(|u| u.item == ELECTRICITY)).for_each(|t| t.rate *= s);
+        lp::solve(data, &x).status == Status::Optimal
+    };
+    if !ok(1e-6) {
+        return Some(0.0);
+    }
+    let (mut lo, mut hi) = (1e-6, 1.0);
+    while ok(hi) {
+        lo = hi;
+        hi *= 2.0;
+        if hi > 1e9 {
+            return None; // no limit binds (limits ignored or only unlimited resources)
+        }
+    }
+    while (hi - lo) / hi > 1e-4 {
+        let mid = 0.5 * (lo + hi);
+        if ok(mid) {
+            lo = mid
+        } else {
+            hi = mid
+        }
+    }
+    Some(lo)
+}
+
+/// The settings the solver runs: self-power's Electricity row and the max-output scale folded in.
+pub fn prepared_settings(data: &GameData, settings: &PlanSettings) -> (PlanSettings, Option<f64>) {
+    let mut s = self_powered_settings(data, settings);
+    let scale = max_output_scale(data, settings);
+    if let Some(k) = scale {
+        // whole buildings may round some machine down a hair: 0.5 % headroom (MINE)
+        let k = k * 0.995;
+        for t in s.targets.iter_mut().filter(|t| t.item != ELECTRICITY || settings.targets.iter().any(|u| u.item == ELECTRICITY)) {
+            t.rate *= k;
+        }
+        s.max_output = false;
+    }
+    (s, scale)
+}
+
 pub fn plan(data: &GameData, settings: &PlanSettings) -> Plan {
     data::set_lang(&settings.lang);
-    let mut p = lp::solve(data, &self_powered_settings(data, settings));
+    let (s, scale) = prepared_settings(data, settings);
+    let mut p = lp::solve(data, &s);
     finish_power(data, settings, &mut p);
+    finish_max_output(settings, scale, &mut p);
     p
+}
+
+/// Max-output note: the scale found, or why there is none.
+pub fn finish_max_output(settings: &PlanSettings, scale: Option<f64>, p: &mut Plan) {
+    if !settings.max_output {
+        return;
+    }
+    match scale {
+        Some(k) if k > 0.0 => p.warnings.push(data::tr(
+            &format!("Max output: {:.4}× the target ratio, the most the resource limits allow.", k * 0.995),
+            &format!("最大产出：目标比例的 {:.4} 倍，资源上限允许的最大值。", k * 0.995),
+        )),
+        Some(_) => p.warnings.push(data::tr("Max output: nothing can be made within the resource limits.", "最大产出：在资源上限内什么都做不出来。")),
+        None => p.warnings.push(data::tr(
+            "Max output: no resource limit binds (limits ignored?), so the targets are planned as given.",
+            "最大产出：没有资源上限起作用（是否忽略了上限？），按给定目标规划。",
+        )),
+    }
+}
+
+/// Satisfactory bill of materials: building costs (`progression.building_costs`) × the plan's machines
+/// (whole buildings, or rounded up in a continuous plan) and extractors (Miner Mk.3 on normal nodes,
+/// as `extraction_power` assumes; water / oil extractors).
+pub fn bill_of_materials(data: &GameData, p: &Plan) -> Vec<RateLine> {
+    let Some(prog) = data.progression.as_ref() else { return vec![] };
+    let mut n: BTreeMap<String, f64> = BTreeMap::new();
+    for r in &p.recipes {
+        if let Some(x) = data.recipe(&r.id) {
+            *n.entry(x.building.clone()).or_default() += r.machines_ceil.max(r.machines);
+        }
+    }
+    for l in &p.raw {
+        let Some(res) = data.resource(&l.item) else { continue };
+        let b = match l.item.as_str() {
+            "Desc_Water_C" => "Desc_WaterPump_C",
+            "Desc_LiquidOil_C" => "Desc_OilPump_C",
+            "Desc_NitrogenGas_C" => "Desc_FrackingExtractor_C",
+            _ => "Desc_MinerMk3_C",
+        };
+        *n.entry(b.into()).or_default() += (l.rate / res.extractor_rate.max(1e-9) - 1e-9).ceil().max(0.0);
+    }
+    let mut m: BTreeMap<String, f64> = BTreeMap::new();
+    for (b, k) in &n {
+        if let Some(bc) = prog.building_costs.get(b) {
+            for (i, q) in &bc.cost {
+                *m.entry(i.clone()).or_default() += q * k;
+            }
+        }
+    }
+    m.into_iter().filter(|(_, q)| *q > 0.0).map(|(i, q)| RateLine::new(&i, &data.item_name(&i), q)).collect()
 }
 
 /// Notes after a solve: what the generators make against the plan's draw, and nuclear waste left over.
@@ -442,6 +552,7 @@ pub fn finish_power(data: &GameData, settings: &PlanSettings, p: &mut Plan) {
     if p.status != Status::Optimal {
         return;
     }
+    p.build_materials = bill_of_materials(data, p);
     if settings.self_power && data.item(ELECTRICITY).is_some() {
         let made: f64 = p.recipes.iter().flat_map(|r| r.outputs.iter()).filter(|o| o.item == ELECTRICITY).map(|o| o.rate).sum();
         let draw = p.production_power + p.extraction_power;

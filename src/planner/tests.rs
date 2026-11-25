@@ -1031,3 +1031,29 @@ fn speedrun_climbs_the_tech_tree() {
     assert!(slow.total_min > r.total_min);
 }
 
+
+#[test]
+fn max_output_scales_the_targets_to_the_limits() {
+    // memo step 8: the targets are a ratio; plan the most the resource limits allow
+    let d = data();
+    let mut s = settings(&[("Desc_IronPlateReinforced_C", 1.0), ("Desc_Rotor_C", 1.0)]);
+    s.resource_limits.insert("Desc_OreIron_C".into(), Some(600.0));
+    s.max_output = true;
+    s.integer = false;
+    let p = plan(&d, &s);
+    assert_eq!(p.status, Status::Optimal, "{:?}", p.warnings);
+    let iron = p.raw.iter().find(|l| l.item == "Desc_OreIron_C").map(|l| l.rate).unwrap_or(0.0);
+    let rip = p.targets.iter().find(|t| t.item == "Desc_IronPlateReinforced_C").unwrap().rate;
+    let rot = p.targets.iter().find(|t| t.item == "Desc_Rotor_C").unwrap().rate;
+    eprintln!("max output: {rip:.2} RIP + {rot:.2} rotors /min from {iron:.1} iron; {:?}", p.warnings.last());
+    assert!(iron <= 600.0 + 1e-6 && iron > 590.0, "{iron}");
+    assert!((rip - rot).abs() < 1e-6 && rip > 1.0);
+    // bill of materials: a plan with constructors needs their Reinforced Iron Plates and Cables
+    assert!(p.build_materials.iter().any(|l| l.item == "Desc_IronPlateReinforced_C" && l.rate > 0.0), "{:?}", p.build_materials);
+    eprintln!("build materials: {:?}", p.build_materials.iter().map(|l| (&l.name, l.rate)).collect::<Vec<_>>());
+    // whole buildings too
+    s.integer = true;
+    let pi = plan(&d, &s);
+    assert_eq!(pi.status, Status::Optimal, "{:?}", pi.warnings);
+    assert!(pi.raw.iter().find(|l| l.item == "Desc_OreIron_C").map(|l| l.rate).unwrap_or(0.0) <= 600.0 + 1e-6);
+}

@@ -61,11 +61,16 @@ thread_local! {
     static ASKED: std::cell::RefCell<Option<PlanSettings>> = const { std::cell::RefCell::new(None) };
 }
 
-/// Power notes on a plan (self-powered cover, nuclear waste), as `planner::plan` adds them.
+thread_local! {
+    static SCALE: std::cell::Cell<Option<f64>> = const { std::cell::Cell::new(None) };
+}
+
+/// Notes on a plan (self-powered cover, nuclear waste, max-output scale), as `planner::plan` adds them.
 fn finish(mut p: planner::Plan) -> planner::Plan {
     ASKED.with(|a| {
         if let Some(s) = a.borrow().as_ref() {
             planner::finish_power(data(&s.game, &s.dataset), s, &mut p);
+            planner::finish_max_output(s, SCALE.with(|c| c.get()), &mut p);
         }
     });
     p
@@ -105,7 +110,8 @@ pub fn solve_start(settings_json: &str) -> String {
     };
     planner::data::set_lang(&settings.lang);
     ASKED.with(|a| *a.borrow_mut() = Some(settings.clone()));
-    let settings = planner::self_powered_settings(data(&settings.game, &settings.dataset), &settings);
+    let (settings, scale) = planner::prepared_settings(data(&settings.game, &settings.dataset), &settings);
+    SCALE.with(|c| c.set(scale));
     match planner::lp::start(data(&settings.game, &settings.dataset), &settings) {
         planner::lp::Start::Done(p) => serde_json::json!({"done": true, "plan": finish(p)}).to_string(),
         planner::lp::Start::Running(run) => {
