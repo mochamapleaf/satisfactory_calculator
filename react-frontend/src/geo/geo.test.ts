@@ -209,6 +209,9 @@ test('supplied inputs are taken at the base; without them the sweep names what n
   const bad = sweepRun({ targets: { Desc_Motor_C: 10 }, recipeIds: rec, names })
   assert.equal(bad.rows.length, 0)
   assert.match(bad.error!, /Nothing on the map makes Rotor with this plan's recipes/)
+  // memo step 20: the message follows the interface language
+  const zh = sweepRun({ targets: { Desc_Motor_C: 10 }, recipeIds: rec, names: { Desc_Rotor_C: '转子' }, lang: 'zh' })
+  assert.match(zh.error!, /^用本方案的配方，地图上做不出 转子。请改选「基础配方」/)
   const ok = sweepRun({ targets: { Desc_Motor_C: 10 }, recipeIds: rec, supplied: { Desc_Rotor_C: 20.00002 }, fmults: [] })
   assert.equal(ok.error, null); assert.ok(ok.done)
   assert.equal(ok.rows[0].status, 'Optimal')
@@ -349,4 +352,62 @@ test('save import: nodes by id or position, water, tier, HUB, purity', () => {
   const none = summarizeSave({ levels: {} }, nodes)
   assert.equal(none.milestones, 0)
   assert.equal(none.hub, null)
+})
+
+test('save import: the factory as existing amounts per site (memo step 19)', () => {
+  const near = (a: number | undefined, b: number) => assert.ok(a !== undefined && Math.abs(a - b) < 1e-6 * Math.max(1, b), `${a} vs ${b}`)
+  const arc = sitesDoc.arcs[0]
+  const A = sitesDoc.sites.find(s => s.id === arc.a)!, B = sitesDoc.sites.find(s => s.id === arc.b)!
+  const hubSite = sitesDoc.sites.find(s => s.id === sitesDoc.hubs[0].site)!
+  const node = nodes.find(n => n.type === 'node' && A.nodes.includes(n.id) && n.item !== 'Desc_LiquidOil_C')!
+  // a point of a cell: the site centroid lies inside its own 1 km cell
+  const cm = (s: { x: number; y: number }) => ({ x: s.x * 100, y: s.y * 100 })
+  const ref = (p: string) => ({ value: { pathName: `Persistent_Level:PersistentLevel.${p}` } })
+  // a spline from a to b given in local cm with a 90° yaw (rotation about z): local (dx, dy) maps to world (−dy, dx)
+  const seg = (type: string, chain: string, a: { x: number; y: number }, b: { x: number; y: number }, name: string) => {
+    const s2 = Math.SQRT1_2
+    return {
+      typePath: `/Game/X/${type}.${type}_C`, instanceName: `L:P.${name}`,
+      transform: { translation: { ...a, z: 0 }, rotation: { x: 0, y: 0, z: s2, w: s2 } },
+      properties: {
+        mConveyorChainActor: { value: { pathName: chain } },
+        mSplineData: { values: [{ properties: { Location: { value: { x: 0, y: 0, z: 0 } } } },
+          { properties: { Location: { value: { x: b.y - a.y, y: -(b.x - a.x), z: 0 } } } }] },
+      },
+    }
+  }
+  const pa = cm(A), pb = cm(B)
+  const save: ParsedSave = { levels: { L: { objects: [
+    { typePath: '/Game/X/Build_ConstructorMk1.Build_ConstructorMk1_C', instanceName: 'L:P.C1', transform: { translation: pa },
+      properties: { mCurrentRecipe: ref('Recipe_IronPlate_C'), mCurrentPotential: { value: 1.5 } } },
+    { typePath: '/Game/X/Build_ConstructorMk1.Build_ConstructorMk1_C', instanceName: 'L:P.C2', transform: { translation: pa },
+      properties: { mCurrentRecipe: ref('Recipe_FromAMod_C') } },
+    { typePath: '/Game/X/Build_MinerMk2.Build_MinerMk2_C', instanceName: 'L:P.M1', properties: { mExtractableResource: ref(node.id), mCurrentPotential: { value: 2 } } },
+    // chain 1: one Mk.3 crossing A→B (two segments, the second inside B); chain 2: wiggles B→A→B (net B→A… then back): A↔B net 0
+    seg('Build_ConveyorBeltMk3', 'ch1', pa, pb, 'b1'), seg('Build_ConveyorBeltMk3', 'ch1', pb, { x: pb.x + 100, y: pb.y }, 'b2'),
+    seg('Build_ConveyorBeltMk1', 'ch2', pb, pa, 'w1'), seg('Build_ConveyorBeltMk1', 'ch2', pa, pb, 'w2'),
+    seg('Build_PipelineMK2', 'p1', pa, pb, 'p1'),
+    { typePath: '/Game/X/Build_TrainStation.Build_TrainStation_C', instanceName: 'L:P.T1', transform: { translation: cm(hubSite) } },
+  ] } } }
+  const s = summarizeSave(save, nodes, sitesDoc, new Set(['Recipe_IronPlate_C']))
+  const b = s.built!
+  const ex = b.existing
+  assert.equal(ex[`x|Recipe_IronPlate_C|${A.id}`], 1.5)
+  assert.equal(b.unknownRecipes, 1)
+  const mk1 = { impure: 30, normal: 60, pure: 120 }[node.purity]
+  assert.equal(ex[`e|${node.item}|${A.id}`], mk1 * 2 * 2)
+  // credited by chain length / arc length (review H1): ch1 runs A→B plus 1 m inside B
+  const L = sitesDoc.arcs[0].length_m, d = Math.hypot(B.x - A.x, B.y - A.y)
+  near(ex[`b|${A.id}|${B.id}`], 270 * Math.min(1, (d + 1) / L)) // the wiggling Mk.1 chain adds nothing
+  assert.equal(ex[`b|${B.id}|${A.id}`], undefined)
+  near(ex[`bp|${A.id}|${B.id}`], 600 * Math.min(1, d / L))
+  near(ex[`bp|${B.id}|${A.id}`], 600 * Math.min(1, d / L))
+  // a short belt that only straddles the cell line is credited by its length
+  const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }, ux = (B.x - A.x) / d, uy = (B.y - A.y) / d
+  const short = summarizeSave({ levels: { L: { objects: [seg('Build_ConveyorBeltMk5', 'c9', { x: (mid.x - 25 * ux) * 100, y: (mid.y - 25 * uy) * 100 }, { x: (mid.x + 25 * ux) * 100, y: (mid.y + 25 * uy) * 100 }, 's1')] } } }, nodes, sitesDoc)
+  const sv = Object.values(short.built!.existing)
+  assert.ok(sv.length <= 1 && (sv[0] ?? 0) <= 780 * 50 / L + 1e-6, JSON.stringify(short.built!.existing))
+  assert.equal(ex[`h|${hubSite.id}`], 1)
+  assert.deepEqual(b.hubs, [hubSite.id])
+  assert.equal(b.beltCrossings, 1)
 })

@@ -119,9 +119,9 @@ export function perMin(r: GameRecipe): Map<string, number> {
   return a
 }
 
-const MK1_BASE = { impure: 30, normal: 60, pure: 120 }
-const OIL_BASE = { impure: 60, normal: 120, pure: 240 }
-const WELL_BASE = { impure: 30, normal: 60, pure: 120 }
+export const MK1_BASE = { impure: 30, normal: 60, pure: 120 }
+export const OIL_BASE = { impure: 60, normal: 120, pure: 240 }
+export const WELL_BASE = { impure: 30, normal: 60, pure: 120 }
 const MINER_TIERS: [number, number][] = [[8, 4.0], [4, 2.0], [0, 1.0]]
 const OIL_UNLOCK = 5, WELL_UNLOCK = 8, SHARD_TIER = 3
 

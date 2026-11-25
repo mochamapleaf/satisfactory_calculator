@@ -15,6 +15,6 @@ const post = (e: SweepEvent) => (self as unknown as Worker).postMessage(e)
 
 self.onmessage = async (ev: MessageEvent<{ game: GameLite; opts: SweepOptions }>) => {
   let highs
-  try { highs = await loadHighs() } catch (err) { post({ type: 'error', message: `HiGHS could not be loaded: ${err}` }); return }
+  try { highs = await loadHighs() } catch (err) { post({ type: 'error', message: `${ev.data.opts.lang === 'zh' ? 'HiGHS 加载失败：' : 'HiGHS could not be loaded: '}${err}` }); return }
   runSweep(ev.data.game, { sitesDoc: sitesDoc as unknown as SitesDoc, nodes: nodesDoc.nodes as GeoNode[], transport }, highsSolver(highs), ev.data.opts, post)
 }

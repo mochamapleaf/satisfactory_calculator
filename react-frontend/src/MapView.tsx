@@ -4,7 +4,7 @@
 // open hubs runs in a worker on highs-js. Drawn as a plain vector map from node coordinates (no game map images).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { dn, fmt, tierRecipes, type GameData, type Plan } from './solver'
-import { t } from './i18n'
+import { lang, t } from './i18n'
 import { Icon } from './Icon'
 import { haulCosts, stackOf, thresholdBelts, type GeoNode, type Purity, type SitesDoc, type Summary } from './geo/model.ts'
 import type { SweepEvent, SweepMeta, SweepOptions, SweepRow } from './geo/sweep.ts'
@@ -186,7 +186,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
         recipes: data.recipes.map(r => ({ id: r.id, alt: r.alt, building: r.building, in: r.in, out: r.out })),
         resources: data.resources.map(r => ({ item: r.item })),
       },
-      opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, dn(i, data.game, i.name)])) },
+      opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, dn(i, data.game, i.name)])), lang: lang() },
     })
   }
 
@@ -254,7 +254,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
         {run?.solving ? <button onClick={() => stop()}>{t('Stop', '停止')}</button>
           : <button className="primary" disabled={noTargets} onClick={start}>{current && run?.rows.length ? t('Solve again', '重新求解') : t('Plan sites', '规划选址')}</button>}
       </div>
-      <SaveImport p={p} setP={setP} itemName={itemName} />
+      <SaveImport p={p} setP={setP} itemName={itemName} recipes={data.recipes.map(r => r.id)} />
       {noTargets && <p className="muted">{t('Add a target to the plan first.', '请先给方案添加一个目标。')}</p>}
       {supplied && <p className="note small">{t(`Supplied inputs (${Object.keys(suppliedIn).map(itemName).join(', ')}) are taken at the base site, free, up to the rate the plan uses. Choose “base recipes” to make everything from ore.`, `外部供应的输入 (${Object.keys(suppliedIn).map(itemName).join('、')}) 在基地站点免费取用,上限为方案用量。选“基础配方”则全部从原矿做起。`)}</p>}
       {run && !current && run.rows.length > 0 && <p className="note small">{t('The result below is for other inputs (plan or map settings changed). Use “Plan sites” to solve again.', '下面的结果对应其他输入 (方案或地图设置已更改)。点“规划选址”重新求解。')}</p>}
@@ -286,7 +286,7 @@ export default function MapView({ data, plan }: { data: GameData; plan: Plan }) 
           {sol && site && <SiteDetail id={site} sol={sol} itemName={itemName} recipeName={recipeName} onBase={() => setP({ ...p, base: site })} isBase={site === (meta?.base ?? p.base)} />}
           {site && <NodeEditor id={site} p={p} setP={setP} itemName={itemName} />}
           {sol && meta && <Links sol={sol} meta={meta} itemName={itemName} />}
-          <TierPlan data={data} opts={opts} />
+          <TierPlan data={data} opts={opts} saved={p.save?.built ? { name: p.save.session, existing: p.save.built.existing, off: Object.keys(p.save.applied).filter(id => p.save!.applied[id] === 'off') } : null} />
           {run?.done && meta && <p className="hint">{t(`Model: ${fmt(meta.n_vars, 0)} variables (${meta.n_int} integer), ${fmt(meta.n_rows, 0)} rows, ${meta.recipes.length} recipes; ${meta.hubs.length} candidate hubs; Mk.${meta.belt_tier} belts (${meta.belt_cap}/min, ${fmt(meta.belt_oe_km, 0)} OE/km), double track ${fmt(meta.track_oe_km, 0)} OE/km. Sweep ${fmt(run.ms / 1000, 0)} s.`, `模型:${fmt(meta.n_vars, 0)} 个变量 (${meta.n_int} 个整数),${fmt(meta.n_rows, 0)} 行,${meta.recipes.length} 个配方;${meta.hubs.length} 个候选枢纽;Mk.${meta.belt_tier} 传送带 (${meta.belt_cap}/min,${fmt(meta.belt_oe_km, 0)} OE/km),双轨 ${fmt(meta.track_oe_km, 0)} OE/km。扫描耗时 ${fmt(run.ms / 1000, 0)} 秒。`)}</p>}
         </div>
       </div>
@@ -490,11 +490,14 @@ function Legend({ sol, itemName }: { sol: Summary | null; itemName: (id: string)
 /** Multi-period build-out (report G9): the plan grows tier by tier; each period reuses what earlier periods built
  *  (free up to that amount, `BuildOptions.existing`) and pays only for the new part. One solve per period at the
  *  hub limit (no F sensitivity), the targets a share of the plan's. */
-function TierPlan({ data, opts }: { data: GameData; opts: SweepOptions }) {
+function TierPlan({ data, opts, saved }: { data: GameData; opts: SweepOptions; saved: { name: string; existing: Record<string, number>; off: string[] } | null }) {
+  // memo step 19: what of the save's factory the build-out reuses (MINE default: all of it, repurposed)
+  const [fromSave, setFromSave] = useState<'all' | 'logistics' | 'none'>('all')
   const [tiers, setTiers] = useState('4, 6, 8')
   const [shares, setShares] = useState('25, 50, 100')
   type Period = { tier: number; share: number; newOe: number | null; total: number | null; sum: Summary | null; error: string | null; ms: number; status: string | null; gap: number | null }
   const [periods, setPeriods] = useState<Period[]>([])
+  const [startedFrom, setStartedFrom] = useState('')
   const [busy, setBusy] = useState(false)
   // the running period's worker and its promise's resolve (Stop ends both; review: a live watchdog resumed an old run)
   const stopRef = useRef<{ w: Worker; done: () => void } | null>(null)
@@ -525,19 +528,26 @@ function TierPlan({ data, opts }: { data: GameData; opts: SweepOptions }) {
       if (e.type === 'error') res(fail(e.message))
     }
     w.onerror = ev => res(fail(ev.message || 'worker failed'))
-    w.postMessage({ game: game(), opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, dn(i, data.game, i.name)])) } })
+    w.postMessage({ game: game(), opts: { ...o, names: Object.fromEntries(data.items.map(i => [i.id, dn(i, data.game, i.name)])), lang: lang() } })
   })
   const go = async () => {
     const id = ++runId.current
     setBusy(true)
     setPeriods([])
-    let existing: Record<string, number> = {}
+    setStartedFrom(!saved || fromSave === 'none' ? t('Started from nothing.', '从零开始。')
+      : fromSave === 'all' ? t(`Started from save “${saved.name}”, everything reused: its machines and miners are taken off what they make now (that output is not counted), and the nodes it mines are back in use.`, `从存档「${saved.name}」起步，全部沿用：它的机器和矿机改作本方案（它们现在的产出不计），它在开采的矿点重新可用。`)
+        : t(`Started from save “${saved.name}”: its belts, pipes and stations reused.`, `从存档「${saved.name}」起步：沿用它的传送带、管道和车站。`))
+    // reusing the save's miners needs their nodes: lift the save's own “free nodes only” exclusions (review H2)
+    const edits = fromSave === 'all' && saved && opts.nodeEdits ? Object.fromEntries(Object.entries(opts.nodeEdits).filter(([id, v]) => !(v === 'off' && saved.off.includes(id)))) : opts.nodeEdits
+    // memo step 19: start from what the imported save has built
+    let existing: Record<string, number> = !saved || fromSave === 'none' ? {}
+      : Object.fromEntries(Object.entries(saved.existing).filter(([k]) => fromSave === 'all' || /^(b|bp|h)\|/.test(k)))
     let total = 0
     const out: Period[] = []
     for (let i = 0; i < n; i++) {
       const tier = ts[i], share = ss[i] / 100
       const o: SweepOptions = {
-        ...opts, tier, fmults: [], existing: Object.keys(existing).length ? existing : null,
+        ...opts, nodeEdits: edits, tier, fmults: [], existing: Object.keys(existing).length ? existing : null,
         targets: Object.fromEntries(Object.entries(opts.targets).map(([k, v]) => [k, v * share])),
         tierRecipes: tierRecipes(tier),
         supplied: opts.supplied ? Object.fromEntries(Object.entries(opts.supplied).map(([k, v]) => [k, v * share])) : null,
@@ -559,14 +569,21 @@ function TierPlan({ data, opts }: { data: GameData; opts: SweepOptions }) {
   return (
     <details className="tierplan">
       <summary>{t('Build out tier by tier', '按科技层逐期扩张')}</summary>
-      <p className="hint">{t('The plan grows with the tech tiers: each period plans a share of the targets with the recipes and transport of its tier, reuses what earlier periods built for free (old belts and pipes count as the capacity they carry), and pays only for the new part (ore equivalents; mining counts per item/min as in the single plan). Periods are solved one after another, each for its own targets (not looking ahead), at the hub limit, with the time limit per solve. Leaving old infrastructure idle costs nothing; dismantling (materials come back) and its work are not counted. With “this plan’s recipes”, an early tier fails when the plan uses a later recipe: choose base recipes.',
-        '方案随科技层级逐期扩大：每一期按该层级的配方和运输方式规划目标的一部分，前几期建好的东西免费沿用（旧传送带和管道按它们实际的运力算），只为新增部分付费（原矿当量；开采按每分钟物品数计，与单期方案一致）。各期依次求解，每期只看自己的目标（不往后看），按枢纽上限、每次求解的时限。旧设施闲置不收费；拆除（材料返还）和拆除工作量不计。选「本方案的配方」时，若方案用到更高层级的配方，早期会失败：请改选基础配方。')}</p>
+      <p className="hint">{t('The plan grows with the tech tiers: each period plans a share of the targets with the recipes and transport of its tier, reuses what earlier periods built for free (old belts and pipes count as the capacity they carry), and pays only for the new part (ore equivalents; mining counts per item/min as in the single plan). With an imported save, its factory can be the starting point: “reuse everything” treats its machines, miners, belts and pipes between sites and stations at hubs as free to repurpose (what they make now is not counted; tracks and trains are not read); “belts, pipes and stations only” keeps its logistics. Periods are solved one after another, each for its own targets (not looking ahead), at the hub limit, with the time limit per solve. Leaving old infrastructure idle costs nothing; dismantling (materials come back) and its work are not counted. With “this plan’s recipes”, an early tier fails when the plan uses a later recipe: choose base recipes.',
+        '方案随科技层级逐期扩大：每一期按该层级的配方和运输方式规划目标的一部分，前几期建好的东西免费沿用（旧传送带和管道按它们实际的运力算），只为新增部分付费（原矿当量；开采按每分钟物品数计，与单期方案一致）。导入存档后可以从存档的工厂起步：「全部沿用」把它的机器、矿机、站点间的传送带和管道、枢纽上的车站当作可以免费改作本方案（它们现在的产出不计；铁轨和火车没有读取）；「只沿用传送带、管道和车站」只保留物流。各期依次求解，每期只看自己的目标（不往后看），按枢纽上限、每次求解的时限。旧设施闲置不收费；拆除（材料返还）和拆除工作量不计。选「本方案的配方」时，若方案用到更高层级的配方，早期会失败：请改选基础配方。')}</p>
       <div className="row small">
         <label>{t('Tiers', '各期层级')} <input value={tiers} onChange={e => setTiers(e.target.value)} aria-label={t('Tiers of the periods', '各期层级')} /></label>
         <label>{t('Share of targets %', '目标比例 %')} <input value={shares} onChange={e => setShares(e.target.value)} aria-label={t('Share of the targets per period', '各期目标比例')} /></label>
+        {saved && <label>{t(`Save “${saved.name}”`, `存档「${saved.name}」`)}
+          <select value={fromSave} disabled={busy} aria-label={t('What of the save to reuse', '沿用存档里的什么')} onChange={e => setFromSave(e.target.value as typeof fromSave)}>
+            <option value="all">{t('reuse everything (machines repurposed)', '全部沿用（机器改作本方案）')}</option>
+            <option value="logistics">{t('reuse belts, pipes and stations only', '只沿用传送带、管道和车站')}</option>
+            <option value="none">{t('start from nothing', '从零开始')}</option>
+          </select></label>}
         {!busy && <button className="tabbtn" disabled={n === 0} onClick={() => void go()}>{t(`Plan ${n} period${n === 1 ? '' : 's'}`, `规划 ${n} 期`)}</button>}
         {busy && <button className="tabbtn" onClick={stop}>{t('Stop', '停止')}</button>}
       </div>
+      {periods.length > 0 && startedFrom && <p className="small muted">{startedFrom}</p>}
       {periods.length > 0 && <div className="tablewrap"><table className="small">
         <thead><tr><th>{t('Period', '期')}</th><th>{t('Tier', '层级')}</th><th className="num">{t('Targets', '目标')}</th><th className="num">{t('New build OE', '新建 OE')}</th><th className="num">{t('Total OE', '累计 OE')}</th><th>{t('Hubs', '枢纽')}</th><th className="num">{t('Belts', '传送带')}</th></tr></thead>
         <tbody>{periods.map((q, i) => <tr key={i}>
@@ -638,7 +655,7 @@ function dropSave(p: GeoPrefs): GeoPrefs {
 /** Import a .sav (report G10, memo step 18): tier, base at the HUB, node purity a modded world stores, and the
  *  nodes already mined (shown on the map; one click leaves them out of the plan). Parsed in geo/saveWorker.ts, which
  *  loads the parser only when a file is chosen. */
-function SaveImport({ p, setP, itemName }: { p: GeoPrefs; setP: React.Dispatch<React.SetStateAction<GeoPrefs>>; itemName: (id: string) => string }) {
+function SaveImport({ p, setP, itemName, recipes }: { p: GeoPrefs; setP: React.Dispatch<React.SetStateAction<GeoPrefs>>; itemName: (id: string) => string; recipes: string[] }) {
   const [busy, setBusy] = useState<number | null>(null) // parse progress 0..1 while reading
   const [error, setError] = useState<string | null>(null)
   const [sizeMb, setSizeMb] = useState(0)
@@ -684,7 +701,7 @@ function SaveImport({ p, setP, itemName }: { p: GeoPrefs; setP: React.Dispatch<R
         })
       }
       w.onerror = ev => { end(); setError(ev.message || t('The save could not be read', '读不了这个存档')) }
-      w.postMessage({ buf, name: f.name }, [buf])
+      w.postMessage({ buf, name: f.name, recipes }, [buf])
     }).catch(err => { end(); setError(String((err as Error)?.message ?? err)) })
   }
   const mined = s ? [...new Set(s.extractors.filter(e => !NOT_MINING.has(e.building)).map(e => e.node))] : []
@@ -730,6 +747,7 @@ function SaveImport({ p, setP, itemName }: { p: GeoPrefs; setP: React.Dispatch<R
           <tr><td>{t('Base', '基地')}</td><td>{s.hub ? t(`HUB at ${fmt(s.hub.x / 1000, 2)}, ${fmt(s.hub.y / 1000, 2)} km → site ${s.hubSite}`, `HUB 在 ${fmt(s.hub.x / 1000, 2)}, ${fmt(s.hub.y / 1000, 2)} km → 站点 ${s.hubSite}`) : t('no HUB in the save', '存档里没有 HUB')}</td></tr>
           <tr><td>{t('On nodes', '矿点上的建筑')}</td><td>{byBuilding.map(([b, n]) => `${EXTRACTOR_NAME[b] ? t(...EXTRACTOR_NAME[b]) : b} ×${n}`).join(t(', ', '，')) || '—'}{s.waterPumps ? t(`; ${s.waterPumps} water pumps (not on nodes)`, `；${s.waterPumps} 台抽水机（不在矿点上）`) : ''}{s.unmatched ? t(`; ${s.unmatched} on nodes this map does not have (older game version)`, `；${s.unmatched} 台所在矿点本地图没有（旧版本游戏）`) : ''}</td></tr>
           <tr><td>{t('Nodes mined', '在开采的矿点')}</td><td>{byItem.map(([i, n]) => `${itemName(i)} ${n}`).join(t(', ', '，')) || '—'}</td></tr>
+          {s.built && <tr><td>{t('Factory', '已建工厂')}</td><td>{t(`${fmt(s.built.machines, 0)} machines (${s.built.recipes} recipes), mining ${fmt(s.built.miningRate, 0)}/min, ${s.built.beltCrossings} belts and ${s.built.pipeCrossings} pipes between sites, train stations at hubs ${s.built.hubs.join(', ') || '—'}; used by “Build out tier by tier” below`, `${fmt(s.built.machines, 0)} 台机器（${s.built.recipes} 种配方），开采 ${fmt(s.built.miningRate, 0)}/分钟，站点之间 ${s.built.beltCrossings} 条传送带、${s.built.pipeCrossings} 条管道，枢纽 ${s.built.hubs.join('、') || '—'} 有火车站；用于下面的「按科技层逐期扩张」`)}{s.built.unknownRecipes ? t(`; ${s.built.unknownRecipes} machines with recipes not in the game data left out`, `；${s.built.unknownRecipes} 台机器的配方不在游戏数据里，未计`) : ''}</td></tr>}
           <tr><td>{t('Purity from the save', '存档里的纯度')}</td><td>{Object.keys(s.purity).length ? t(`${Object.keys(s.purity).length} nodes differ from the map (applied as node edits)`, `${Object.keys(s.purity).length} 个矿点和地图不同（已作为矿点修改应用）`) : t('none (as on the map)', '无（按地图）')}</td></tr>
         </tbody></table>
         {mined.length > 0 && (excluded < mined.length

@@ -21,6 +21,8 @@ export interface SweepOptions {
   supplied?: Record<string, number> | null
   /** display names for messages (item id -> name) */
   names?: Record<string, string>
+  /** language of the messages (not part of the solve key, like `names`) */
+  lang?: 'en' | 'zh'
   /** world variant (report G10): all resource nodes at one purity, and per-node edits (purity or 'off') */
   purity?: 'game' | Purity
   nodeEdits?: Record<string, Purity | 'off'>
@@ -50,6 +52,7 @@ export interface GeoInput { sitesDoc: SitesDoc; nodes: GeoNode[]; transport: unk
 export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: SweepOptions, emit: (e: SweepEvent) => void) {
   const t0 = performance.now()
   const nm = (k: string) => o.names?.[k] ?? k
+  const tz = (en: string, zh: string) => (o.lang === 'zh' ? zh : en)
   const per = (v: number) => (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10)
   try {
     sweep(t0, nm, per)
@@ -59,7 +62,7 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
 
   function sweep(t0: number, nm: (k: string) => string, per: (v: number) => number) {
   const docHubs = geo.sitesDoc.hubs.map(h => h.site)
-  if (!geo.sitesDoc.sites.some(s => s.id === o.base)) throw new Error(`Unknown base site ${o.base}.`)
+  if (!geo.sitesDoc.sites.some(s => s.id === o.base)) throw new Error(tz(`Unknown base site ${o.base}.`, `未知的基地站点 ${o.base}。`))
   const hubs = docHubs.includes(o.base) ? docHubs : hubsFor(geo.sitesDoc, o.base)
   // tech tier (report G9): only recipes unlocked by then
   const atTier = o.tierRecipes ? new Set(o.tierRecipes) : null
@@ -78,10 +81,17 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
     closure = recipes ?? recipeClosure(d, o.targets)
   } catch (e) {
     // the base recipes of this tier make nothing for a target (plastic before tier 5)
-    throw new Error(`${e instanceof Error ? e.message : String(e)}${atTier ? ` (tier ${o.tier}). Nothing on the map makes it with the recipes unlocked so far: only the recipes unlocked by then count, a higher tier may make it.` : ''}`)
+    const msg = e instanceof Error ? e.message : String(e)
+    const item = /^no recipe makes (.+)$/.exec(msg)?.[1]
+    const what = item ? tz(`No recipe makes ${nm(item)}`, `没有配方能做 ${nm(item)}`) : msg
+    throw new Error(`${what}${atTier ? tz(` (tier ${o.tier}). Nothing on the map makes it with the recipes unlocked so far: only the recipes unlocked by then count, a higher tier may make it.`, `（层级 ${o.tier}）。用目前解锁的配方，地图上做不出来：只算到这一层级为止解锁的配方，更高层级可能可以。`) : ''}`)
   }
   const lost = unmakeable(d, closure, o.targets, supplied)
-  if (lost.length) throw new Error(`Nothing on the map makes ${lost.map(nm).join(', ')} with ${o.recipeIds ? "this plan's recipes" : 'the base recipes'}. ${o.recipeIds ? 'Choose “base recipes”, or change the plan.' : ''}${atTier ? ` At tier ${o.tier} only the recipes unlocked by then count: a higher tier may make it.` : ''}`.trim())
+  if (lost.length) {
+    throw new Error(tz(
+      `Nothing on the map makes ${lost.map(nm).join(', ')} with ${o.recipeIds ? "this plan's recipes" : 'the base recipes'}. ${o.recipeIds ? 'Choose “base recipes”, or change the plan.' : ''}${atTier ? ` At tier ${o.tier} only the recipes unlocked by then count: a higher tier may make it.` : ''}`.trim(),
+      `用${o.recipeIds ? '本方案的配方' : '基础配方'}，地图上做不出 ${lost.map(nm).join('、')}。${o.recipeIds ? '请改选「基础配方」，或修改方案。' : ''}${atTier ? `在层级 ${o.tier} 只算到这一层级为止解锁的配方：更高层级可能可以。` : ''}`))
+  }
   // ore equivalents of belt / rail materials price construction with every recipe (they are prices,
   // not what this tier can make: aluminium casing is tier 7)
   const oe = oreEquivalents(atTier ? new Data(game, geo.sitesDoc, nodes, geo.transport, hubs) : d, materials(), solve)
@@ -164,8 +174,10 @@ export function runSweep(game: GameLite, geo: GeoInput, solve: LpSolve, o: Sweep
         let short: [string, number, number][] = []
         try { short = rawShortfalls(d, aggregateGross(d, recs, r.idx.A, o.targets, r.meta.items, solve, supplied), o.tier, r.meta.belt_cap, r.meta.pipe_cap) } catch { /* no location-free plan either */ }
         throw new Error(short.length
-          ? `The map cannot supply this plan at tier ${o.tier}: ${short.map(([k, q, h]) => `${nm(k)} ${per(q)}/min needed, ${per(h)}/min from all nodes`).join('; ')}.`
-          : `No siting satisfies this plan at tier ${o.tier}: the nodes cannot supply it (a resource is locked at this tier, or its nodes are too small).`)
+          ? tz(`The map cannot supply this plan at tier ${o.tier}: ${short.map(([k, q, h]) => `${nm(k)} ${per(q)}/min needed, ${per(h)}/min from all nodes`).join('; ')}.`,
+            `层级 ${o.tier} 时地图供不起这个方案：${short.map(([k, q, h]) => `${nm(k)} 需要 ${per(q)}/分钟，所有矿点共 ${per(h)}/分钟`).join('；')}。`)
+          : tz(`No siting satisfies this plan at tier ${o.tier}: the nodes cannot supply it (a resource is locked at this tier, or its nodes are too small).`,
+            `层级 ${o.tier} 时没有可行的选址：矿点供不起（某种资源在这一层级还没解锁，或矿点太小）。`))
       }
       if (obj !== null) env = env === null ? obj : Math.min(env, obj)
       const row = rowOf(p, 1, r.meta.F, r.res, r.summary, env)
