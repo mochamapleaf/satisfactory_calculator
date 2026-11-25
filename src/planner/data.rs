@@ -397,8 +397,11 @@ impl GameData {
     pub fn building(&self, id: &str) -> Option<&Building> {
         self.buildings.iter().find(|b| b.id == id)
     }
+    /// The raw resource of `item`; `<ore>#vein` (ore still in the ground, dug by quality-mining drills,
+    /// `quality.rs`) is the same resource as `<ore>`.
     pub fn resource(&self, item: &str) -> Option<&Resource> {
-        self.resources.iter().find(|r| r.item == item)
+        let base = item.strip_suffix(VEIN).unwrap_or(item);
+        self.resources.iter().find(|r| r.item == base)
     }
     /// Lookup an item id by id or (case-insensitive) display name.
     pub fn resolve_item(&self, key: &str) -> Option<&Item> {
@@ -436,6 +439,9 @@ impl GameData {
     }
     /// Display name of an item id, with its quality for `x@q` ids ("Iron gear wheel ★legendary").
     pub fn item_name(&self, id: &str) -> String {
+        if let Some(ore) = id.strip_suffix(VEIN) {
+            return format!("{}{}", self.item_name(ore), tr(" (in the ground)", "（地下矿脉）"));
+        }
         let (base, q) = super::quality::split(id);
         let n = self.item(base).map(|i| self.pick(&i.name, &i.name_zh)).unwrap_or(base);
         if q == 0 {
@@ -495,3 +501,6 @@ pub fn set_lang(lang: &str) {
         _ => 0,
     }));
 }
+
+/// Suffix of an ore still in the ground (quality mining).
+pub const VEIN: &str = "#vein";

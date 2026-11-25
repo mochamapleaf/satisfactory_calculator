@@ -67,6 +67,8 @@ export function qualityNames(data: GameData): string[] {
 }
 /** Item name with its quality ("Iron gear wheel ★legendary"). */
 export function itemName(data: GameData, id: string): string {
+  // ore still in the ground, dug by quality-mining drills (data.rs VEIN)
+  if (id.endsWith('#vein')) return `${itemName(data, id.slice(0, -5))}${t(' (in the ground)', '（地下矿脉）')}`
   const [base, q] = qsplit(id)
   const it = data.items.find(i => i.id === base)
   const n = dn(it, data.game, base)

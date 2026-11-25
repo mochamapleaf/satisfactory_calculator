@@ -1122,4 +1122,13 @@ fn quality_mining_lowers_ore_per_legendary_plate() {
     eprintln!("iron ore for 10 legendary plates/min: {:.0} without quality mining, {:.0} with; drills {:?}", ore(&p0), ore(&p1), drills);
     assert!(ore(&p1) <= ore(&p0) * (1.0 + 1e-6));
     assert!(!drills.is_empty(), "quality mining should pay off for legendary plates");
+    // drills only dig the vein: supplied normal ore is never rerolled (review H3)
+    let mut sup = s.clone();
+    sup.supplies = vec![ItemRate { item: "iron-ore".into(), rate: 100000.0 }];
+    let ps = plan(&d, &sup);
+    let vein: f64 = ps.raw.iter().filter(|l| l.item.ends_with("#vein")).map(|l| l.rate).sum();
+    let drilled: f64 = ps.recipes.iter().filter(|r| r.id.starts_with("quality-mining")).flat_map(|r| r.inputs.iter()).map(|l| l.rate).sum();
+    assert!((vein - drilled).abs() < 1e-6 * (1.0 + drilled), "{vein} vs {drilled}");
+    // asteroid chunks are not drilled
+    assert!(p1.recipes.iter().all(|r| !r.id.contains("asteroid")));
 }
