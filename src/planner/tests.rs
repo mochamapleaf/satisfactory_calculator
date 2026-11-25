@@ -999,9 +999,18 @@ fn speedrun_climbs_the_tech_tree() {
             s.tier, s.name, s.buildings, s.miners, s.build_min, s.produce_min, s.wait_min, s.end_min, s.total_buildings);
     }
     assert_eq!(r.status, Status::Optimal);
-    // every milestone up to tier 9 and the five phases
+    // nothing infeasible (review: Hazmat Suit needed the MAM Polyester Fabric alternate)
+    assert!(r.warnings.is_empty(), "{:?}", r.warnings);
+    eprintln!("skipped as not needed: {:?}", r.skipped);
+    // the five phases are all there; with every milestone forced, all 42 + 5 steps
+    assert_eq!(r.stages.iter().filter(|s| s.kind == "phase").count(), 5);
+    let all = speedrun(&d, &SpeedrunSettings { needed_only: false, ..Default::default() });
     let n_ms = d.progression.as_ref().unwrap().milestones.len();
-    assert!(r.stages.len() + r.warnings.len() >= n_ms + 5, "{} stages", r.stages.len());
+    eprintln!("all milestones: {} steps, {:.1} h; {:?}", all.stages.len(), all.total_min / 60.0, all.warnings);
+    assert_eq!(all.stages.len(), n_ms + 5);
+    assert!(all.total_min >= r.total_min);
+    // power: generators appear once they unlock
+    assert!(r.stages.iter().any(|s| s.power_mw > 0.0));
     // time only goes forward
     for w in r.stages.windows(2) {
         assert!(w[1].start_min >= w[0].end_min - 1e-9 && w[1].end_min >= w[1].start_min);
@@ -1011,26 +1020,3 @@ fn speedrun_climbs_the_tech_tree() {
     assert!(slow.total_min > r.total_min);
 }
 
-#[test]
-#[ignore]
-fn dbg_speedrun_first() {
-    let d = data();
-    let prog = d.progression.as_ref().unwrap();
-    let m = prog.milestones.iter().find(|m| m.name == "Base Building").unwrap();
-    eprintln!("{:?}", m.cost);
-    let mut allowed: std::collections::BTreeSet<String> = prog.tutorial_recipes.iter().cloned().collect();
-    for r in ["Recipe_IngotIron_C", "Recipe_IronPlate_C", "Recipe_IronRod_C"] { allowed.insert(r.into()); }
-    let mut s = settings(&m.cost.iter().map(|(i, q)| (i.as_str(), *q)).collect::<Vec<_>>());
-    s.integer = false;
-    s.disabled_recipes = d.recipes.iter().filter(|r| !allowed.contains(&r.id)).map(|r| r.id.clone()).collect();
-    let p = plan(&d, &s);
-    eprintln!("{:?} {:?}", p.status, p.warnings);
-    s.objective = Objective::Buildings;
-    s.cost = Objective::Buildings.preset();
-    s.targets.iter_mut().for_each(|t| t.rate /= 30.0);
-    let p = plan(&d, &s);
-    eprintln!("buildings: {:?} {:?}", p.status, p.warnings);
-    s.lang = "zh".into();
-    let p = plan(&d, &s);
-    eprintln!("zh: {:?} {:?}", p.status, p.warnings);
-}

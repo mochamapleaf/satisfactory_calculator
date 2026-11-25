@@ -36,13 +36,19 @@ pub struct SpeedrunSettings {
     pub elevator: bool,
     /// Report how far the climb gets in this many hours (0 = no limit line).
     pub hours: f64,
+    /// Skip milestones the Space Elevator parts do not need (equipment, vehicles, …), as a speedrun does
+    /// (review: forcing all 42 is not a speedrun).
+    pub needed_only: bool,
+    /// Build generators for each step's power once a generator is unlocked (before that: hand-fed burners,
+    /// not counted).
+    pub power: bool,
     /// UI language for names ("zh" | "en").
     pub lang: String,
 }
 
 impl Default for SpeedrunSettings {
     fn default() -> Self {
-        Self { up_to_tier: 9, place_s: 25.0, wire_s: 20.0, elevator: true, hours: 0.0, lang: String::new() }
+        Self { up_to_tier: 9, place_s: 25.0, wire_s: 20.0, elevator: true, hours: 0.0, needed_only: true, power: true, lang: String::new() }
     }
 }
 
@@ -74,6 +80,11 @@ pub struct Stage {
     pub total_buildings: f64,
     /// Recipes this stage unlocks, by name.
     pub unlocks: Vec<String>,
+    /// What the new factories run: recipe name and machines (continuous), and the new raw input per minute.
+    pub recipes: Vec<StageBuild>,
+    pub raw: Vec<ItemRate>,
+    /// New generators' output, MW (0 when power is off or no generator is unlocked yet).
+    pub power_mw: f64,
     pub note: String,
 }
 
@@ -83,8 +94,11 @@ pub struct SpeedrunReport {
     pub stages: Vec<Stage>,
     pub total_min: f64,
     pub total_buildings: f64,
-    /// Stages done within `hours` (when set).
+    /// Stages done within `hours` (when set), and the last one.
     pub done_in_hours: Option<usize>,
+    pub reached: Option<String>,
+    /// Milestones left out as not needed for the Space Elevator (`needed_only`).
+    pub skipped: Vec<String>,
     pub solve_ms: f64,
     pub warnings: Vec<String>,
 }
@@ -121,6 +135,9 @@ fn extractor(item: &str, unlocked: &BTreeSet<String>) -> (f64, &'static str) {
 }
 
 struct Trial {
+    recipes: Vec<StageBuild>,
+    raw: Vec<ItemRate>,
+    power_mw: f64,
     tau: f64,
     total: f64,
     build_min: f64,
@@ -140,7 +157,8 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
         out.warnings.push(super::data::tr("No tech progression in this game's data.", "这个游戏的数据里没有科技树。"));
         return out;
     };
-    let sec = (ss.place_s.max(0.0) + ss.wire_s.max(0.0)) / 60.0; // minutes per building
+    // minutes per building; at least 1 s (0 made the factory size unbounded, review)
+    let sec = (ss.place_s.max(0.0) + ss.wire_s.max(0.0)).max(1.0) / 60.0;
     let mut unlocked: BTreeSet<String> = prog.tutorial_recipes.iter().cloned().chain(START.iter().map(|s| s.to_string())).collect();
     // byproduct handling recipes come with their machines: allowed whenever the machine's other recipes are
     let always: BTreeSet<String> = data
@@ -189,6 +207,47 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
             }
         }
     }
+    // items the Space Elevator parts need, through every standard and MAM recipe (any tier)
+    if ss.needed_only && ss.elevator {
+        let mut need: BTreeSet<String> = PHASES.iter().flat_map(|p| p.iter().map(|(i, _)| i.to_string())).collect();
+        let prod: Vec<&super::data::Recipe> =
+            data.recipes.iter().filter(|r| !r.generator && (!r.alt || prog.mam_recipes.contains(&r.id))).collect();
+        loop {
+            let n = need.len();
+            for r in &prod {
+                if r.outputs.iter().any(|(i, _)| need.contains(i)) {
+                    need.extend(r.inputs.iter().map(|(i, _)| i.clone()));
+                }
+            }
+            if need.len() == n {
+                break;
+            }
+        }
+        // buildings those recipes run in, extractors and generators (their build recipes)
+        let mut builds: BTreeSet<String> = BTreeSet::new();
+        for r in prod.iter().filter(|r| r.outputs.iter().any(|(i, _)| need.contains(i))) {
+            if let Some(bc) = prog.building_costs.get(&r.building) {
+                builds.insert(bc.recipe.clone());
+            }
+        }
+        for (b, bc) in &prog.building_costs {
+            if b.starts_with("Desc_Miner") || b.contains("Pump") || b.contains("Fracking") || b.starts_with("Desc_Generator") {
+                builds.insert(bc.recipe.clone());
+            }
+        }
+        let useful = |m: &Milestone| {
+            m.recipes.iter().any(|r| {
+                builds.contains(r) || r == "Recipe_Mam_C" || data.recipe(r).is_some_and(|x| x.outputs.iter().any(|(i, _)| need.contains(i)))
+            })
+        };
+        ms.retain(|m| {
+            let keep = useful(m);
+            if !keep {
+                out.skipped.push(m.name.clone());
+            }
+            keep
+        });
+    }
     let mut defs: Vec<StageDef> = vec![];
     let mut phase_done = 0usize;
     for m in &ms {
@@ -231,6 +290,15 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
         // parts the unlocked recipes make; others (Portable Miner: Equipment Workshop) count as hand-crafted
         let made_by_machine: BTreeSet<&str> =
             data.recipes.iter().filter(|r| allowed.contains(&r.id)).flat_map(|r| r.outputs.iter().map(|(i, _)| i.as_str())).collect();
+        // generators whose building is unlocked (their build recipe), for the step's own power
+        let gens: Vec<String> = data
+            .recipes
+            .iter()
+            .filter(|r| r.generator && prog.building_costs.get(&r.building).is_some_and(|bc| unlocked.contains(&bc.recipe)))
+            .map(|r| r.id.clone())
+            .collect();
+        let power_on = ss.power && !gens.is_empty();
+        let disabled: Vec<String> = disabled.into_iter().filter(|r| !(power_on && gens.contains(r))).collect();
         let base = PlanSettings {
             game: "satisfactory".into(),
             objective: Objective::Buildings,
@@ -238,6 +306,9 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
             integer: false,
             disabled_recipes: disabled,
             allow_all_alternates: false,
+            // MAM alternates (Polyester Fabric for the Gas Filter: Fabric needs hand-gathered Mycelia)
+            enabled_alternates: allowed.iter().filter(|r| data.recipe(r).is_some_and(|x| x.alt)).cloned().collect(),
+            self_power: power_on,
             lang: ss.lang.clone(),
             ..Default::default()
         };
@@ -253,7 +324,13 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
                 let mut s = base.clone();
                 s.targets = want.iter().map(|(i, q)| ItemRate { item: i.clone(), rate: q / tau }).collect();
                 s.supplies = factory.iter().filter(|(_, r)| **r > 1e-9).map(|(i, r)| ItemRate { item: i.clone(), rate: *r }).collect();
-                let p = plan(data, &s);
+                let mut p = plan(data, &s);
+                if p.status != Status::Optimal && s.self_power {
+                    // no generator whose fuel these recipes can make (the biomass burner burns gathered
+                    // leaves / wood): power by hand-fed burners, not counted
+                    s.self_power = false;
+                    p = plan(data, &s);
+                }
                 if p.status != Status::Optimal {
                     return None;
                 }
@@ -283,7 +360,11 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
                     }
                 }
                 let build_min = (buildings + miners) * sec;
+                let power_mw = p.recipes.iter().flat_map(|r| r.outputs.iter()).filter(|o| o.item == super::ELECTRICITY).map(|o| o.rate).sum();
                 last = Some(Trial {
+                    recipes: p.recipes.iter().map(|r| StageBuild { building: r.name.clone(), count: r.machines }).collect(),
+                    raw: p.raw.iter().map(|l| ItemRate { item: l.item.clone(), rate: l.rate }).collect(),
+                    power_mw,
                     tau,
                     total: build_min + tau,
                     build_min,
@@ -291,7 +372,7 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
                     miners,
                     build,
                     supplies_used: p.supplied.iter().map(|l| (l.item.clone(), l.rate)).collect(),
-                    made: s.targets.clone(),
+                    made: s.targets.iter().filter(|t| t.item != super::ELECTRICITY).cloned().collect(),
                 });
             }
             last
@@ -391,6 +472,9 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
             end_min: submit,
             total_buildings,
             unlocks,
+            recipes: t.recipes,
+            raw: t.raw,
+            power_mw: t.power_mw,
             note: String::new(),
         });
     }
@@ -398,7 +482,9 @@ pub fn speedrun(data: &GameData, ss: &SpeedrunSettings) -> SpeedrunReport {
     out.total_min = clock;
     out.total_buildings = total_buildings;
     if ss.hours > 0.0 {
-        out.done_in_hours = Some(out.stages.iter().filter(|s| s.end_min <= ss.hours * 60.0 + 1e-9).count());
+        let done: Vec<&Stage> = out.stages.iter().filter(|s| s.end_min <= ss.hours * 60.0 + 1e-9).collect();
+        out.done_in_hours = Some(done.len());
+        out.reached = done.last().map(|s| s.name.clone());
     }
     out.solve_ms = t0.elapsed().as_secs_f64() * 1e3;
     out

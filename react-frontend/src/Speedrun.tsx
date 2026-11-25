@@ -10,10 +10,11 @@ interface Stage {
   buildings: number; miners: number; build: { building: string; count: number }[]
   build_min: number; produce_min: number; wait_min: number; start_min: number; end_min: number
   total_buildings: number; unlocks: string[]; note: string
+  recipes: { building: string; count: number }[]; raw: ItemRate[]; power_mw: number
 }
-interface Report { status: string; stages: Stage[]; total_min: number; total_buildings: number; done_in_hours: number | null; solve_ms: number; warnings: string[]; error?: string }
-interface Opts { up_to_tier: number; place_s: number; wire_s: number; elevator: boolean; hours: number }
-const DEFAULTS: Opts = { up_to_tier: 9, place_s: 25, wire_s: 20, elevator: true, hours: 8 }
+interface Report { status: string; stages: Stage[]; total_min: number; total_buildings: number; done_in_hours: number | null; reached: string | null; skipped: string[]; solve_ms: number; warnings: string[]; error?: string }
+interface Opts { up_to_tier: number; place_s: number; wire_s: number; elevator: boolean; hours: number; needed_only: boolean; power: boolean }
+const DEFAULTS: Opts = { up_to_tier: 9, place_s: 25, wire_s: 20, elevator: true, hours: 8, needed_only: true, power: true }
 const KEY = 'speedrun.v1'
 
 let worker: Worker | null = null
@@ -33,7 +34,10 @@ function run(payload: unknown): Promise<Report> {
 }
 
 /** 1:05 h, or 25 min. */
-const hm = (min: number) => (min >= 60 ? `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, '0')} h` : `${fmt(min, 0)} min`)
+const hm = (min: number) => {
+  const m = Math.round(min)
+  return m >= 60 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} h` : `${fmt(min, 0)} min`
+}
 
 export default function Speedrun({ data }: { data: GameData }) {
   const [o, setO] = useState<Opts>(() => {
@@ -69,6 +73,8 @@ export default function Speedrun({ data }: { data: GameData }) {
         <label>{t('Seconds to place a building', '每个建筑摆放秒数')}<input type="number" min={0} max={600} value={o.place_s} onChange={e => set({ place_s: Math.max(0, +e.target.value || 0) })} /></label>
         <label>{t('Seconds of belts / power per building', '每个建筑拉线秒数')}<input type="number" min={0} max={600} value={o.wire_s} onChange={e => set({ wire_s: Math.max(0, +e.target.value || 0) })} /></label>
         <label className="check"><input type="checkbox" checked={o.elevator} onChange={e => set({ elevator: e.target.checked })} /> {t('Space Elevator phases', '太空电梯阶段')}</label>
+        <label className="check"><input type="checkbox" checked={o.needed_only} onChange={e => set({ needed_only: e.target.checked })} /> {t('Only milestones the Space Elevator needs', '只做太空电梯需要的里程碑')}</label>
+        <label className="check"><input type="checkbox" checked={o.power} onChange={e => set({ power: e.target.checked })} /> {t('Build power plants once unlocked', '解锁后自建发电厂')}</label>
         <label>{t('Show what fits in (hours)', '看几小时内能爬到哪')}<input type="number" min={0} max={1000} step={1} value={o.hours} onChange={e => set({ hours: Math.max(0, +e.target.value || 0) })} /></label>
         <button onClick={go} disabled={busy}>{busy ? t('Planning…', '规划中…') : t('Plan the climb', '规划爬科技')}</button>
       </div>
@@ -78,9 +84,10 @@ export default function Speedrun({ data }: { data: GameData }) {
         <div className="cards">
           <div className="card"><span className="big">{hm(r.total_min)}</span><span className="muted">{t(`to finish (${r.stages.length} steps)`, `爬完（${r.stages.length} 步）`)}</span></div>
           <div className="card"><span className="big">{num(r.total_buildings)}</span><span className="muted">{t('buildings at the end', '最后的建筑数')}</span></div>
-          {r.done_in_hours !== null && <div className="card"><span className="big">{r.done_in_hours}</span><span className="muted">{t(`steps done in ${o.hours} h`, `${o.hours} 小时内完成的步数`)}</span></div>}
+          {r.done_in_hours !== null && <div className="card"><span className="big">{r.done_in_hours}</span><span className="muted">{t(`steps done in ${o.hours} h${r.reached ? ` (up to ${r.reached})` : ''}`, `${o.hours} 小时内完成的步数${r.reached ? `（到「${r.reached}」）` : ''}`)}</span></div>}
         </div>
         {r.warnings.map((w, i) => <p key={i} className="warn">{w}</p>)}
+        {r.skipped.length > 0 && <p className="small muted">{t('Left out (the Space Elevator parts do not need them): ', '跳过（太空电梯零件用不到）：')}{r.skipped.join('、')}</p>}
         <div className="tablewrap">
           <table className="mbtable">
             <thead><tr>
@@ -101,6 +108,9 @@ export default function Speedrun({ data }: { data: GameData }) {
                 open === s.id && <tr key={`${s.id}-d`}><td colSpan={7} className="small">
                   <div><b>{t('Cost', '花费')}</b>{t(': ', '：')}{s.cost.map(c => <span key={c.item} className="chipitem"><Icon id={c.item} size={16} />{num(c.rate)} {itemName(data, c.item)} </span>)}</div>
                   <div><b>{t('Build', '新建')}</b>{t(': ', '：')}{s.build.map(b => `${b.building} ×${num(b.count)}`).join(' · ') || t('nothing new (earlier factories make it)', '不用新建（之前的工厂就能做）')}</div>
+                  {s.recipes.length > 0 && <div><b>{t('New factories run', '新工厂运行')}</b>{t(': ', '：')}{s.recipes.map(x => `${x.building} ×${fmt(x.count, 1)}`).join(' · ')}</div>}
+                  {s.raw.length > 0 && <div><b>{t('New raw input', '新增原矿')}</b>{t(': ', '：')}{s.raw.map(x => `${itemName(data, x.item)} ${fmt(x.rate, 1)}${t('/min', '/分钟')}`).join(' · ')}</div>}
+                  {s.power_mw > 0 && <div><b>{t('Power', '发电')}</b>{t(': ', '：')}{fmt(s.power_mw, 0)} MW</div>}
                   {s.unlocks.length > 0 && <div><b>{t('Unlocks', '解锁')}</b>{t(': ', '：')}{s.unlocks.join('、')}</div>}
                   {s.wait_min > 0.05 && <div>{t(`Waits ${hm(s.wait_min)} for the HUB ship.`, `等 HUB 飞船 ${hm(s.wait_min)}。`)}</div>}
                 </td></tr>,
@@ -109,8 +119,8 @@ export default function Speedrun({ data }: { data: GameData }) {
           </table>
         </div>
         <p className="small muted">
-          {t('Not modelled yet: power plants and power, hand-crafting at the start, walking and exploring, node purity and distance, MAM research cost, alternate recipes (hard drives). Miners count as Mk.1 / Mk.2 / Mk.3 on normal nodes as they unlock; the parts of each step\'s buildings are made by that step\'s factories. ',
-            '暂未建模：发电厂和电力、开局手搓、跑图探索、矿点纯度和距离、MAM 研究花费、替代配方（硬盘）。采矿机按解锁情况算一/二/三级、普通矿点；每一步新建筑的材料由这一步的工厂生产。')}
+          {t('Not modelled yet: hand-crafting and hand-fed biomass power at the start, walking and exploring, node purity, distance and node counts, MAM research cost (MAM recipes count as available once the MAM is built), alternate recipes from hard drives, stockpiling ahead, building several steps at once. Miners count as Mk.1 / Mk.2 / Mk.3 on normal nodes as they unlock; the parts of the buildings of each step are made by the factories of that step; once a generator is unlocked each step builds its own power. Real speedruns are much faster (e.g. an 11–12 h co-op run): read this as a planning baseline, not a record. ',
+            '暂未建模：开局手搓和手喂生物质发电、跑图探索、矿点纯度/距离/数量、MAM 研究花费（MAM 配方在建好 MAM 后视为可用）、硬盘替代配方、提前囤货、几步同时进行。采矿机按解锁情况算一/二/三级、普通矿点；每一步新建筑的材料由这一步的工厂生产；解锁发电机后每一步自建发电。真实速通快得多（例如 11–12 小时的多人速通），这里的数字当作规划基线，不是纪录。')}
           {fmt(r.solve_ms / 1000, 1)} s.
         </p>
       </div>}
